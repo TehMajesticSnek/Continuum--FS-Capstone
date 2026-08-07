@@ -26,15 +26,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
-import com.continuum.R
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -43,11 +40,14 @@ import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 
 @Composable
-fun LoginScreen(
-    toRegister: () -> Unit,
+fun RegisterScreen(
+    toLogin: () -> Unit,
 ) {
+    var fName by remember { mutableStateOf("") }
+    var lName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordConfirm by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -57,14 +57,6 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.continuum_logo),
-            contentDescription = "Continuum Logo",
-            modifier = Modifier.height(90.dp),
-            contentScale = ContentScale.Fit
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
 
         Text(
             text = "CONTINUUM",
@@ -79,10 +71,10 @@ fun LoginScreen(
             style = MaterialTheme.typography.bodyMedium
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Welcome Back",
+            text = "Create Account",
             color = PrimaryText,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
@@ -90,16 +82,57 @@ fun LoginScreen(
             textAlign = TextAlign.Start
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Sign in to access your team's handoffs.",
-            color = MutedText,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row (horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(
+                value = fName,
+                onValueChange = { fName = it },
+                label = { Text("First name") },
+                placeholder = { Text("Enter name") },
+                modifier = Modifier.weight(0.75f),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Surface,
+                    unfocusedContainerColor = Surface,
+                    focusedBorderColor = BluePrimary,
+                    unfocusedBorderColor = Border,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedLabelColor = BluePrimary,
+                    unfocusedLabelColor = MutedText,
+                    cursorColor = BluePrimary,
+                    focusedPlaceholderColor = MutedText,
+                    unfocusedPlaceholderColor = MutedText
+                ),
+                shape = RoundedCornerShape(10.dp)
+            )
 
-        Spacer(modifier = Modifier.height(24.dp))
+            OutlinedTextField(
+                value = lName,
+                onValueChange = { lName = it },
+                label = { Text("Last name") },
+                placeholder = { Text("Enter name") },
+                modifier = Modifier.weight(0.75f),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Surface,
+                    unfocusedContainerColor = Surface,
+                    focusedBorderColor = BluePrimary,
+                    unfocusedBorderColor = Border,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedLabelColor = BluePrimary,
+                    unfocusedLabelColor = MutedText,
+                    cursorColor = BluePrimary,
+                    focusedPlaceholderColor = MutedText,
+                    unfocusedPlaceholderColor = MutedText
+                ),
+                shape = RoundedCornerShape(10.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = email,
@@ -131,6 +164,32 @@ fun LoginScreen(
             onValueChange = { password = it },
             label = { Text("Password") },
             placeholder = { Text("Enter your password") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Surface,
+                unfocusedContainerColor = Surface,
+                focusedBorderColor = BluePrimary,
+                unfocusedBorderColor = Border,
+                focusedTextColor = PrimaryText,
+                unfocusedTextColor = PrimaryText,
+                focusedLabelColor = BluePrimary,
+                unfocusedLabelColor = MutedText,
+                cursorColor = BluePrimary,
+                focusedPlaceholderColor = MutedText,
+                unfocusedPlaceholderColor = MutedText
+            ),
+            shape = RoundedCornerShape(10.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = passwordConfirm,
+            onValueChange = { passwordConfirm = it },
+            label = { Text("Confirm password") },
+            placeholder = { Text("Re-enter your password") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
@@ -182,12 +241,11 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-
-        val signInString = buildAnnotatedString {
+        val signUpString = buildAnnotatedString {
             val baseStyle = MaterialTheme.typography.bodyMedium
 
             withStyle(baseStyle.toSpanStyle().copy(color = MutedText)) {
-                append("New to Continuum? ")
+                append("Already have an account? ")
             }
 
             val linkStyles = TextLinkStyles(
@@ -198,13 +256,12 @@ fun LoginScreen(
                 LinkAnnotation.Clickable(
                     tag = "terms",
                     styles = linkStyles,
-                    linkInteractionListener = { toRegister() }
+                    linkInteractionListener = { toLogin() }
                 )
             ) {
-                append("Create account")
+                append("Sign in")
             }
         }
-
-        Text(signInString)
+        Text(signUpString)
     }
 }
