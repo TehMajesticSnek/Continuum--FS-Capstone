@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
@@ -34,6 +35,7 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import com.continuum.Database
 import com.continuum.R
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
@@ -41,13 +43,21 @@ import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LoginScreen(
+    db: Database,
     toRegister: () -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var resultText by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -153,7 +163,20 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = {  },
+            onClick = {
+                coroutineScope.launch(Dispatchers.IO) {
+                    val response = db.login(email, password)
+                    if (response == "") {
+                        // TODO change to homepage once that exists
+                        withContext(Dispatchers.Main) {
+                            toRegister()
+                        }
+                    }
+                    else {
+                        resultText = response
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),

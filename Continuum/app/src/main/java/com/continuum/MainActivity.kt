@@ -11,7 +11,7 @@ import com.continuum.ui.theme.ContinuumTheme
 
 class MainActivity : ComponentActivity() {
 
-    val db = Database()
+    val db = Database() // TODO Probably just pass this as a parameter for all the page-change functions. Should hopefully be pretty easy. Move to nav file maybe probably
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    Navigate()
+                    Navigate(db)
                 }
             }
         }
