@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,7 +40,9 @@ import com.continuum.ui.theme.Surface
 
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(
+    onCreateAccountClick: () -> Unit = {}
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -174,12 +177,18 @@ fun LoginScreen() {
             style = MaterialTheme.typography.bodyMedium
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            text = "Don't have an account? Create Account",
-            color = MutedText,
-            style = MaterialTheme.typography.bodyMedium
-        )
+        TextButton(
+            onClick = onCreateAccountClick
+        ) {
+            Text(
+                text = "Don't have an account? Create Account",
+                color = MutedText,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+
     }
 }
