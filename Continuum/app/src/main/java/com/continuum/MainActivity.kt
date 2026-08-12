@@ -4,11 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.getValue // <-- NEW
-import androidx.compose.runtime.mutableStateOf // <-- NEW
-import androidx.compose.runtime.remember // <-- NEW
-import androidx.compose.runtime.setValue // <-- NEW
-import com.continuum.screens.CreateAccountScreen // <-- NEW
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.continuum.screens.CreateAccountScreen
 import com.continuum.screens.LoginScreen
 import com.continuum.ui.theme.ContinuumTheme
 
@@ -21,13 +21,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             ContinuumTheme {
 
-                // <-- NEW: false means show Login
-                // <-- NEW: true means show Create Account
+                // false means show Login
+                // true means show Create Account
                 var showCreateAccount by remember {
                     mutableStateOf(false)
                 }
 
-                // <-- NEW
                 if (showCreateAccount) {
 
                     CreateAccountScreen(
@@ -35,7 +34,7 @@ class MainActivity : ComponentActivity() {
                             // Backend account creation will come later
                         },
                         onSignInClick = {
-                            showCreateAccount = false // <-- NEW
+                            showCreateAccount = false
                         }
                     )
 
@@ -43,7 +42,7 @@ class MainActivity : ComponentActivity() {
 
                     LoginScreen(
                         onCreateAccountClick = {
-                            showCreateAccount = true // <-- NEW
+                            showCreateAccount = true
                         }
                     )
                 }
