@@ -1,0 +1,176 @@
+package com.continuum.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.continuum.ui.theme.BluePrimary
+import com.continuum.ui.theme.Border
+import com.continuum.ui.theme.MutedText
+import com.continuum.ui.theme.NavyBackground
+import com.continuum.ui.theme.PrimaryText
+import com.continuum.ui.theme.Surface
+
+@Composable
+fun CreateHandoffScreen(
+    onBackClick: () -> Unit = {},
+    onSubmitClick: () -> Unit = {}
+) {
+    var title by remember { mutableStateOf("") }
+    var content by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(NavyBackground)
+            .statusBarsPadding()
+            .padding(
+                start = 20.dp,
+                end = 20.dp,
+                top = 12.dp,
+                bottom = 24.dp
+            )
+    ) {
+
+        IconButton(
+            onClick = onBackClick
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = PrimaryText
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "New Handoff",
+            color = PrimaryText,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Text(
+            text = "Capture the important details from your shift.",
+            color = MutedText,
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Text(
+            text = "Title",
+            color = PrimaryText,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            placeholder = {
+                Text("Enter handoff title")
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Surface,
+                unfocusedContainerColor = Surface,
+                focusedBorderColor = BluePrimary,
+                unfocusedBorderColor = Border,
+                focusedTextColor = PrimaryText,
+                unfocusedTextColor = PrimaryText,
+                focusedPlaceholderColor = MutedText,
+                unfocusedPlaceholderColor = MutedText,
+                cursorColor = BluePrimary
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Handoff Notes",
+            color = PrimaryText,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        OutlinedTextField(
+            value = content,
+            onValueChange = { content = it },
+            placeholder = {
+                Text(
+                    "Enter shift updates, unresolved issues, and important notes..."
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(220.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Surface,
+                unfocusedContainerColor = Surface,
+                focusedBorderColor = BluePrimary,
+                unfocusedBorderColor = Border,
+                focusedTextColor = PrimaryText,
+                unfocusedTextColor = PrimaryText,
+                focusedPlaceholderColor = MutedText,
+                unfocusedPlaceholderColor = MutedText,
+                cursorColor = BluePrimary
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Button(
+            onClick = onSubmitClick,
+            enabled = title.isNotBlank() && content.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = BluePrimary,
+                contentColor = PrimaryText,
+                disabledContainerColor = Border,
+                disabledContentColor = MutedText
+            )
+        ) {
+            Text(
+                text = "Submit Handoff",
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
