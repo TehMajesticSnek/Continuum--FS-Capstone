@@ -1,5 +1,7 @@
 package com.continuum.screens
 
+import android.app.AlertDialog
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,10 +29,14 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLinkStyles
@@ -50,6 +56,17 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+suspend fun showError(context: Context, error: String) {
+    withContext(Dispatchers.Main) {
+        AlertDialog.Builder(context, R.style.AlertTheme)
+            .setTitle("Error:")
+            .setMessage(error)
+            .setPositiveButton("Dismiss") { dialog, _ -> dialog.dismiss() }
+            .create()
+            .show()
+    }
+}
+
 @Composable
 fun LoginScreen(
     db: Database,
@@ -60,12 +77,15 @@ fun LoginScreen(
     var resultText by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(NavyBackground)
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 24.dp)
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -176,6 +196,7 @@ fun LoginScreen(
                     }
                     else {
                         resultText = response
+                        showError(context, resultText)
                     }
                 }
             },

@@ -58,7 +58,7 @@ class Database {
                     "Email is already in use"
                 }
                 else -> {
-                    "Unknown error"
+                    "Unknown error. Please try again later"
                 }
             }
             null
@@ -94,7 +94,7 @@ class Database {
                     "This user was banned"
                 }
                 else -> {
-                    "Unknown error"
+                    "Unknown error. Please try again later"
                 }
             }
             null

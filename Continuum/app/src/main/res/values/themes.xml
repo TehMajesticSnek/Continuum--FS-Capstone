@@ -2,4 +2,15 @@
 <resources>
 
     <style name="Theme.Continuum" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="AlertTheme" parent="android:Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:background">@drawable/dialog_box_shape</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/AlertButtonTheme</item>
+    </style>
+
+    <style name="AlertButtonTheme" parent="android:Widget.Holo.Button.Borderless">
+        <item name="android:textColor">#FF2563EB</item>
+        <item name="android:textStyle">bold</item>
+    </style>
 </resources>
