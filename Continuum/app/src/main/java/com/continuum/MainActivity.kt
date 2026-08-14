@@ -16,6 +16,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+//        TODO decide what to do about the device system bars
+//        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+//
+//        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+//        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+
         setContent {
             ContinuumTheme {
                 Surface(

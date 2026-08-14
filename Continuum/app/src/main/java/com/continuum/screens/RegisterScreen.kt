@@ -66,6 +66,7 @@ import kotlinx.coroutines.withContext
 fun RegisterScreen(
     db: Database,
     toLogin: () -> Unit,
+    toHome: () -> Unit,
 ) {
     var fName by remember { mutableStateOf("") }
     var lName by remember { mutableStateOf("") }
@@ -309,9 +310,8 @@ fun RegisterScreen(
                 coroutineScope.launch(Dispatchers.IO) {
                     val response = db.registerUser(email, password, passwordConfirm, fName, lName)
                     if (response == "") {
-                        // TODO change to homepage once that exists
                         withContext(Dispatchers.Main) {
-                            toLogin()
+                            toHome()
                         }
                     }
                     else {

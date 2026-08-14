@@ -1,9 +1,12 @@
 package com.continuum.screens
 
+import android.app.AlertDialog
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -37,7 +40,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,8 +55,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.continuum.Database
+import com.continuum.R
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -60,15 +70,115 @@ import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.launch
 
 @Composable
+fun JoinTeamDialog(context: Context, onDismissJoin: () -> Unit) {
+    var teamCode by remember { mutableStateOf("") }
+    //build modal
+
+    Dialog(onDismissRequest = onDismissJoin) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Join a Team",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = teamCode,
+                    onValueChange = { teamCode = it },
+                    label = { Text(text = "Team code") },
+                    placeholder = { Text("Enter team code") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        focusedLabelColor = BluePrimary,
+                        unfocusedLabelColor = MutedText,
+                        cursorColor = BluePrimary,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { },
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(200.dp)
+                        .height(36.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BluePrimary,
+                        contentColor = PrimaryText
+                    )
+                ) {
+                    Text(
+                        text = "Submit",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        onClick = { onDismissJoin() }
+
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    TextButton(
+                        onClick = { }
+
+                    ) {
+                        Text("Create Team")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun HomeScreen(
-    onNewHandoffClick: () -> Unit = {},
-    onJoinTeamClick: () -> Unit = {}
+    db: Database,
+    toNewHandoff: () -> Unit = {},
 ) {
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed
     )
 
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val teams = listOf(
         "Night Shift",
@@ -79,6 +189,7 @@ fun HomeScreen(
     var selectedTeam by remember {
         mutableStateOf(teams.first())
     }
+    var showJoinDialog by remember { mutableStateOf(false)}
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -139,7 +250,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     OutlinedButton(
-                        onClick = onJoinTeamClick,
+                        onClick = { showJoinDialog = true },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(8.dp),
                         border = BorderStroke(
@@ -269,7 +380,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(18.dp))
 
             Button(
-                onClick = onNewHandoffClick,
+                onClick = toNewHandoff,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -361,7 +472,15 @@ fun HomeScreen(
             }
         }
     }
+    if (showJoinDialog) {
+        JoinTeamDialog(
+            context = context,
+            onDismissJoin = { showJoinDialog = false }
+        )
+    }
 }
+
+
 
 @Composable
 private fun TeamMenuItem(

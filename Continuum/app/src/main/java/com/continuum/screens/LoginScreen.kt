@@ -32,8 +32,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -52,7 +50,6 @@ import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -71,6 +68,7 @@ suspend fun showError(context: Context, error: String) {
 fun LoginScreen(
     db: Database,
     toRegister: () -> Unit,
+    toHome: () -> Unit,
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -189,9 +187,8 @@ fun LoginScreen(
                 coroutineScope.launch(Dispatchers.IO) {
                     val response = db.login(email, password)
                     if (response == "") {
-                        // TODO change to homepage once that exists
                         withContext(Dispatchers.Main) {
-                            toRegister()
+                            toHome()
                         }
                     }
                     else {

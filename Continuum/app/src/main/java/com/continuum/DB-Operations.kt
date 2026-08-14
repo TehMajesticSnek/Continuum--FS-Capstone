@@ -6,9 +6,6 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
-import io.github.jan.supabase.auth.user.UserInfo
-import io.github.jan.supabase.postgrest.query.Columns
-import io.ktor.websocket.WebSocketDeflateExtension.Companion.install
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -18,15 +15,15 @@ data class UserObj(
     val lName: String,
 )
 val supabase = createSupabaseClient(
-    supabaseUrl = "https://nkpxjjlvzbfzcpcxbraf.supabase.co",
-    supabaseKey = "sb_publishable_RoUXBvS61E45Lzkiw-7JmA_bKjYHX4F" // Public key. Safe to hard code I'm pretty sure. Make sure RLS is on in all tables though
+    supabaseUrl = "https://bbwivjungybfetfpnoyu.supabase.co",
+    supabaseKey = "sb_publishable_ySkpmX-JfWWJ8mNzYR035A_avt2S9N_" // Public key. Safe to hard code I'm pretty sure. Make sure RLS is on in all tables though
 ) {
     install(Postgrest)
     install(Auth)
 }
 
 class Database {
-    lateinit var uid: String
+    var uid: String? = null
 
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
         // check all are not null
@@ -34,7 +31,6 @@ class Database {
         {
             return "Passwords do not match"
         }
-        // check if email is already registered
 
         // register user
         var errorMsg = ""
@@ -48,26 +44,37 @@ class Database {
                 "weak_password" -> {
                     "Password must be at least 6 characters"
                 }
+
                 "validation_failed" -> {
                     "One or more fields were invalid. Check text formats"
                 }
+
                 "email_address_invalid" -> {
                     "Invalid email address"
                 }
+
                 "user_already_exists" -> {
                     "Email is already in use"
                 }
+
+                "over_email_send_rate_limit" -> {
+                    "Too many attempts. Please try again later"
+                }
+
                 else -> {
                     "Unknown error. Please try again later"
                 }
             }
             null
-        }.toString()
+        } catch (e: Exception) {
+            errorMsg = "Connection failed. Please check your internet connection."
+            null
+        }
 
-        if (errorMsg.isEmpty()) {
+        if (errorMsg.isEmpty() && uid != null) {
             // add to users table
             val user = UserObj(userID = uid as String, fName = fName, lName = lName)
-            supabase.from("Users").insert(user)
+            supabase.from("users").insert(user)
         }
         return errorMsg
 
@@ -93,12 +100,16 @@ class Database {
                 "user_banned" -> {
                     "This user was banned"
                 }
+                "over_email_send_rate_limit" -> {
+                    "Too many attempts. Please try again later"
+                }
                 else -> {
                     "Unknown error. Please try again later"
                 }
             }
-            null
-        }.toString()
+        } catch (e: Exception) {
+            errorMsg = "Connection failed. Please check your internet connection."
+        }
 
         if (errorMsg.isEmpty()) {
             // get userID
