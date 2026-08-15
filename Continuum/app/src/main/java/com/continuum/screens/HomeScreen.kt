@@ -1,7 +1,6 @@
 package com.continuum.screens
 
-import android.app.AlertDialog
-import android.content.Context
+import android.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,19 +59,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.continuum.Database
-import com.continuum.R
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
-fun JoinTeamDialog(context: Context, onDismissJoin: () -> Unit) {
+fun JoinTeamDialog(db: Database, onDismissJoin: () -> Unit, onShowCreate: () -> Unit) {
     var teamCode by remember { mutableStateOf("") }
-    //build modal
+    val coroutineScope = rememberCoroutineScope()
+
 
     Dialog(onDismissRequest = onDismissJoin) {
         Box(
@@ -101,7 +103,12 @@ fun JoinTeamDialog(context: Context, onDismissJoin: () -> Unit) {
 
                 OutlinedTextField(
                     value = teamCode,
-                    onValueChange = { teamCode = it },
+                    onValueChange = {
+                        if (it.length <= 8) {
+                            teamCode = it.uppercase()
+                        }
+
+                    },
                     label = { Text(text = "Team code") },
                     placeholder = { Text("Enter team code") },
                     modifier = Modifier.fillMaxWidth(),
@@ -125,11 +132,23 @@ fun JoinTeamDialog(context: Context, onDismissJoin: () -> Unit) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(
-                    onClick = { },
+                    onClick = {
+
+                        coroutineScope.launch(Dispatchers.IO) {
+                            val response = db.JoinTeam(teamCode)
+                            if (response == "") {
+                                onDismissJoin()
+                            }
+                            else {
+                                //TODO error popup
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .width(200.dp)
                         .height(36.dp),
+                    enabled = (teamCode.length == 8),
                     shape = RoundedCornerShape(6.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = BluePrimary,
@@ -150,23 +169,124 @@ fun JoinTeamDialog(context: Context, onDismissJoin: () -> Unit) {
                         .padding(0.dp),
                     horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(
+                        onClick = { onShowCreate() }
+
+                    ) {
+                        Text("Create Team")
+                    }
+
+                    TextButton(
                         onClick = { onDismissJoin() }
 
                     ) {
                         Text("Cancel")
-                    }
-
-                    TextButton(
-                        onClick = { }
-
-                    ) {
-                        Text("Create Team")
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate: () -> Unit) {
+    var teamName by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+
+
+    Dialog(onDismissRequest = onDismissCreate) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Create a Team",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = teamName,
+                    onValueChange = { teamName = it },
+                    label = { Text(text = "Team name") },
+                    placeholder = { Text("Enter team name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        focusedLabelColor = BluePrimary,
+                        unfocusedLabelColor = MutedText,
+                        cursorColor = BluePrimary,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            val response = db.createTeam(teamName)
+                            if (response == "") {
+                                onSuccessCreate()
+                            }
+                            else {
+                                //TODO error popup
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .width(200.dp)
+                        .height(36.dp),
+                    enabled = teamName.isNotBlank(),
+                    shape = RoundedCornerShape(6.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BluePrimary,
+                        contentColor = PrimaryText
+                    )
+                ) {
+                    Text(
+                        text = "Create Team",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                TextButton(
+                    modifier = Modifier
+                        .align(Alignment.End),
+                    onClick = { onDismissCreate() }
+
+                ) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun HomeScreen(
@@ -189,7 +309,9 @@ fun HomeScreen(
     var selectedTeam by remember {
         mutableStateOf(teams.first())
     }
-    var showJoinDialog by remember { mutableStateOf(false)}
+    var showJoinDialog by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -474,8 +596,19 @@ fun HomeScreen(
     }
     if (showJoinDialog) {
         JoinTeamDialog(
-            context = context,
-            onDismissJoin = { showJoinDialog = false }
+            db,
+            onDismissJoin = { showJoinDialog = false },
+            onShowCreate = { showCreateDialog = true }
+        )
+    }
+    if (showCreateDialog) {
+        CreateTeamDialog(
+            db,
+            onDismissCreate = { showCreateDialog = false },
+            onSuccessCreate = {
+                showCreateDialog = false
+                showJoinDialog = false
+            }
         )
     }
 }
