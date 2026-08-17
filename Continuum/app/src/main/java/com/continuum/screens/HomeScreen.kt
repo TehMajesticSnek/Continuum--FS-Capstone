@@ -292,6 +292,7 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
 fun HomeScreen(
     db: Database,
     toNewHandoff: () -> Unit = {},
+    toHistory: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed
@@ -584,7 +585,8 @@ fun HomeScreen(
 
                 BottomNavItem(
                     icon = Icons.Default.Search,
-                    label = "History"
+                    label = "History",
+                    onClick = toHistory
                 )
 
                 BottomNavItem(
@@ -731,12 +733,16 @@ private fun SummaryCard(
 private fun BottomNavItem(
     icon: ImageVector,
     label: String,
-    selected: Boolean = false
+    selected: Boolean = false,
+    onClick: () -> Unit = {}
 ) {
     val itemColor =
         if (selected) BluePrimary else MutedText
 
     Column(
+        modifier = Modifier.clickable {
+            onClick() //
+        },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
