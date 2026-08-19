@@ -41,6 +41,17 @@ class Database {
         val team_id: Int
     )
 
+    @Serializable
+    data class TeamMembership(
+        val team_id: Int
+    )
+
+    @Serializable
+    data class TeamResult(
+        val team_id: Int,
+        val team_name: String
+    )
+
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
         // check all are not null
         if (inputPassword != passwordConfirm)
@@ -154,10 +165,9 @@ class Database {
                 JoinTeam(newTeam.team_code, 1)
                 break
             } catch (e: Exception) {
-                // if duplicate key
+                println("SCRUM53 createTeam ERROR: ${e.message}")
+                e.printStackTrace()
                 attempts++
-                // TODO add error handling
-                // error block
             }
         }
 
@@ -166,6 +176,12 @@ class Database {
 
     suspend fun JoinTeam(teamCode: String, roleID: Int = 0): String {
         var errorMsg = ""
+
+        val currentUid = uid
+            ?: supabase.auth.currentSessionOrNull()?.user?.id
+            ?: return "User not logged in"
+
+        uid = currentUid
 
         try {
             // get teamID from teamCode
@@ -178,16 +194,71 @@ class Database {
 
             val newUser = User(
                 teamIDResult?.team_id ?: throw IllegalArgumentException("Invalid team code"),
-                uid,
+                currentUid,
                 roleID
             )
+            println("SCRUM53 inserting membership: team=${teamIDResult.team_id}, user=$currentUid")
+
             supabase.from("team_members").insert(newUser)
 
+            println("SCRUM53 membership insert completed")
+
         } catch (e: Exception) {
-            // error block
-            // TODO add error handling
-            val test = 1
+            println("SCRUM53 JoinTeam ERROR: ${e.message}")
+            e.printStackTrace()
         }
         return errorMsg
+    }
+
+    suspend fun getUserTeams(): List<TeamResult> {
+
+        val currentUid = uid
+            ?: supabase.auth.currentSessionOrNull()?.user?.id
+            ?: return emptyList()
+
+        uid = currentUid
+
+        println("SCRUM53 currentUid: $currentUid")
+
+        return try {
+
+            val memberships = supabase
+                .from("team_members")
+                .select(columns = Columns.list("team_id")) {
+                    filter {
+                        eq("user_id", currentUid)
+                    }
+                }
+                .decodeList<TeamMembership>()
+
+            println("SCRUM53 memberships: $memberships")
+
+            if (memberships.isEmpty()) {
+                emptyList()
+            } else {
+
+                val teams = mutableListOf<TeamResult>()
+
+                memberships.forEach { membership ->
+
+                    val team = supabase
+                        .from("teams")
+                        .select(columns = Columns.list("team_id", "team_name")) {
+                            filter {
+                                eq("team_id", membership.team_id)
+                            }
+                        }
+                        .decodeSingle<TeamResult>()
+
+                    teams.add(team)
+                }
+
+                teams
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
 }

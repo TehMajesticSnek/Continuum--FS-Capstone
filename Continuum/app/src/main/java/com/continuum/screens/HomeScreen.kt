@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,7 +72,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun JoinTeamDialog(db: Database, onDismissJoin: () -> Unit, onShowCreate: () -> Unit) {
+fun JoinTeamDialog(
+    db: Database,
+    onDismissJoin: () -> Unit,
+    onShowCreate: () -> Unit,
+    onSuccessJoin: () -> Unit
+) {
     var teamCode by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
@@ -137,7 +143,7 @@ fun JoinTeamDialog(db: Database, onDismissJoin: () -> Unit, onShowCreate: () -> 
                         coroutineScope.launch(Dispatchers.IO) {
                             val response = db.JoinTeam(teamCode)
                             if (response == "") {
-                                onDismissJoin()
+                                onSuccessJoin()
                             }
                             else {
                                 //TODO error popup
@@ -301,15 +307,38 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    val teams = listOf(
-        "Night Shift",
-        "IT Support",
-        "Operations"
-    )
+    var teams by remember {
+        mutableStateOf<List<Database.TeamResult>>(emptyList())
+    }
 
     var selectedTeam by remember {
-        mutableStateOf(teams.first())
+        mutableStateOf<Database.TeamResult?>(null)
     }
+
+    LaunchedEffect(Unit) {
+        teams = db.getUserTeams()
+
+        println("SCRUM53 teams returned: $teams")
+
+        if (selectedTeam == null && teams.isNotEmpty()) {
+            selectedTeam = teams.first()
+        }
+    }
+
+    fun refreshTeams() {
+        scope.launch {
+            teams = db.getUserTeams()
+
+            println("SCRUM53 teams returned: $teams")
+
+            if (teams.isNotEmpty()) {
+                selectedTeam = teams.first()
+            } else {
+                selectedTeam = null
+            }
+        }
+    }
+
     var showJoinDialog by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
 
@@ -356,8 +385,8 @@ fun HomeScreen(
                     teams.forEach { team ->
 
                         TeamMenuItem(
-                            teamName = team,
-                            selected = team == selectedTeam,
+                            teamName = team.team_name,
+                            selected = team.team_id == selectedTeam?.team_id,
                             onClick = {
                                 selectedTeam = team
 
@@ -409,8 +438,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = selectedTeam,
-                        color = PrimaryText,
+                        text = selectedTeam?.team_name ?: "No Team Selected", color = PrimaryText,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -494,7 +522,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Team: $selectedTeam",
+                text = "Team: ${selectedTeam?.team_name ?: "No Team Selected"}",
                 color = BluePrimary,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium
@@ -598,18 +626,24 @@ fun HomeScreen(
     }
     if (showJoinDialog) {
         JoinTeamDialog(
-            db,
+            db = db,
             onDismissJoin = { showJoinDialog = false },
-            onShowCreate = { showCreateDialog = true }
+            onShowCreate = { showCreateDialog = true },
+            onSuccessJoin = {
+                showJoinDialog = false
+                refreshTeams()
+            }
         )
     }
+
     if (showCreateDialog) {
         CreateTeamDialog(
-            db,
+            db = db,
             onDismissCreate = { showCreateDialog = false },
             onSuccessCreate = {
                 showCreateDialog = false
                 showJoinDialog = false
+                refreshTeams()
             }
         )
     }
