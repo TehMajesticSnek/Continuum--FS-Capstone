@@ -42,11 +42,12 @@ class Database {
     )
 
     @Serializable
-    data class TeamMembership(
+    data class TeamMembershipID(
         val team_id: Int
     )
 
     @Serializable
+    // TODO This can probably be consolidated into the Team class, but I'd prefer to handle that myself just to make sure nothing else breaks. Likewise, I think TeamMembership can use GetIDResult
     data class TeamResult(
         val team_id: Int,
         val team_name: String
@@ -177,6 +178,7 @@ class Database {
     suspend fun JoinTeam(teamCode: String, roleID: Int = 0): String {
         var errorMsg = ""
 
+        // TODO Probably redundant. I would remove this val once debug outputs aren't necessary
         val currentUid = uid
             ?: supabase.auth.currentSessionOrNull()?.user?.id
             ?: return "User not logged in"
@@ -190,7 +192,6 @@ class Database {
                     eq("team_code", teamCode)
                 }
             }.decodeSingle<GetIDResult>()
-            println("Egg")
 
             val newUser = User(
                 teamIDResult?.team_id ?: throw IllegalArgumentException("Invalid team code"),
@@ -212,6 +213,7 @@ class Database {
 
     suspend fun getUserTeams(): List<TeamResult> {
 
+        // TODO Probably redundant. I would remove this val once debug outputs aren't necessary
         val currentUid = uid
             ?: supabase.auth.currentSessionOrNull()?.user?.id
             ?: return emptyList()
@@ -222,14 +224,11 @@ class Database {
 
         return try {
 
-            val memberships = supabase
-                .from("team_members")
-                .select(columns = Columns.list("team_id")) {
+            val memberships = supabase.from("team_members").select(columns = Columns.list("team_id")) {
                     filter {
                         eq("user_id", currentUid)
                     }
-                }
-                .decodeList<TeamMembership>()
+                }.decodeList<TeamMembershipID>()
 
             println("SCRUM53 memberships: $memberships")
 
@@ -247,8 +246,7 @@ class Database {
                             filter {
                                 eq("team_id", membership.team_id)
                             }
-                        }
-                        .decodeSingle<TeamResult>()
+                        }.decodeSingle<TeamResult>()
 
                     teams.add(team)
                 }
