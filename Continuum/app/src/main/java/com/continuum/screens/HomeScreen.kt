@@ -141,7 +141,7 @@ fun JoinTeamDialog(
                     onClick = {
 
                         coroutineScope.launch(Dispatchers.IO) {
-                            val response = db.JoinTeam(teamCode)
+                            val response = db.joinTeam(teamCode)
                             if (response == "") {
                                 onSuccessJoin()
                             }
@@ -308,11 +308,11 @@ fun HomeScreen(
     val context = LocalContext.current
 
     var teams by remember {
-        mutableStateOf<List<Database.TeamResult>>(emptyList())
+        mutableStateOf<List<Database.Team>>(emptyList())
     }
 
     var selectedTeam by remember {
-        mutableStateOf<Database.TeamResult?>(null)
+        mutableStateOf<Database.Team?>(null)
     }
 
     LaunchedEffect(Unit) {
@@ -322,6 +322,8 @@ fun HomeScreen(
 
         if (selectedTeam == null && teams.isNotEmpty()) {
             selectedTeam = teams.first()
+            //TODO replace this with a more permanent solution
+            db.activeTeam = selectedTeam!!.teamID // temp solution
         }
     }
 
@@ -333,6 +335,7 @@ fun HomeScreen(
 
             if (teams.isNotEmpty()) {
                 selectedTeam = teams.first()
+                db.activeTeam = selectedTeam!!.teamID // temp solution
             } else {
                 selectedTeam = null
             }
@@ -385,10 +388,11 @@ fun HomeScreen(
                     teams.forEach { team ->
 
                         TeamMenuItem(
-                            teamName = team.team_name,
-                            selected = team.team_id == selectedTeam?.team_id,
+                            teamName = team.teamName.toString(),
+                            selected = team.teamID == selectedTeam?.teamID,
                             onClick = {
                                 selectedTeam = team
+                                db.activeTeam = selectedTeam!!.teamID // temp solution
 
                                 scope.launch {
                                     drawerState.close()
@@ -438,7 +442,7 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = selectedTeam?.team_name ?: "No Team Selected", color = PrimaryText,
+                        text = selectedTeam?.teamName ?: "No Team Selected", color = PrimaryText,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -522,7 +526,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             Text(
-                text = "Team: ${selectedTeam?.team_name ?: "No Team Selected"}",
+                text = "Team: ${selectedTeam?.teamName ?: "No Team Selected"}",
                 color = BluePrimary,
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium

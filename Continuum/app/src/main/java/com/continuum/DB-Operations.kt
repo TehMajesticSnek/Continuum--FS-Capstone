@@ -7,10 +7,14 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.security.SecureRandom
+import kotlin.Int
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 val supabase = createSupabaseClient(
     supabaseUrl = "https://bbwivjungybfetfpnoyu.supabase.co",
@@ -25,32 +29,37 @@ class Database {
     var activeTeam: Int? = null
 
     @Serializable
-    class Team (
-        val team_name: String,
-    ) {
-        lateinit var team_code: String
-    }
-    @Serializable
-    class User(
-        val team_id: Int,
-        val user_id: String?,
-        val role_id: Int
+    data class Team (
+        @SerialName("team_name")
+        var teamName: String? = null,
+        @SerialName("team_id")
+        var teamID: Int? = null,
+        @SerialName("team_code")
+        var teamCode: String? = null,
     )
     @Serializable
-    data class GetIDResult(
-        val team_id: Int
+    data class User(
+        @SerialName("team_id")
+        val teamID: Int,
+        @SerialName("user_id")
+        val userID: String?,
+        @SerialName("role_id")
+        val roleID: Long
     )
-
     @Serializable
-    data class TeamMembershipID(
-        val team_id: Int
-    )
-
-    @Serializable
-    // TODO This can probably be consolidated into the Team class, but I'd prefer to handle that myself just to make sure nothing else breaks. Likewise, I think TeamMembership can use GetIDResult
-    data class TeamResult(
-        val team_id: Int,
-        val team_name: String
+    data class Handoff(
+        @SerialName("team_id")
+        val teamID: Int?,
+        @SerialName("user_id")
+        val userID: String?,
+        val title: String,
+        val content: String?,
+        val status: Short,
+        val priority: Short,
+        @SerialName("time_created")
+        val timestamp: Instant?,
+        @SerialName("time_edited")
+        val editTimestamp: Instant? = null
     )
 
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
@@ -154,20 +163,19 @@ class Database {
                 .joinToString("")
         }
         // create team object
-        val newTeam = Team(teamName)
-        // generate code
+        val newTeam = Team(teamName = teamName)
+        // create team code
         while (attempts < maxAttempts) {
-            newTeam.team_code = generateCode()
+            newTeam.teamCode = generateCode()
 
             try {
                 //  add team to table
                 supabase.from("teams").insert(newTeam)
                 //  add user to team members table
-                JoinTeam(newTeam.team_code, 1)
+                joinTeam(newTeam.teamCode.toString(), 1)
                 break
             } catch (e: Exception) {
-                println("SCRUM53 createTeam ERROR: ${e.message}")
-                e.printStackTrace()
+
                 attempts++
             }
         }
@@ -175,15 +183,8 @@ class Database {
         return errorMsg
     }
 
-    suspend fun JoinTeam(teamCode: String, roleID: Int = 0): String {
+    suspend fun joinTeam(teamCode: String, roleID: Long = 0): String {
         var errorMsg = ""
-
-        // TODO Probably redundant. I would remove this val once debug outputs aren't necessary
-        val currentUid = uid
-            ?: supabase.auth.currentSessionOrNull()?.user?.id
-            ?: return "User not logged in"
-
-        uid = currentUid
 
         try {
             // get teamID from teamCode
@@ -191,66 +192,49 @@ class Database {
                 filter {
                     eq("team_code", teamCode)
                 }
-            }.decodeSingle<GetIDResult>()
+            }.decodeSingle<Team>()
 
             val newUser = User(
-                teamIDResult?.team_id ?: throw IllegalArgumentException("Invalid team code"),
-                currentUid,
+                teamIDResult.teamID ?: throw IllegalArgumentException("Invalid team code"),
+                uid,
                 roleID
             )
-            println("SCRUM53 inserting membership: team=${teamIDResult.team_id}, user=$currentUid")
-
             supabase.from("team_members").insert(newUser)
 
-            println("SCRUM53 membership insert completed")
-
         } catch (e: Exception) {
-            println("SCRUM53 JoinTeam ERROR: ${e.message}")
-            e.printStackTrace()
+
         }
         return errorMsg
     }
 
-    suspend fun getUserTeams(): List<TeamResult> {
-
-        // TODO Probably redundant. I would remove this val once debug outputs aren't necessary
-        val currentUid = uid
-            ?: supabase.auth.currentSessionOrNull()?.user?.id
-            ?: return emptyList()
-
-        uid = currentUid
-
-        println("SCRUM53 currentUid: $currentUid")
+    suspend fun getUserTeams(): List<Team> {
 
         return try {
 
             val memberships = supabase.from("team_members").select(columns = Columns.list("team_id")) {
                     filter {
-                        eq("user_id", currentUid)
+                        eq("user_id", uid.toString())
                     }
-                }.decodeList<TeamMembershipID>()
-
-            println("SCRUM53 memberships: $memberships")
+                }.decodeList<Team>()
 
             if (memberships.isEmpty()) {
                 emptyList()
             } else {
 
-                val teams = mutableListOf<TeamResult>()
+                val teams = mutableListOf<Team>()
 
                 memberships.forEach { membership ->
-
                     val team = supabase
                         .from("teams")
                         .select(columns = Columns.list("team_id", "team_name")) {
                             filter {
-                                eq("team_id", membership.team_id)
+                                eq("team_id", membership.teamID as Int)
                             }
-                        }.decodeSingle<TeamResult>()
-
+                        }.decodeSingle<Team>()
+                    // add team to list
                     teams.add(team)
                 }
-
+                // return list as try-value
                 teams
             }
 
@@ -258,5 +242,25 @@ class Database {
             e.printStackTrace()
             emptyList()
         }
+    }
+
+    suspend fun newHandoff(title: String, content: String?, status: Short = 0, priority: Short = 0): String {
+        var errorMsg = ""
+
+        try {
+            val newHandoffObj = Handoff(
+                activeTeam,
+                uid,
+                title,
+                content,
+                status,
+                priority,
+                Clock.System.now()
+            )
+            supabase.from("handoffs").insert(newHandoffObj)
+        } catch (e: Exception) {
+
+        }
+        return errorMsg
     }
 }

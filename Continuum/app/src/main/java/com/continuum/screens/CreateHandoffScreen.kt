@@ -23,24 +23,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.continuum.Database
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun CreateHandoffScreen(
+    db: Database,
     onBackClick: () -> Unit = {},
     onSubmitClick: () -> Unit = {}
 ) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -154,7 +163,14 @@ fun CreateHandoffScreen(
         Spacer(modifier = Modifier.height(28.dp))
 
         Button(
-            onClick = onSubmitClick,
+            onClick = {
+
+                coroutineScope.launch(Dispatchers.IO) {
+                    db.newHandoff(title, content)
+
+                }
+                onSubmitClick
+            },
             enabled = title.isNotBlank() && content.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()

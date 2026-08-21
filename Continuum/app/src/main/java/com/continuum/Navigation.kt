@@ -13,16 +13,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 object Login
-
 @Serializable
 object Register
-
 @Serializable
 object Home
-
 @Serializable
 object NewHandoff
-
 @Serializable
 object Records
 
@@ -69,7 +65,7 @@ fun Navigate(db: Database) {
 
         composable<Home> {
             HomeScreen(
-                db = db,
+                db,
                 toNewHandoff = {
                     navController.navigate(NewHandoff)
                 },
@@ -81,6 +77,7 @@ fun Navigate(db: Database) {
 
         composable<NewHandoff> {
             CreateHandoffScreen(
+                db,
                 onBackClick = {
                     navController.popBackStack()
                 }
@@ -89,6 +86,7 @@ fun Navigate(db: Database) {
 
         composable<Records> {
             RecordsScreen(
+                db,
                 onBackClick = {
                     navController.popBackStack()
                 }

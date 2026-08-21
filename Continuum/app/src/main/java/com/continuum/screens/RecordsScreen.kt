@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.continuum.Database
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -49,6 +50,7 @@ import com.continuum.ui.theme.Surface
 
 @Composable
 fun RecordsScreen(
+    db: Database,
     onBackClick: () -> Unit = {}
 ) {
     var searchText by remember {
