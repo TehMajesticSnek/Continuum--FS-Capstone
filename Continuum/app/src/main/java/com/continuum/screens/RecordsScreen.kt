@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Assignment
@@ -78,6 +80,7 @@ fun RecordsScreen(
                 top = 12.dp,
                 bottom = 24.dp
             )
+            .verticalScroll(rememberScrollState()),
     ) {
 
         // Top bar
@@ -213,7 +216,7 @@ fun RecordsScreen(
                 }
             }
         } else {
-            handoffs.forEach { handoff ->
+            handoffs.reversed().forEach { handoff ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()

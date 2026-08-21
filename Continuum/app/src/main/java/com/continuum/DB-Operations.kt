@@ -38,7 +38,7 @@ class Database {
         var teamCode: String? = null,
     )
     @Serializable
-    data class User(
+    data class TeamUser(
         @SerialName("team_id")
         val teamID: Int,
         @SerialName("user_id")
@@ -202,7 +202,7 @@ class Database {
                 }
             }.decodeSingle<Team>()
 
-            val newUser = User(
+            val newUser = TeamUser(
                 teamIDResult.teamID ?: throw IllegalArgumentException("Invalid team code"),
                 uid,
                 roleID
@@ -283,8 +283,7 @@ class Database {
                         filter {
                             eq("team_id", activeTeam!!)
                         }
-                    }
-                    .decodeList<Handoff>()
+                    }.decodeList<Handoff>()
             }
         } catch (e: Exception) {
             e.printStackTrace()

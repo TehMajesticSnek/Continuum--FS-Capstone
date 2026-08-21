@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.Add
@@ -330,8 +332,6 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         teams = db.getUserTeams()
 
-        println("SCRUM53 teams returned: $teams")
-
         if (selectedTeam == null && teams.isNotEmpty()) {
             selectedTeam = teams.first()
             //TODO replace this with a more permanent solution
@@ -343,8 +343,6 @@ fun HomeScreen(
     fun refreshTeams() {
         scope.launch {
             teams = db.getUserTeams()
-
-            println("SCRUM53 teams returned: $teams")
 
             if (teams.isNotEmpty()) {
                 selectedTeam = teams.first()
@@ -476,6 +474,7 @@ fun HomeScreen(
                     top = 12.dp,
                     bottom = 24.dp
                 )
+                .verticalScroll(rememberScrollState()),
         ) {
 
             Row(
@@ -617,7 +616,7 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            handoffs
+            handoffs.reversed()
                 .filter { handoff ->
                     val isRecent =
                         handoff.timestamp != null &&
