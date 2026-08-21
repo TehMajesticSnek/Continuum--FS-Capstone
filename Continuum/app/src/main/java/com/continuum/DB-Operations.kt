@@ -263,4 +263,24 @@ class Database {
         }
         return errorMsg
     }
+
+    suspend fun getHandoffs(): List<Handoff> {
+        return try {
+            if (activeTeam == null) {
+                emptyList()
+            } else {
+                supabase
+                    .from("handoffs")
+                    .select {
+                        filter {
+                            eq("team_id", activeTeam!!)
+                        }
+                    }
+                    .decodeList<Handoff>()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 }

@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,6 +56,13 @@ fun RecordsScreen(
 ) {
     var searchText by remember {
         mutableStateOf("")
+    }
+    var handoffs by remember {
+        mutableStateOf<List<Database.Handoff>>(emptyList())
+    }
+
+    LaunchedEffect(Unit) {
+        handoffs = db.getHandoffs()
     }
 
     Column(
@@ -165,41 +173,85 @@ fun RecordsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Placeholder for future dynamic records
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(260.dp),
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Surface
-            ),
-            border = BorderStroke(
-                width = 1.dp,
-                color = Border
-            )
-        ) {
-            Column(
+        if (handoffs.isEmpty()) {
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .fillMaxWidth()
+                    .height(180.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Surface
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = Border
+                )
             ) {
-                Text(
-                    text = "Handoff records will appear here",
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "No handoff records found",
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                Text(
-                    text = "Records from your team will be displayed in this list.",
-                    color = MutedText,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                    Text(
+                        text = "Handoffs for the selected team will appear here.",
+                        color = MutedText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        } else {
+            handoffs.forEach { handoff ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 10.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Surface
+                    ),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = Border
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(
+                            text = handoff.title,
+                            color = PrimaryText,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = handoff.content ?: "",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Text(
+                            text = "Status: ${handoff.status}  •  Priority: ${handoff.priority}",
+                            color = BluePrimary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             }
         }
 

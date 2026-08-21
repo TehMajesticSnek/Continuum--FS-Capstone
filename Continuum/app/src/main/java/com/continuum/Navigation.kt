@@ -77,8 +77,11 @@ fun Navigate(db: Database) {
 
         composable<NewHandoff> {
             CreateHandoffScreen(
-                db,
+                db = db,
                 onBackClick = {
+                    navController.popBackStack()
+                },
+                onSubmitClick = {
                     navController.popBackStack()
                 }
             )
@@ -86,7 +89,7 @@ fun Navigate(db: Database) {
 
         composable<Records> {
             RecordsScreen(
-                db,
+                db = db,
                 onBackClick = {
                     navController.popBackStack()
                 }

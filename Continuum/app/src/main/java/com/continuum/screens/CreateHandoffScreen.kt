@@ -164,12 +164,13 @@ fun CreateHandoffScreen(
 
         Button(
             onClick = {
+                coroutineScope.launch {
+                    withContext(Dispatchers.IO) {
+                        db.newHandoff(title, content)
+                    }
 
-                coroutineScope.launch(Dispatchers.IO) {
-                    db.newHandoff(title, content)
-
+                    onSubmitClick()
                 }
-                onSubmitClick
             },
             enabled = title.isNotBlank() && content.isNotBlank(),
             modifier = Modifier
