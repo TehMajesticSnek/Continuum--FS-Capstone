@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.continuum.screens.CreateHandoffScreen
+import com.continuum.screens.HandoffDetailsScreen
 import com.continuum.screens.HomeScreen
 import com.continuum.screens.LoginScreen
 import com.continuum.screens.RecordsScreen
@@ -19,6 +20,8 @@ object Register
 object Home
 @Serializable
 object NewHandoff
+@Serializable
+object HandoffDetails
 @Serializable
 object Records
 
@@ -82,6 +85,14 @@ fun Navigate(db: Database) {
                     navController.popBackStack()
                 },
                 onSubmitClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable<HandoffDetails> {
+            HandoffDetailsScreen(
+                onBackClick = {
                     navController.popBackStack()
                 }
             )
