@@ -611,7 +611,7 @@ fun HomeScreen(
                         handoff.timestamp != null &&
                                 handoff.timestamp >= kotlin.time.Clock.System.now() - kotlin.time.Duration.parse("24h")
 
-                    val isHighPriority = handoff.priority >= 2
+                    val isHighPriority = handoff.priority >= 4
 
                     isRecent || isHighPriority
                 }
