@@ -1,10 +1,14 @@
 package com.continuum
 
+import android.app.Activity
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -28,13 +32,31 @@ object NewHandoff
 object HandoffDetails
 @Serializable
 object Records
-
 @Composable
 fun Navigate(db: Database) {
     val navController = rememberNavController()
+    val context = LocalContext.current
 
     var selectedHandoff by remember {
         mutableStateOf<Database.Handoff?>(null)
+    }
+
+    var lastBackPressTime = 0L
+    val exitToast = Toast.makeText(context, "Double tap to exit", Toast.LENGTH_SHORT)
+
+    BackHandler(enabled = (navController.previousBackStackEntry == null)) {
+        val currentTime = System.currentTimeMillis()
+        val duration = 2000
+
+
+
+        if (currentTime - lastBackPressTime < duration) {
+            exitToast.cancel()
+            (context as Activity).finish()
+        } else {
+            lastBackPressTime = currentTime
+            exitToast.show()
+        }
     }
 
     NavHost(

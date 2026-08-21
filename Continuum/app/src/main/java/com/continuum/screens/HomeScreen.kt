@@ -1,6 +1,8 @@
 package com.continuum.screens
 
 import android.R
+import android.app.AlertDialog
+import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -73,6 +75,17 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+suspend fun showError(context: Context, error: String) {
+    withContext(Dispatchers.Main) {
+        AlertDialog.Builder(context, com.continuum.R.style.AlertTheme)
+            .setTitle("Error:")
+            .setMessage(error)
+            .setPositiveButton("Dismiss") { dialog, _ -> dialog.dismiss() }
+            .create()
+            .show()
+    }
+}
+
 @Composable
 fun JoinTeamDialog(
     db: Database,
@@ -82,6 +95,7 @@ fun JoinTeamDialog(
 ) {
     var teamCode by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismissJoin) {
         Box(
@@ -147,7 +161,7 @@ fun JoinTeamDialog(
                                 onSuccessJoin()
                             }
                             else {
-                                //TODO error popup
+                                showError(context, response)
                             }
                         }
                     },
@@ -198,6 +212,7 @@ fun JoinTeamDialog(
 fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate: () -> Unit) {
     var teamName by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
 
     Dialog(onDismissRequest = onDismissCreate) {
@@ -258,7 +273,7 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
                                 onSuccessCreate()
                             }
                             else {
-                                //TODO error popup
+                                showError(context, response)
                             }
                         }
                     },

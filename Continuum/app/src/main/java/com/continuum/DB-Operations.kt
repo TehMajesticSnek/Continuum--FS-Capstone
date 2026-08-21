@@ -163,7 +163,7 @@ class Database {
         val maxAttempts = 8
 
         var attempts = 0
-        var errorMsg = ""
+        var errorMsg = "There was an issue creating the team. Please try again"
 
         fun generateCode(): String {
             return (1..8)
@@ -181,9 +181,9 @@ class Database {
                 supabase.from("teams").insert(newTeam)
                 //  add user to team members table
                 joinTeam(newTeam.teamCode.toString(), 1)
+                errorMsg = ""
                 break
             } catch (e: Exception) {
-
                 attempts++
             }
         }
@@ -200,8 +200,10 @@ class Database {
                 filter {
                     eq("team_code", teamCode)
                 }
-            }.decodeSingle<Team>()
-
+            }.decodeSingleOrNull<Team>()
+            if (teamIDResult == null) {
+                return "Invalid team code"
+            }
             val newUser = TeamUser(
                 teamIDResult.teamID ?: throw IllegalArgumentException("Invalid team code"),
                 uid,
@@ -210,7 +212,7 @@ class Database {
             supabase.from("team_members").insert(newUser)
 
         } catch (e: Exception) {
-
+            errorMsg = "There was an issue creating the team. Please try again"
         }
         return errorMsg
     }
@@ -267,7 +269,7 @@ class Database {
             )
             supabase.from("handoffs").insert(newHandoffObj)
         } catch (e: Exception) {
-
+            errorMsg = "There was an issue creating this record. Please try again"
         }
         return errorMsg
     }

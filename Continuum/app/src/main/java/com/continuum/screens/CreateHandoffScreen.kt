@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.continuum.Database
@@ -50,6 +51,7 @@ fun CreateHandoffScreen(
     var content by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -166,13 +168,20 @@ fun CreateHandoffScreen(
             onClick = {
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
-                        db.newHandoff(title, content)
-                    }
+                        val response = db.newHandoff(title, content)
 
-                    onSubmitClick()
+                        if (response == "") {
+                            withContext(Dispatchers.Main) {
+                                onSubmitClick()
+                            }
+                        }
+                        else {
+                            showError(context, response)
+                        }
+                    }
                 }
             },
-            enabled = title.isNotBlank() && content.isNotBlank(),
+            enabled = title.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),

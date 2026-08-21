@@ -73,7 +73,6 @@ fun RegisterScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordConfirm by remember { mutableStateOf("") }
-    var resultText by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
@@ -315,8 +314,7 @@ fun RegisterScreen(
                         }
                     }
                     else {
-                        resultText = response
-                        showError(context, resultText)
+                        showError(context, response)
                     }
                 }
             },
