@@ -1,6 +1,10 @@
 package com.continuum
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -28,6 +32,10 @@ object Records
 @Composable
 fun Navigate(db: Database) {
     val navController = rememberNavController()
+
+    var selectedHandoff by remember {
+        mutableStateOf<Database.Handoff?>(null)
+    }
 
     NavHost(
         navController = navController,
@@ -91,11 +99,14 @@ fun Navigate(db: Database) {
         }
 
         composable<HandoffDetails> {
-            HandoffDetailsScreen(
-                onBackClick = {
-                    navController.popBackStack()
-                }
-            )
+            selectedHandoff?.let { handoff ->
+                HandoffDetailsScreen(
+                    handoff = handoff,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
         }
 
         composable<Records> {
@@ -103,6 +114,10 @@ fun Navigate(db: Database) {
                 db = db,
                 onBackClick = {
                     navController.popBackStack()
+                },
+                onHandoffClick = { handoff ->
+                    selectedHandoff = handoff
+                    navController.navigate(HandoffDetails)
                 }
             )
         }

@@ -1,5 +1,6 @@
 package com.continuum.screens
 
+import com.continuum.Database
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -33,11 +34,7 @@ import com.continuum.ui.theme.Surface
 
 @Composable
 fun HandoffDetailsScreen(
-    title: String = "Overnight Shift Handoff",
-    content: String = "Pending issues and important notes from the previous shift will appear here.",
-    date: String = "August 20, 2026",
-    status: String = "Open",
-    priority: String = "High",
+    handoff: Database.Handoff,
     onBackClick: () -> Unit = {}
 ) {
     Column(
@@ -90,7 +87,7 @@ fun HandoffDetailsScreen(
             ) {
 
                 Text(
-                    text = title,
+                    text = handoff.title,
                     color = PrimaryText,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -99,7 +96,10 @@ fun HandoffDetailsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = date,
+                    text = handoff.timestamp
+                        ?.toString()
+                        ?.substringBefore("T")
+                        ?: "Unknown date",
                     color = MutedText,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -111,14 +111,14 @@ fun HandoffDetailsScreen(
                 ) {
                     DetailLabel(
                         label = "Status",
-                        value = status
+                        value = handoff.status.toString()
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
 
                     DetailLabel(
                         label = "Priority",
-                        value = priority
+                        value = handoff.priority.toString()
                     )
                 }
 
@@ -134,7 +134,7 @@ fun HandoffDetailsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = content,
+                    text = handoff.content ?: "",
                     color = PrimaryText,
                     style = MaterialTheme.typography.bodyMedium
                 )

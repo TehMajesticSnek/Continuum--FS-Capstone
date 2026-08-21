@@ -2,6 +2,7 @@ package com.continuum.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +53,8 @@ import com.continuum.ui.theme.Surface
 @Composable
 fun RecordsScreen(
     db: Database,
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    onHandoffClick: (Database.Handoff) -> Unit = {}
 ) {
     var searchText by remember {
         mutableStateOf("")
@@ -215,7 +217,10 @@ fun RecordsScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 10.dp),
+                        .padding(bottom = 10.dp)
+                        .clickable {
+                            onHandoffClick(handoff)
+                        },
                     shape = RoundedCornerShape(8.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Surface
