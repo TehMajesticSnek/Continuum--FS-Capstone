@@ -315,6 +315,10 @@ fun HomeScreen(
         mutableStateOf<Database.Team?>(null)
     }
 
+    var handoffs by remember {
+        mutableStateOf<List<Database.Handoff>>(emptyList())
+    }
+
     LaunchedEffect(Unit) {
         teams = db.getUserTeams()
 
@@ -324,6 +328,7 @@ fun HomeScreen(
             selectedTeam = teams.first()
             //TODO replace this with a more permanent solution
             db.activeTeam = selectedTeam!!.teamID // temp solution
+            handoffs = db.getHandoffs()
         }
     }
 
@@ -395,6 +400,7 @@ fun HomeScreen(
                                 db.activeTeam = selectedTeam!!.teamID // temp solution
 
                                 scope.launch {
+                                    handoffs = db.getHandoffs()
                                     drawerState.close()
                                 }
                             }
@@ -588,6 +594,70 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f)
                 )
             }
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Text(
+                text = "Recent Handoffs",
+                color = PrimaryText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            handoffs
+                .filter { handoff ->
+                    val isRecent =
+                        handoff.timestamp != null &&
+                                handoff.timestamp >= kotlin.time.Clock.System.now() - kotlin.time.Duration.parse("24h")
+
+                    val isHighPriority = handoff.priority >= 2
+
+                    isRecent || isHighPriority
+                }
+                .take(3)
+                .forEach { handoff ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Surface
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = Border
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp)
+                        ) {
+                            Text(
+                                text = handoff.title,
+                                color = PrimaryText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Text(
+                                text = handoff.content ?: "",
+                                color = MutedText,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "Priority: ${handoff.priority}",
+                                color = BluePrimary,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
 
             Spacer(modifier = Modifier.weight(1f))
 
