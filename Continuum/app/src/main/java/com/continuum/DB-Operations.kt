@@ -109,7 +109,15 @@ class Database {
         return errorMsg
 
     }
-
+    fun getFirstName(): String {
+        return supabase.auth.currentSessionOrNull()
+            ?.user
+            ?.userMetadata
+            ?.get("f_name")
+            ?.toString()
+            ?.trim('"')
+            ?: "User"
+    }
     suspend fun login(inputEmail: String, inputPassword: String) : String {
 
         // validate credentials

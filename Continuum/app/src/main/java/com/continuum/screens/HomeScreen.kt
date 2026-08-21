@@ -81,7 +81,6 @@ fun JoinTeamDialog(
     var teamCode by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
 
-
     Dialog(onDismissRequest = onDismissJoin) {
         Box(
             modifier = Modifier
@@ -306,6 +305,15 @@ fun HomeScreen(
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val firstName = db.getFirstName()
+    val currentHour = java.util.Calendar
+        .getInstance()
+        .get(java.util.Calendar.HOUR_OF_DAY)
+    val greeting = when (currentHour) {
+        in 0..11 -> "Good Morning"
+        in 12..17 -> "Good Afternoon"
+        else -> "Good Evening"
+    }
 
     var teams by remember {
         mutableStateOf<List<Database.Team>>(emptyList())
@@ -515,7 +523,7 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             Text(
-                text = "Good Morning, Dominic!",
+                text = "$greeting, $firstName!",
                 color = PrimaryText,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -575,21 +583,25 @@ fun HomeScreen(
 
                 SummaryCard(
                     label = "Open\nIssues",
-                    value = "8",
+                    value = handoffs.count { it.status.toInt() == 0 }.toString(),
                     indicatorColor = BluePrimary,
                     modifier = Modifier.weight(1f)
                 )
 
                 SummaryCard(
                     label = "Critical",
-                    value = "2",
+                    value = handoffs.count { it.priority.toInt() >= 4 }.toString(),
                     indicatorColor = Color.Red,
                     modifier = Modifier.weight(1f)
                 )
 
                 SummaryCard(
                     label = "Resolved\nToday",
-                    value = "12",
+                    value = handoffs.count { handoff ->
+                        handoff.status.toInt() == 3 &&
+                                handoff.timestamp?.toString()?.substringBefore("T") ==
+                                kotlin.time.Clock.System.now().toString().substringBefore("T")
+                    }.toString(),
                     indicatorColor = Color.Green,
                     modifier = Modifier.weight(1f)
                 )
