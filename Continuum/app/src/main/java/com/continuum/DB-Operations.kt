@@ -38,7 +38,7 @@ class Database {
         var teamCode: String? = null,
     )
     @Serializable
-    data class User(
+    data class TeamUser(
         @SerialName("team_id")
         val teamID: Int,
         @SerialName("user_id")
@@ -174,7 +174,7 @@ class Database {
         val maxAttempts = 8
 
         var attempts = 0
-        var errorMsg = ""
+        var errorMsg = "There was an issue creating the team. Please try again"
 
         fun generateCode(): String {
             return (1..8)
@@ -192,9 +192,9 @@ class Database {
                 supabase.from("teams").insert(newTeam)
                 //  add user to team members table
                 joinTeam(newTeam.teamCode.toString(), 1)
+                errorMsg = ""
                 break
             } catch (e: Exception) {
-
                 attempts++
             }
         }
@@ -211,9 +211,11 @@ class Database {
                 filter {
                     eq("team_code", teamCode)
                 }
-            }.decodeSingle<Team>()
-
-            val newUser = User(
+            }.decodeSingleOrNull<Team>()
+            if (teamIDResult == null) {
+                return "Invalid team code"
+            }
+            val newUser = TeamUser(
                 teamIDResult.teamID ?: throw IllegalArgumentException("Invalid team code"),
                 uid,
                 roleID
@@ -221,7 +223,7 @@ class Database {
             supabase.from("team_members").insert(newUser)
 
         } catch (e: Exception) {
-
+            errorMsg = "There was an issue creating the team. Please try again"
         }
         return errorMsg
     }
@@ -263,7 +265,7 @@ class Database {
         }
     }
 
-    suspend fun newHandoff(title: String, content: String?, status: Short = 0, priority: Short = 0): String {
+    suspend fun newHandoff(title: String, content: String?, status: Short = 0, priority: Short = 4): String {
         var errorMsg = ""
 
         try {
@@ -278,7 +280,7 @@ class Database {
             )
             supabase.from("handoffs").insert(newHandoffObj)
         } catch (e: Exception) {
-
+            errorMsg = "There was an issue creating this record. Please try again"
         }
         return errorMsg
     }
@@ -294,8 +296,7 @@ class Database {
                         filter {
                             eq("team_id", activeTeam!!)
                         }
-                    }
-                    .decodeList<Handoff>()
+                    }.decodeList<Handoff>()
             }
         } catch (e: Exception) {
             e.printStackTrace()

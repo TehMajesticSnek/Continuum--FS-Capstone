@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Continuum" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Continuum" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.Continuum.Startup" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#FF0F172A</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/continuum_logo_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.Continuum</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
 
     <style name="AlertTheme" parent="android:Theme.Material.Dialog.Alert">
         <item name="android:windowBackground">@android:color/transparent</item>

@@ -56,17 +56,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-suspend fun showError(context: Context, error: String) {
-    withContext(Dispatchers.Main) {
-        AlertDialog.Builder(context, R.style.AlertTheme)
-            .setTitle("Error:")
-            .setMessage(error)
-            .setPositiveButton("Dismiss") { dialog, _ -> dialog.dismiss() }
-            .create()
-            .show()
-    }
-}
-
 @Composable
 fun LoginScreen(
     db: Database,
@@ -75,7 +64,6 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var resultText by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -199,8 +187,7 @@ fun LoginScreen(
                         }
                     }
                     else {
-                        resultText = response
-                        showError(context, resultText)
+                        showError(context, response)
                     }
                 }
             },

@@ -1,7 +1,13 @@
 package com.continuum.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -20,12 +28,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentType
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.continuum.Database
@@ -48,8 +61,33 @@ fun CreateHandoffScreen(
 ) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
+    val blankMapEntry = java.util.AbstractMap.SimpleEntry((-1).toShort(), "")
+
+    var statExpanded by remember { mutableStateOf(false) }
+    val statOptions = mapOf(
+        0.toShort() to "New",
+        1.toShort() to "Acknowledged",
+        2.toShort() to "In Progress",
+        3.toShort() to "Under Review",
+        4.toShort() to "Complete"
+    )
+    var statSelected by remember { mutableStateOf<Map.Entry<Short, String>>(blankMapEntry) }
+    val statInteractionSource = remember { MutableInteractionSource() }
+
+    var prioExpanded by remember { mutableStateOf(false) }
+    val prioOptions = mapOf(
+        0.toShort() to "Urgent",
+        1.toShort() to "High",
+        2.toShort() to "Medium",
+        3.toShort() to "Neutral",
+        4.toShort() to "Low"
+    )
+    var prioSelected by remember { mutableStateOf<Map.Entry<Short, String>>(blankMapEntry) }
+    val prioInteractionSource = remember { MutableInteractionSource() }
+
 
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -90,6 +128,106 @@ fun CreateHandoffScreen(
             color = MutedText,
             style = MaterialTheme.typography.bodyMedium
         )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+
+            LaunchedEffect(statInteractionSource) {
+                statInteractionSource.interactions.collect { interaction ->
+                    if (interaction is PressInteraction.Release) {
+                        statExpanded = true
+                    }
+                }
+            }
+            LaunchedEffect(prioInteractionSource) {
+                prioInteractionSource.interactions.collect { interaction ->
+                    if (interaction is PressInteraction.Release) {
+                        prioExpanded = true
+                    }
+                }
+            }
+
+            Box (modifier = Modifier.weight(0.75f))
+            {
+                OutlinedTextField(
+                    value = statSelected.value,
+                    onValueChange = { },
+                    label = { Text("Status") },
+                    readOnly = true,
+                    interactionSource = statInteractionSource,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        focusedLabelColor = BluePrimary,
+                        unfocusedLabelColor = MutedText,
+                        cursorColor = BluePrimary,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                DropdownMenu(
+                    expanded = statExpanded,
+                    onDismissRequest = { statExpanded = false }
+                ) {
+                    statOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.value) },
+                            onClick = {
+                                statSelected = option
+                                statExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Box (modifier = Modifier.weight(0.75f))
+            {
+                OutlinedTextField(
+                    value = prioSelected.value,
+                    onValueChange = { },
+                    label = { Text("Priority") },
+                    readOnly = true,
+                    interactionSource = prioInteractionSource,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        focusedLabelColor = BluePrimary,
+                        unfocusedLabelColor = MutedText,
+                        cursorColor = BluePrimary,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                DropdownMenu(
+                    expanded = prioExpanded,
+                    onDismissRequest = { prioExpanded = false }
+                ) {
+                    prioOptions.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option.value) },
+                            onClick = {
+                                prioSelected = option
+                                prioExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(28.dp))
 
@@ -166,13 +304,20 @@ fun CreateHandoffScreen(
             onClick = {
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
-                        db.newHandoff(title, content)
-                    }
+                        val response = db.newHandoff(title, content, statSelected.key, prioSelected.key)
 
-                    onSubmitClick()
+                        if (response == "") {
+                            withContext(Dispatchers.Main) {
+                                onSubmitClick()
+                            }
+                        }
+                        else {
+                            showError(context, response)
+                        }
+                    }
                 }
             },
-            enabled = title.isNotBlank() && content.isNotBlank(),
+            enabled = title.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
