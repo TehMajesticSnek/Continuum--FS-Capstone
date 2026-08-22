@@ -56,16 +56,14 @@ class Database {
         val content: String?,
         val status: Short,
         val priority: Short,
-
         @SerialName("time_created")
         val timestamp: Instant?,
-
         @SerialName("time_edited")
         val editTimestamp: Instant? = null,
-
         @SerialName("handoff_id")
         val handoffID: Int? = null
-    ) @Serializable
+    )
+    @Serializable
     data class Acknowledgement(
         @SerialName("handoff_id")
         val handoffID: Int,
@@ -337,8 +335,7 @@ class Database {
                         eq("handoff_id", handoffID)
                         eq("user_id", currentUserID)
                     }
-                }
-                .decodeList<Acknowledgement>()
+                }.decodeList<Acknowledgement>()
 
             acknowledgements.isNotEmpty()
 
