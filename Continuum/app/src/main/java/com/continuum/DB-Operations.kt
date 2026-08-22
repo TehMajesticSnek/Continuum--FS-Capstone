@@ -56,10 +56,21 @@ class Database {
         val content: String?,
         val status: Short,
         val priority: Short,
+
         @SerialName("time_created")
         val timestamp: Instant?,
+
         @SerialName("time_edited")
-        val editTimestamp: Instant? = null
+        val editTimestamp: Instant? = null,
+
+        @SerialName("handoff_id")
+        val handoffID: Int? = null
+    ) @Serializable
+    data class Acknowledgement(
+        @SerialName("handoff_id")
+        val handoffID: Int,
+        @SerialName("user_id")
+        val userID: String
     )
 
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
@@ -289,6 +300,50 @@ class Database {
         } catch (e: Exception) {
             e.printStackTrace()
             emptyList()
+        }
+    }
+    suspend fun acknowledgeHandoff(handoffID: Int): String {
+        var errorMsg = ""
+
+        try {
+            val currentUserID = uid ?: return "User not logged in"
+
+            val acknowledgement = Acknowledgement(
+                handoffID = handoffID,
+                userID = currentUserID
+            )
+
+            supabase
+                .from("Acknowledgements")
+                .insert(acknowledgement)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMsg = "Unable to acknowledge handoff"
+        }
+
+        return errorMsg
+    }
+
+    suspend fun hasAcknowledgedHandoff(handoffID: Int): Boolean {
+        return try {
+            val currentUserID = uid ?: return false
+
+            val acknowledgements = supabase
+                .from("Acknowledgements")
+                .select {
+                    filter {
+                        eq("handoff_id", handoffID)
+                        eq("user_id", currentUserID)
+                    }
+                }
+                .decodeList<Acknowledgement>()
+
+            acknowledgements.isNotEmpty()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
     }
 }

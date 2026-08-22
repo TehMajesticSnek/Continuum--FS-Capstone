@@ -101,6 +101,7 @@ fun Navigate(db: Database) {
         composable<HandoffDetails> {
             selectedHandoff?.let { handoff ->
                 HandoffDetailsScreen(
+                    db = db,
                     handoff = handoff,
                     onBackClick = {
                         navController.popBackStack()

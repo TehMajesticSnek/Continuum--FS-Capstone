@@ -19,8 +19,16 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -34,9 +42,22 @@ import com.continuum.ui.theme.Surface
 
 @Composable
 fun HandoffDetailsScreen(
+    db: Database,
     handoff: Database.Handoff,
     onBackClick: () -> Unit = {}
 ) {
+    var acknowledged by remember {
+        mutableStateOf(false)
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(handoff.handoffID) {
+        val id = handoff.handoffID
+        if (id != null) {
+            acknowledged = db.hasAcknowledgedHandoff(id)
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -138,6 +159,33 @@ fun HandoffDetailsScreen(
                     color = PrimaryText,
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        val id = handoff.handoffID
+
+                        if (id != null && !acknowledged) {
+                            coroutineScope.launch {
+                                val result = db.acknowledgeHandoff(id)
+
+                                if (result.isEmpty()) {
+                                    acknowledged = true
+                                }
+                            }
+                        }
+                    },
+                    enabled = !acknowledged,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (acknowledged) {
+                            "Acknowledged"
+                        } else {
+                            "Acknowledge Handoff"
+                        }
+                    )
+                }
             }
         }
     }
