@@ -79,6 +79,20 @@ class Database {
         val userID: String,
         val content: String
     )
+    @Serializable
+    data class Note(
+        @SerialName("note_id")
+        val noteID: Long,
+        @SerialName("team_id")
+        val teamID: Int,
+        @SerialName("user_id")
+        val userID: String,
+        val content: String,
+        @SerialName("time_created")
+        val timeCreated: Instant,
+        @SerialName("time_edited")
+        val timeEdited: Instant? = null
+    )
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
         // check all are not null
         if (inputPassword != passwordConfirm)
@@ -290,6 +304,26 @@ class Database {
         }
         return errorMsg
     }
+    suspend fun getNotes(): List<Note> {
+        return try {
+            val currentTeamID = activeTeam ?: return emptyList()
+            val currentUserID = uid ?: return emptyList()
+
+            supabase
+                .from("notes")
+                .select {
+                    filter {
+                        eq("team_id", currentTeamID)
+                        eq("user_id", currentUserID)
+                    }
+                }
+                .decodeList<Note>()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
     suspend fun saveNote(content: String): String {
         var errorMsg = ""
 
@@ -318,7 +352,34 @@ class Database {
 
         return errorMsg
     }
+    suspend fun updateNote(noteID: Long, content: String): String {
+        var errorMsg = ""
 
+        try {
+            if (content.isBlank()) {
+                return "Note cannot be empty"
+            }
+
+            supabase
+                .from("notes")
+                .update(
+                    {
+                        set("content", content)
+                        set("time_edited", Clock.System.now())
+                    }
+                ) {
+                    filter {
+                        eq("note_id", noteID)
+                    }
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMsg = "There was an issue updating this note. Please try again"
+        }
+
+        return errorMsg
+    }
     suspend fun getHandoffs(): List<Handoff> {
         return try {
             if (activeTeam == null) {

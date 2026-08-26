@@ -402,6 +402,193 @@ fun QuickNoteDialog(
         }
     }
 }
+
+@Composable
+fun SavedNotesDialog(
+    db: Database,
+    onDismiss: () -> Unit,
+    onSelectNote: (Database.Note) -> Unit
+) {
+    var notes by remember {
+        mutableStateOf<List<Database.Note>>(emptyList())
+    }
+
+    LaunchedEffect(Unit) {
+        notes = db.getNotes()
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .size(width = 340.dp, height = 420.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = "Saved Notes",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (notes.isEmpty()) {
+                    Text(
+                        text = "No saved notes.",
+                        color = MutedText
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        notes.reversed().forEach { note ->
+
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .clickable {
+                                        onSelectNote(note)
+                                    },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Surface
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = Border
+                                )
+                            ) {
+                                Text(
+                                    text = note.content,
+                                    color = PrimaryText,
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("Close")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EditNoteDialog(
+    db: Database,
+    note: Database.Note,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    var noteContent by remember(note.noteID) {
+        mutableStateOf(note.content)
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .size(width = 320.dp, height = 320.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = "Edit Note",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = noteContent,
+                    onValueChange = { noteContent = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        cursorColor = BluePrimary
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = onDismiss
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val response = db.updateNote(
+                                    noteID = note.noteID,
+                                    content = noteContent
+                                )
+
+                                if (response.isEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        onSuccess()
+                                    }
+                                } else {
+                                    showError(context, response)
+                                }
+                            }
+                        },
+                        enabled = noteContent.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BluePrimary,
+                            contentColor = PrimaryText
+                        ),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text("Save Changes")
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun HomeScreen(
     db: Database,
@@ -416,6 +603,9 @@ fun HomeScreen(
     val context = LocalContext.current
 
     var showQuickNoteDialog by remember { mutableStateOf(false) }
+
+    var showSavedNotesDialog by remember { mutableStateOf(false) }
+    var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
 
     val firstName = db.getFirstName()
     val currentHour = java.util.Calendar
@@ -684,6 +874,26 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            OutlinedButton(
+                onClick = { showSavedNotesDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(6.dp),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = BluePrimary
+                )
+            ) {
+                Text(
+                    text = "Saved Notes",
+                    color = BluePrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             Button(
                 onClick = toNewHandoff,
                 modifier = Modifier
@@ -851,6 +1061,30 @@ fun HomeScreen(
             db = db,
             onDismiss = { showQuickNoteDialog = false },
             onSuccess = { showQuickNoteDialog = false }
+        )
+    }
+    if (showSavedNotesDialog) {
+        SavedNotesDialog(
+            db = db,
+            onDismiss = {
+                showSavedNotesDialog = false
+            },
+            onSelectNote = { note ->
+                selectedNote = note
+                showSavedNotesDialog = false
+            }
+        )
+    }
+    selectedNote?.let { note ->
+        EditNoteDialog(
+            db = db,
+            note = note,
+            onDismiss = {
+                selectedNote = null
+            },
+            onSuccess = {
+                selectedNote = null
+            }
         )
     }
 
