@@ -309,7 +309,99 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
     }
 }
 
+@Composable
+fun QuickNoteDialog(
+    db: Database,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit
+) {
+    var noteContent by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
+    Dialog(onDismissRequest = onDismiss) {
+        Box(
+            modifier = Modifier
+                .size(width = 320.dp, height = 320.dp)
+                .background(
+                    MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(20.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = "Quick Note",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = noteContent,
+                    onValueChange = { noteContent = it },
+                    placeholder = { Text("Enter note...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        cursorColor = BluePrimary,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = onDismiss
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val response = db.saveNote(noteContent)
+
+                                if (response.isEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        onSuccess()
+                                    }
+                                } else {
+                                    showError(context, response)
+                                }
+                            }
+                        },
+                        enabled = noteContent.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BluePrimary,
+                            contentColor = PrimaryText
+                        ),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text("Save")
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 fun HomeScreen(
     db: Database,
@@ -322,6 +414,9 @@ fun HomeScreen(
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    var showQuickNoteDialog by remember { mutableStateOf(false) }
+
     val firstName = db.getFirstName()
     val currentHour = java.util.Calendar
         .getInstance()
@@ -561,6 +656,33 @@ fun HomeScreen(
             )
 
             Spacer(modifier = Modifier.height(18.dp))
+            OutlinedButton(
+                onClick = { showQuickNoteDialog = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(6.dp),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = BluePrimary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Quick Note",
+                    tint = BluePrimary
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Text(
+                    text = "Quick Note",
+                    color = BluePrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             Button(
                 onClick = toNewHandoff,
@@ -724,6 +846,14 @@ fun HomeScreen(
             }
         }
     }
+    if (showQuickNoteDialog) {
+        QuickNoteDialog(
+            db = db,
+            onDismiss = { showQuickNoteDialog = false },
+            onSuccess = { showQuickNoteDialog = false }
+        )
+    }
+
     if (showJoinDialog) {
         JoinTeamDialog(
             db = db,

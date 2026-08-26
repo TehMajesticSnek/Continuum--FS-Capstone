@@ -71,6 +71,14 @@ class Database {
         val userID: String
     )
 
+    @Serializable
+    data class NoteInsert(
+        @SerialName("team_id")
+        val teamID: Int,
+        @SerialName("user_id")
+        val userID: String,
+        val content: String
+    )
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
         // check all are not null
         if (inputPassword != passwordConfirm)
@@ -280,6 +288,34 @@ class Database {
         } catch (e: Exception) {
             errorMsg = "There was an issue creating this record. Please try again"
         }
+        return errorMsg
+    }
+    suspend fun saveNote(content: String): String {
+        var errorMsg = ""
+
+        try {
+            val currentUserID = uid ?: return "User not logged in"
+            val currentTeamID = activeTeam ?: return "No team selected"
+
+            if (content.isBlank()) {
+                return "Note cannot be empty"
+            }
+
+            val newNote = NoteInsert(
+                teamID = currentTeamID,
+                userID = currentUserID,
+                content = content
+            )
+
+            supabase
+                .from("notes")
+                .insert(newNote)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMsg = "There was an issue saving this note. Please try again"
+        }
+
         return errorMsg
     }
 
