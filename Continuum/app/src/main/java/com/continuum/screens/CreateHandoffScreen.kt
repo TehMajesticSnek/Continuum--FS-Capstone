@@ -56,11 +56,15 @@ import kotlinx.coroutines.withContext
 @Composable
 fun CreateHandoffScreen(
     db: Database,
+    initialContent: String = "",
     onBackClick: () -> Unit = {},
     onSubmitClick: () -> Unit = {}
 ) {
     var title by remember { mutableStateOf("") }
-    var content by remember { mutableStateOf("") }
+
+    var content by remember(initialContent) {
+        mutableStateOf(initialContent)
+    }
     val blankMapEntry = java.util.AbstractMap.SimpleEntry((-1).toShort(), "")
 
     var statExpanded by remember { mutableStateOf(false) }

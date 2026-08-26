@@ -496,7 +496,8 @@ fun EditNoteDialog(
     db: Database,
     note: Database.Note,
     onDismiss: () -> Unit,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
+    onCreateHandoff: () -> Unit
 ) {
     var noteContent by remember(note.noteID) {
         mutableStateOf(note.content)
@@ -547,6 +548,24 @@ fun EditNoteDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                OutlinedButton(
+                    onClick = onCreateHandoff,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = BluePrimary
+                    )
+                ) {
+                    Text(
+                        text = "Create Handoff",
+                        color = BluePrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -593,6 +612,7 @@ fun EditNoteDialog(
 fun HomeScreen(
     db: Database,
     toNewHandoff: () -> Unit = {},
+    toHandoffFromNote: (String) -> Unit = {},
     toHistory: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(
@@ -1083,6 +1103,10 @@ fun HomeScreen(
                 selectedNote = null
             },
             onSuccess = {
+                selectedNote = null
+            },
+            onCreateHandoff = {
+                toHandoffFromNote(note.content)
                 selectedNote = null
             }
         )

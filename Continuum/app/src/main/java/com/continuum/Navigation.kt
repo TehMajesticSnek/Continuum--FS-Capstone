@@ -40,6 +40,9 @@ fun Navigate(db: Database) {
     var selectedHandoff by remember {
         mutableStateOf<Database.Handoff?>(null)
     }
+    var handoffDraftContent by remember {
+        mutableStateOf("")
+    }
 
     var lastBackPressTime = 0L
     val exitToast = Toast.makeText(context, "Double tap to exit", Toast.LENGTH_SHORT)
@@ -100,6 +103,11 @@ fun Navigate(db: Database) {
             HomeScreen(
                 db,
                 toNewHandoff = {
+                    handoffDraftContent = ""
+                    navController.navigate(NewHandoff)
+                },
+                toHandoffFromNote = { noteContent ->
+                    handoffDraftContent = noteContent
                     navController.navigate(NewHandoff)
                 },
                 toHistory = {
@@ -111,6 +119,7 @@ fun Navigate(db: Database) {
         composable<NewHandoff> {
             CreateHandoffScreen(
                 db = db,
+                initialContent = handoffDraftContent,
                 onBackClick = {
                     navController.popBackStack()
                 },
