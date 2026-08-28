@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,10 +57,36 @@ fun HandoffDetailsScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
+    var comments by remember {
+        mutableStateOf<List<Database.Comment>>(emptyList())
+    }
+
+    var commentAuthors by remember {
+        mutableStateOf<Map<String, String>>(emptyMap())
+    }
+
+    var newEntry by remember {
+        mutableStateOf("")
+    }
+
+    var isAction by remember {
+        mutableStateOf(false)
+    }
+
     LaunchedEffect(handoff.handoffID) {
         val id = handoff.handoffID
+
         if (id != null) {
             acknowledged = db.hasAcknowledgedHandoff(id)
+
+            comments = db.getComments(id)
+
+            commentAuthors = comments
+                .map { it.userID }
+                .distinct()
+                .associateWith { userID ->
+                    db.getUserFirstName(userID)
+                }
         }
     }
     Column(
@@ -63,6 +94,7 @@ fun HandoffDetailsScreen(
             .fillMaxSize()
             .background(NavyBackground)
             .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(
                 start = 20.dp,
                 end = 20.dp,
@@ -183,6 +215,155 @@ fun HandoffDetailsScreen(
                             "Acknowledged"
                         } else {
                             "Acknowledge Handoff"
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Text(
+                    text = "Updates",
+                    color = BluePrimary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                comments.forEach { comment ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = NavyBackground
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = Border
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp)
+                        ) {
+                            Text(
+                                text = if (comment.isAction) {
+                                    "Attempted Action"
+                                } else {
+                                    "Comment"
+                                },
+                                color = BluePrimary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Text(
+                                text = comment.content,
+                                color = PrimaryText
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "${commentAuthors[comment.userID] ?: "User"} • ${
+                                    comment.timeCreated
+                                        .toString()
+                                        .replace("T", " ")
+                                        .substringBefore(".")
+                                }",
+                                color = MutedText,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            isAction = false
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Comment")
+                    }
+
+                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            isAction = true
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Attempted Action")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = newEntry,
+                    onValueChange = {
+                        newEntry = it
+                    },
+                    placeholder = {
+                        Text(
+                            if (isAction) {
+                                "Describe the attempted action..."
+                            } else {
+                                "Enter a comment..."
+                            }
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText,
+                        cursorColor = BluePrimary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        val id = handoff.handoffID
+
+                        if (id != null && newEntry.isNotBlank()) {
+                            coroutineScope.launch {
+                                val result = db.addComment(
+                                    handoffID = id,
+                                    content = newEntry,
+                                    isAction = isAction
+                                )
+
+                                if (result.isEmpty()) {
+                                    newEntry = ""
+                                    comments = db.getComments(id)
+                                }
+                            }
+                        }
+                    },
+                    enabled = newEntry.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (isAction) {
+                            "Add Attempted Action"
+                        } else {
+                            "Add Comment"
                         }
                     )
                 }

@@ -46,6 +46,14 @@ class Database {
         @SerialName("role_id")
         val roleID: Long
     )
+
+    @Serializable
+    data class User(
+        @SerialName("user_id")
+        val userID: String,
+        @SerialName("f_name")
+        val firstName: String
+    )
     @Serializable
     data class Handoff(
         @SerialName("team_id")
@@ -92,6 +100,36 @@ class Database {
         val timeCreated: Instant,
         @SerialName("time_edited")
         val timeEdited: Instant? = null
+    )
+
+    @Serializable
+    data class CommentInsert(
+        @SerialName("handoff_id")
+        val handoffID: Int,
+        @SerialName("user_id")
+        val userID: String,
+        val content: String,
+        @SerialName("time_created")
+        val timeCreated: Instant,
+        @SerialName("is_action")
+        val isAction: Boolean
+    )
+
+    @Serializable
+    data class Comment(
+        @SerialName("comment_id")
+        val commentID: Long,
+        @SerialName("handoff_id")
+        val handoffID: Int,
+        @SerialName("user_id")
+        val userID: String,
+        @SerialName("parent_id")
+        val parentID: Long? = null,
+        val content: String,
+        @SerialName("time_created")
+        val timeCreated: Instant,
+        @SerialName("is_action")
+        val isAction: Boolean
     )
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
         // check all are not null
@@ -148,6 +186,24 @@ class Database {
             ?.toString()
             ?.trim('"')
             ?: "User"
+    }
+    suspend fun getUserFirstName(userID: String): String {
+        return try {
+            val result = supabase
+                .from("users")
+                .select {
+                    filter {
+                        eq("user_id", userID)
+                    }
+                }
+                .decodeSingle<User>()
+
+            result.firstName
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "User"
+        }
     }
     suspend fun login(inputEmail: String, inputPassword: String) : String {
 
@@ -379,6 +435,57 @@ class Database {
         }
 
         return errorMsg
+    }
+
+    suspend fun addComment(
+        handoffID: Int,
+        content: String,
+        isAction: Boolean
+    ): String {
+        var errorMsg = ""
+
+        try {
+            val currentUserID = uid ?: return "User not logged in"
+
+            if (content.isBlank()) {
+                return "Comment cannot be empty"
+            }
+
+            val newComment = CommentInsert(
+                handoffID = handoffID,
+                userID = currentUserID,
+                content = content,
+                timeCreated = Clock.System.now(),
+                isAction = isAction
+            )
+
+            supabase
+                .from("comments")
+                .insert(newComment)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMsg = "There was an issue saving this entry. Please try again"
+        }
+
+        return errorMsg
+    }
+
+    suspend fun getComments(handoffID: Int): List<Comment> {
+        return try {
+            supabase
+                .from("comments")
+                .select {
+                    filter {
+                        eq("handoff_id", handoffID)
+                    }
+                }
+                .decodeList<Comment>()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
     }
     suspend fun getHandoffs(): List<Handoff> {
         return try {
