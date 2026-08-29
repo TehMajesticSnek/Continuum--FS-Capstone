@@ -50,8 +50,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
-import com.continuum.Database
+import com.continuum.data.Database
 import com.continuum.R
+import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -64,7 +65,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun RegisterScreen(
-    db: Database,
+    viewModel: ViewModel,
     toLogin: () -> Unit,
     toHome: () -> Unit,
 ) {
@@ -307,7 +308,7 @@ fun RegisterScreen(
         Button(
             onClick = {
                 coroutineScope.launch(Dispatchers.IO) {
-                    val response = db.registerUser(email, password, passwordConfirm, fName, lName)
+                    val response = viewModel.db.registerUser(email, password, passwordConfirm, fName, lName)
                     if (response == "") {
                         withContext(Dispatchers.Main) {
                             toHome()

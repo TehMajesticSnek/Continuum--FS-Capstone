@@ -1,7 +1,5 @@
 package com.continuum.screens
 
-import android.app.AlertDialog
-import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -44,8 +42,9 @@ import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
-import com.continuum.Database
+import com.continuum.data.Database
 import com.continuum.R
+import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -58,7 +57,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun LoginScreen(
-    db: Database,
+    viewModel: ViewModel,
     toRegister: () -> Unit,
     toHome: () -> Unit,
 ) {
@@ -180,7 +179,7 @@ fun LoginScreen(
         Button(
             onClick = {
                 coroutineScope.launch(Dispatchers.IO) {
-                    val response = db.login(email, password)
+                    val response = viewModel.db.login(email, password)
                     if (response == "") {
                         withContext(Dispatchers.Main) {
                             toHome()

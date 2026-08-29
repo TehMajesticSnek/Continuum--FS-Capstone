@@ -1,6 +1,5 @@
 package com.continuum.screens
 
-import android.R
 import android.app.AlertDialog
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
@@ -68,7 +67,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.continuum.Database
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.continuum.data.Database
+import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -77,9 +78,9 @@ import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.format.Padding
 
 suspend fun showError(context: Context, error: String) {
     withContext(Dispatchers.Main) {
@@ -616,7 +617,7 @@ fun EditNoteDialog(
 
 @Composable
 fun HomeScreen(
-    db: Database,
+    viewModel: ViewModel,
     toNewHandoff: () -> Unit = {},
     toHandoffFromNote: (String) -> Unit = {},
     toHistory: () -> Unit = {}
@@ -633,7 +634,7 @@ fun HomeScreen(
     var showSavedNotesDialog by remember { mutableStateOf(false) }
     var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
 
-    val firstName = db.getFirstName()
+    val firstName = viewModel.db.getFirstName()
     val currentHour = java.util.Calendar
         .getInstance()
         .get(java.util.Calendar.HOUR_OF_DAY)
@@ -650,6 +651,7 @@ fun HomeScreen(
     var selectedTeam by remember {
         mutableStateOf<Database.Team?>(null)
     }
+    val savedTeam by viewModel.selectedTeam.collectAsStateWithLifecycle()
 
     var handoffs by remember {
         mutableStateOf<List<Database.Handoff>>(emptyList())
@@ -671,29 +673,51 @@ fun HomeScreen(
         4.toShort() to "Low"
     )
 
-    LaunchedEffect(Unit) {
-        teams = db.getUserTeams()
+    suspend fun refreshTeams() { // TODO update create and join to auto-select new team
 
-        if (selectedTeam == null && teams.isNotEmpty()) {
-            selectedTeam = teams.first()
-            //TODO replace this with a more permanent solution
-            db.activeTeam = selectedTeam!!.teamID // temp solution
-            handoffs = db.getHandoffs()
-        }
-    }
+        teams = viewModel.db.getUserTeams()
 
-    fun refreshTeams() {
-        scope.launch {
-            teams = db.getUserTeams()
-
-            if (teams.isNotEmpty()) {
-                selectedTeam = teams.first()
-                db.activeTeam = selectedTeam!!.teamID // temp solution
-            } else {
-                selectedTeam = null
+        if (teams.isEmpty()) {
+            // prompt join team
+        } else if (savedTeam != 0) {
+            for (team in teams) {
+                if (savedTeam == team.teamID) {
+                    selectedTeam = team
+                    viewModel.db.activeTeam = team.teamID
+                    break
+                }
             }
+        } else {
+            selectedTeam = null
+        }
+        handoffs = viewModel.db.getHandoffs()
+    }
+
+    LaunchedEffect(Unit) { // if a team is stored, run that first. Displays a little faster
+        if (viewModel.selectedTeam.value == 0) {
+            refreshTeams()
+            return@LaunchedEffect
+        }
+
+        handoffs = viewModel.db.getHandoffs()
+
+        teams = viewModel.db.getUserTeams()
+        if (teams.isEmpty()) {
+            // prompt join team
+        } else if (savedTeam != 0) {
+            for (team in teams) {
+                if (savedTeam == team.teamID) {
+                    selectedTeam = team
+                    viewModel.db.activeTeam = team.teamID
+                    break
+                }
+            }
+        } else {
+            selectedTeam = null
         }
     }
+
+
 
     var showJoinDialog by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -745,10 +769,10 @@ fun HomeScreen(
                             selected = team.teamID == selectedTeam?.teamID,
                             onClick = {
                                 selectedTeam = team
-                                db.activeTeam = selectedTeam!!.teamID // temp solution
+                                viewModel.selectTeam(selectedTeam!!.teamID ?: 0)
 
                                 scope.launch {
-                                    handoffs = db.getHandoffs()
+                                    refreshTeams()
                                     drawerState.close()
                                 }
                             }
@@ -1115,14 +1139,14 @@ fun HomeScreen(
     }
     if (showQuickNoteDialog) {
         QuickNoteDialog(
-            db = db,
+            db = viewModel.db,
             onDismiss = { showQuickNoteDialog = false },
             onSuccess = { showQuickNoteDialog = false }
         )
     }
     if (showSavedNotesDialog) {
         SavedNotesDialog(
-            db = db,
+            db = viewModel.db,
             onDismiss = {
                 showSavedNotesDialog = false
             },
@@ -1134,7 +1158,7 @@ fun HomeScreen(
     }
     selectedNote?.let { note ->
         EditNoteDialog(
-            db = db,
+            db = viewModel.db,
             note = note,
             onDismiss = {
                 selectedNote = null
@@ -1151,24 +1175,28 @@ fun HomeScreen(
 
     if (showJoinDialog) {
         JoinTeamDialog(
-            db = db,
+            db = viewModel.db,
             onDismissJoin = { showJoinDialog = false },
             onShowCreate = { showCreateDialog = true },
             onSuccessJoin = {
                 showJoinDialog = false
-                refreshTeams()
+                scope.launch(Dispatchers.IO) {
+                    refreshTeams()
+                }
             }
         )
     }
 
     if (showCreateDialog) {
         CreateTeamDialog(
-            db = db,
+            db = viewModel.db,
             onDismissCreate = { showCreateDialog = false },
             onSuccessCreate = {
                 showCreateDialog = false
                 showJoinDialog = false
-                refreshTeams()
+                scope.launch(Dispatchers.IO) {
+                    refreshTeams()
+                }
             }
         )
     }

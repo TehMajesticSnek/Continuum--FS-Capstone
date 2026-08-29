@@ -1,6 +1,6 @@
 package com.continuum.screens
 
-import com.continuum.Database
+import com.continuum.data.Database
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -47,7 +48,7 @@ import com.continuum.ui.theme.Surface
 
 @Composable
 fun HandoffDetailsScreen(
-    db: Database,
+    viewModel: ViewModel,
     handoff: Database.Handoff,
     onBackClick: () -> Unit = {}
 ) {
@@ -93,15 +94,15 @@ fun HandoffDetailsScreen(
         val id = handoff.handoffID
 
         if (id != null) {
-            acknowledged = db.hasAcknowledgedHandoff(id)
+            acknowledged = viewModel.db.hasAcknowledgedHandoff(id)
 
-            comments = db.getComments(id)
+            comments = viewModel.db.getComments(id)
 
             commentAuthors = comments
                 .map { it.userID }
                 .distinct()
                 .associateWith { userID ->
-                    db.getUserFirstName(userID)
+                    viewModel.db.getUserFirstName(userID)
                 }
         }
     }
@@ -215,7 +216,7 @@ fun HandoffDetailsScreen(
 
                         if (id != null && !acknowledged) {
                             coroutineScope.launch {
-                                val result = db.acknowledgeHandoff(id)
+                                val result = viewModel.db.acknowledgeHandoff(id)
 
                                 if (result.isEmpty()) {
                                     acknowledged = true
@@ -359,7 +360,7 @@ fun HandoffDetailsScreen(
 
                         if (id != null && newEntry.isNotBlank()) {
                             coroutineScope.launch {
-                                val result = db.addComment(
+                                val result = viewModel.db.addComment(
                                     handoffID = id,
                                     content = newEntry,
                                     isAction = isAction
@@ -367,7 +368,7 @@ fun HandoffDetailsScreen(
 
                                 if (result.isEmpty()) {
                                     newEntry = ""
-                                    comments = db.getComments(id)
+                                    comments = viewModel.db.getComments(id)
                                 }
                             }
                         }

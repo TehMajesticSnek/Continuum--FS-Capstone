@@ -1,7 +1,6 @@
 package com.continuum.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
@@ -35,13 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentType
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.continuum.Database
+import com.continuum.data.Database
+import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -49,13 +46,12 @@ import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
 fun CreateHandoffScreen(
-    db: Database,
+    viewModel: ViewModel,
     initialContent: String = "",
     onBackClick: () -> Unit = {},
     onSubmitClick: () -> Unit = {}
@@ -308,8 +304,7 @@ fun CreateHandoffScreen(
             onClick = {
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
-
-                        val response = db.newHandoff(title, content, statSelected!!.key, prioSelected!!.key)
+                        val response = viewModel.db.newHandoff(title, content, statSelected!!.key, prioSelected!!.key)
 
                         if (response == "") {
                             withContext(Dispatchers.Main) {

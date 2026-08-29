@@ -46,10 +46,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.continuum.Database
+import com.continuum.data.Database
+import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -59,7 +59,7 @@ import com.continuum.ui.theme.Surface
 
 @Composable
 fun RecordsScreen(
-    db: Database,
+    viewModel: ViewModel,
     toHome: () -> Unit = {},
     onBackClick: () -> Unit = {},
     onHandoffClick: (Database.Handoff) -> Unit = {}
@@ -88,7 +88,7 @@ fun RecordsScreen(
     )
 
     LaunchedEffect(Unit) {
-        handoffs = db.getHandoffs()
+        handoffs = viewModel.db.getHandoffs()
     }
     Scaffold (
         bottomBar = {

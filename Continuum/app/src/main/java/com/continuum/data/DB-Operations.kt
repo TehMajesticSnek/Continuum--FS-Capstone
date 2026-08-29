@@ -1,4 +1,4 @@
-package com.continuum
+package com.continuum.data
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -16,15 +16,15 @@ import kotlin.Int
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-val supabase = createSupabaseClient(
-    supabaseUrl = "https://bbwivjungybfetfpnoyu.supabase.co",
-    supabaseKey = "sb_publishable_ySkpmX-JfWWJ8mNzYR035A_avt2S9N_" // Public key. Safe to hard code I'm pretty sure. Make sure RLS is on in all tables though
-) {
-    install(Postgrest)
-    install(Auth)
-}
 
 class Database {
+    val supabase = createSupabaseClient(
+        supabaseUrl = "https://bbwivjungybfetfpnoyu.supabase.co",
+        supabaseKey = "sb_publishable_ySkpmX-JfWWJ8mNzYR035A_avt2S9N_" // Public key. Safe to hard code I'm pretty sure. Make sure RLS is on in all tables though
+    ) {
+        install(Postgrest)
+        install(Auth)
+    }
     var uid: String? = null
     var activeTeam: Int? = null
 
@@ -219,6 +219,20 @@ class Database {
             uid = supabase.auth.currentSessionOrNull()?.user?.id.toString()
         }
         return errorMsg
+    }
+
+    suspend fun isLoggedIn(): Boolean {
+        supabase.auth.awaitInitialization()
+
+        val currentSession = supabase.auth.currentSessionOrNull()
+
+        if (currentSession != null) {
+            // User is already logged in, navigate straight to the Home Screen
+            return true
+        } else {
+            // No cached user found, direct them to the Login Screen
+            return false
+        }
     }
 
     fun getFirstName(): String {
