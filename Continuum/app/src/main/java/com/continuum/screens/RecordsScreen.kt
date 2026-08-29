@@ -94,14 +94,13 @@ fun RecordsScreen(
         bottomBar = {
             BottomAppBar(
                 containerColor = NavyBackground,
-                contentPadding = PaddingValues.Zero,
+                contentPadding = PaddingValues(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 30.dp),
                 windowInsets = WindowInsets(0, 0, 0, 80),
                 modifier = Modifier.wrapContentHeight()
             ) {
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 0.dp),
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
 
                     ) {

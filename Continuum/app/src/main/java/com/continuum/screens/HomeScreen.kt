@@ -808,49 +808,44 @@ fun HomeScreen(
             bottomBar = {
                 BottomAppBar(
                     containerColor = NavyBackground,
-                    contentPadding = PaddingValues.Zero,
+                    contentPadding = PaddingValues(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 30.dp),
                     windowInsets = WindowInsets(0, 0, 0, 80),
-
-                    // 3. Do NOT set a hardcoded height modifier here; let wrapContentHeight do the work
                     modifier = Modifier.wrapContentHeight()
-                            //modifier = Modifier.wrapContentHeight()
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
 
-                }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 0.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
 
-                ) {
+                        BottomNavItem(
+                            icon = Icons.Default.Home,
+                            label = "Home",
+                            selected = true
+                        )
 
-                    BottomNavItem(
-                        icon = Icons.Default.Home,
-                        label = "Home",
-                        selected = true
-                    )
+                        BottomNavItem(
+                            icon = Icons.AutoMirrored.Outlined.Assignment,
+                            label = "Handoffs"
+                        )
 
-                    BottomNavItem(
-                        icon = Icons.AutoMirrored.Outlined.Assignment,
-                        label = "Handoffs"
-                    )
+                        BottomNavItem(
+                            icon = Icons.Outlined.Warning,
+                            label = "Issues"
+                        )
 
-                    BottomNavItem(
-                        icon = Icons.Outlined.Warning,
-                        label = "Issues"
-                    )
+                        BottomNavItem(
+                            icon = Icons.Default.Search,
+                            label = "History",
+                            onClick = toHistory
+                        )
 
-                    BottomNavItem(
-                        icon = Icons.Default.Search,
-                        label = "History",
-                        onClick = toHistory
-                    )
-
-                    BottomNavItem(
-                        icon = Icons.Default.Settings,
-                        label = "Settings"
-                    )
+                        BottomNavItem(
+                            icon = Icons.Default.Settings,
+                            label = "Settings"
+                        )
+                    }
                 }
             }
         ) {
@@ -867,7 +862,6 @@ fun HomeScreen(
                         bottom = 24.dp
                     )
             ) {
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
