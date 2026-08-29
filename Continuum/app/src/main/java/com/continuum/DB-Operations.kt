@@ -346,7 +346,7 @@ class Database {
         }
     }
 
-    suspend fun newHandoff(title: String, content: String?, status: Short = 0, priority: Short = 4): String {
+    suspend fun newHandoff(title: String, content: String?, status: Short, priority: Short): String {
         var errorMsg = ""
 
         try {

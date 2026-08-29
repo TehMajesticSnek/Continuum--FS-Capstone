@@ -75,7 +75,7 @@ fun CreateHandoffScreen(
         3.toShort() to "Under Review",
         4.toShort() to "Complete"
     )
-    var statSelected by remember { mutableStateOf<Map.Entry<Short, String>>(blankMapEntry) }
+    var statSelected by remember { mutableStateOf(statOptions.entries.find { it.key == 0.toShort() }) }
     val statInteractionSource = remember { MutableInteractionSource() }
 
     var prioExpanded by remember { mutableStateOf(false) }
@@ -86,7 +86,7 @@ fun CreateHandoffScreen(
         3.toShort() to "Neutral",
         4.toShort() to "Low"
     )
-    var prioSelected by remember { mutableStateOf<Map.Entry<Short, String>>(blankMapEntry) }
+    var prioSelected by remember { mutableStateOf(prioOptions.entries.find { it.key == 3.toShort() }) }
     val prioInteractionSource = remember { MutableInteractionSource() }
 
 
@@ -155,7 +155,7 @@ fun CreateHandoffScreen(
             Box (modifier = Modifier.weight(0.75f))
             {
                 OutlinedTextField(
-                    value = statSelected.value,
+                    value = statSelected!!.value,
                     onValueChange = { },
                     label = { Text("Status") },
                     readOnly = true,
@@ -195,7 +195,7 @@ fun CreateHandoffScreen(
             Box (modifier = Modifier.weight(0.75f))
             {
                 OutlinedTextField(
-                    value = prioSelected.value,
+                    value = prioSelected!!.value,
                     onValueChange = { },
                     label = { Text("Priority") },
                     readOnly = true,
@@ -308,7 +308,8 @@ fun CreateHandoffScreen(
             onClick = {
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
-                        val response = db.newHandoff(title, content, statSelected.key, prioSelected.key)
+
+                        val response = db.newHandoff(title, content, statSelected!!.key, prioSelected!!.key)
 
                         if (response == "") {
                             withContext(Dispatchers.Main) {
