@@ -9,8 +9,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,6 +49,7 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -74,6 +79,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.format.Padding
 
 suspend fun showError(context: Context, error: String) {
     withContext(Dispatchers.Main) {
@@ -649,6 +655,22 @@ fun HomeScreen(
         mutableStateOf<List<Database.Handoff>>(emptyList())
     }
 
+    val statOptions = mapOf(
+        0.toShort() to "New",
+        1.toShort() to "Acknowledged",
+        2.toShort() to "In Progress",
+        3.toShort() to "Under Review",
+        4.toShort() to "Complete"
+    )
+
+    val prioOptions = mapOf(
+        0.toShort() to "Urgent",
+        1.toShort() to "High",
+        2.toShort() to "Medium",
+        3.toShort() to "Neutral",
+        4.toShort() to "Low"
+    )
+
     LaunchedEffect(Unit) {
         teams = db.getUserTeams()
 
@@ -782,299 +804,320 @@ fun HomeScreen(
             }
         }
     ) {
+        Scaffold (
+            bottomBar = {
+                BottomAppBar(
+                    containerColor = NavyBackground,
+                    contentPadding = PaddingValues.Zero,
+                    windowInsets = WindowInsets(0, 0, 0, 80),
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(NavyBackground)
-                .statusBarsPadding()
-                .padding(
-                    start = 20.dp,
-                    end = 20.dp,
-                    top = 12.dp,
-                    bottom = 24.dp
-                )
-                .verticalScroll(rememberScrollState()),
+                    // 3. Do NOT set a hardcoded height modifier here; let wrapContentHeight do the work
+                    modifier = Modifier.wrapContentHeight()
+                            //modifier = Modifier.wrapContentHeight()
+                ) {
+
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+
+                ) {
+
+                    BottomNavItem(
+                        icon = Icons.Default.Home,
+                        label = "Home",
+                        selected = true
+                    )
+
+                    BottomNavItem(
+                        icon = Icons.AutoMirrored.Outlined.Assignment,
+                        label = "Handoffs"
+                    )
+
+                    BottomNavItem(
+                        icon = Icons.Outlined.Warning,
+                        label = "Issues"
+                    )
+
+                    BottomNavItem(
+                        icon = Icons.Default.Search,
+                        label = "History",
+                        onClick = toHistory
+                    )
+
+                    BottomNavItem(
+                        icon = Icons.Default.Settings,
+                        label = "Settings"
+                    )
+                }
+            }
         ) {
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            it
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(NavyBackground)
+                    .statusBarsPadding()
+                    .padding(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = 12.dp,
+                        bottom = 24.dp
+                    )
             ) {
 
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            drawerState.open()
-                        }
-                    },
-                    modifier = Modifier.size(40.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                drawerState.open()
+                            }
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Open Teams Menu",
+                            tint = PrimaryText,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Text(
+                        text = "CONTINUUM",
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+
                     Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = "Open Teams Menu",
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Notifications",
                         tint = PrimaryText,
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier
+                            .size(40.dp)
+                            .padding(7.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(28.dp))
 
                 Text(
-                    text = "CONTINUUM",
+                    text = "$greeting, $firstName!",
                     color = PrimaryText,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications",
-                    tint = PrimaryText,
+                Text(
+                    text = "Here's what's happening across your shifts.",
+                    color = MutedText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Team: ${selectedTeam?.teamName ?: "No Team Selected"}",
+                    color = BluePrimary,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                OutlinedButton(
+                    onClick = { showQuickNoteDialog = true },
                     modifier = Modifier
-                        .size(40.dp)
-                        .padding(7.dp)
-                )
-            }
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = BluePrimary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Quick Note",
+                        tint = BluePrimary
+                    )
 
-            Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
 
-            Text(
-                text = "$greeting, $firstName!",
-                color = PrimaryText,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Here's what's happening across your shifts.",
-                color = MutedText,
-                style = MaterialTheme.typography.bodySmall
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "Team: ${selectedTeam?.teamName ?: "No Team Selected"}",
-                color = BluePrimary,
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-            OutlinedButton(
-                onClick = { showQuickNoteDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(6.dp),
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = BluePrimary
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Quick Note",
-                    tint = BluePrimary
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    text = "Quick Note",
-                    color = BluePrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            OutlinedButton(
-                onClick = { showSavedNotesDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(6.dp),
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = BluePrimary
-                )
-            ) {
-                Text(
-                    text = "Saved Notes",
-                    color = BluePrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Button(
-                onClick = toNewHandoff,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(6.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BluePrimary,
-                    contentColor = PrimaryText
-                )
-            ) {
-                Text(
-                    text = "New Handoff",
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Summary",
-                color = PrimaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-
-                SummaryCard(
-                    label = "Open\nIssues",
-                    value = handoffs.count { it.status.toInt() == 0 }.toString(),
-                    indicatorColor = BluePrimary,
-                    modifier = Modifier.weight(1f)
-                )
-
-                SummaryCard(
-                    label = "Critical",
-                    value = handoffs.count { it.priority.toInt() >= 4 }.toString(),
-                    indicatorColor = Color.Red,
-                    modifier = Modifier.weight(1f)
-                )
-
-                SummaryCard(
-                    label = "Resolved\nToday",
-                    value = handoffs.count { handoff ->
-                        handoff.status.toInt() == 3 &&
-                                handoff.timestamp?.toString()?.substringBefore("T") ==
-                                kotlin.time.Clock.System.now().toString().substringBefore("T")
-                    }.toString(),
-                    indicatorColor = Color.Green,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = "Recent Handoffs",
-                color = PrimaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            handoffs.reversed()
-                .filter { handoff ->
-                    val isRecent =
-                        handoff.timestamp != null &&
-                                handoff.timestamp >= kotlin.time.Clock.System.now() - kotlin.time.Duration.parse("24h")
-
-                    val isHighPriority = handoff.priority >= 4
-
-                    isRecent || isHighPriority
+                    Text(
+                        text = "Quick Note",
+                        color = BluePrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
-                .take(3)
-                .forEach { handoff ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Surface
-                        ),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = Border
-                        )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                OutlinedButton(
+                    onClick = { showSavedNotesDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = BluePrimary
+                    )
+                ) {
+                    Text(
+                        text = "Saved Notes",
+                        color = BluePrimary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                    onClick = toNewHandoff,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BluePrimary,
+                        contentColor = PrimaryText
+                    )
+                ) {
+                    Text(
+                        text = "New Handoff",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                ) {
+
+                    Text(
+                        text = "Summary",
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp)
-                        ) {
-                            Text(
-                                text = handoff.title,
-                                color = PrimaryText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                        SummaryCard(
+                            label = "Open\nIssues",
+                            value = handoffs.count { it.status.toInt() == 0 }.toString(),
+                            indicatorColor = BluePrimary,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                            Text(
-                                text = handoff.content ?: "",
-                                color = MutedText,
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        SummaryCard(
+                            label = "Critical",
+                            value = handoffs.count { it.priority.toInt() >= 4 }.toString(),
+                            indicatorColor = Color.Red,
+                            modifier = Modifier.weight(1f)
+                        )
 
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = "Priority: ${handoff.priority}",
-                                color = BluePrimary,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
+                        SummaryCard(
+                            label = "Resolved\nToday",
+                            value = handoffs.count { handoff ->
+                                handoff.status.toInt() == 3 &&
+                                        handoff.timestamp?.toString()?.substringBefore("T") ==
+                                        kotlin.time.Clock.System.now().toString().substringBefore("T")
+                            }.toString(),
+                            indicatorColor = Color.Green,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Text(
+                        text = "Recent Handoffs",
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    handoffs.reversed()
+                        .filter { handoff ->
+                            val isRecent =
+                                handoff.timestamp != null &&
+                                        handoff.timestamp >= kotlin.time.Clock.System.now() - kotlin.time.Duration.parse("24h")
+
+                            val isHighPriority = handoff.priority >= 4
+
+                            isRecent || isHighPriority
+                        }
+                        .take(3)
+                        .forEach { handoff ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Surface
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = Border
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp)
+                                ) {
+                                    Text(
+                                        text = handoff.title,
+                                        color = PrimaryText,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text = handoff.content ?: "",
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text(
+                                        text = "Status: ${statOptions[handoff.status]}  •  Priority: ${prioOptions[handoff.priority]}",
+                                        color = BluePrimary,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-
-                BottomNavItem(
-                    icon = Icons.Default.Home,
-                    label = "Home",
-                    selected = true
-                )
-
-                BottomNavItem(
-                    icon = Icons.AutoMirrored.Outlined.Assignment,
-                    label = "Handoffs"
-                )
-
-                BottomNavItem(
-                    icon = Icons.Outlined.Warning,
-                    label = "Issues"
-                )
-
-                BottomNavItem(
-                    icon = Icons.Default.Search,
-                    label = "History",
-                    onClick = toHistory
-                )
-
-                BottomNavItem(
-                    icon = Icons.Default.Settings,
-                    label = "Settings"
-                )
             }
         }
+
     }
     if (showQuickNoteDialog) {
         QuickNoteDialog(
@@ -1252,7 +1295,7 @@ private fun SummaryCard(
 }
 
 @Composable
-private fun BottomNavItem(
+fun BottomNavItem(
     icon: ImageVector,
     label: String,
     selected: Boolean = false,

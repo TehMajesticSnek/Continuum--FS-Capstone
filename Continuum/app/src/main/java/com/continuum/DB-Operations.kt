@@ -52,7 +52,11 @@ class Database {
         @SerialName("user_id")
         val userID: String,
         @SerialName("f_name")
-        val firstName: String
+        val firstName: String,
+        @SerialName("l_name")
+        val lastName: String?,
+        //@SerialName("pfp_url") // Need to figure out specifics with the storage API first
+        //val pfp: String
     )
     @Serializable
     data class Handoff(
@@ -178,33 +182,7 @@ class Database {
         return errorMsg
 
     }
-    fun getFirstName(): String {
-        return supabase.auth.currentSessionOrNull()
-            ?.user
-            ?.userMetadata
-            ?.get("f_name")
-            ?.toString()
-            ?.trim('"')
-            ?: "User"
-    }
-    suspend fun getUserFirstName(userID: String): String {
-        return try {
-            val result = supabase
-                .from("users")
-                .select {
-                    filter {
-                        eq("user_id", userID)
-                    }
-                }
-                .decodeSingle<User>()
 
-            result.firstName
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            "User"
-        }
-    }
     suspend fun login(inputEmail: String, inputPassword: String) : String {
 
         // validate credentials
@@ -243,6 +221,35 @@ class Database {
         return errorMsg
     }
 
+    fun getFirstName(): String {
+        return supabase.auth.currentSessionOrNull()
+            ?.user
+            ?.userMetadata
+            ?.get("f_name")
+            ?.toString()
+            ?.trim('"')
+            ?: "User"
+    }
+
+    suspend fun getUserFirstName(userID: String): String {
+        return try {
+            val result = supabase
+                .from("users")
+                .select {
+                    filter {
+                        eq("user_id", userID)
+                    }
+                }
+                .decodeSingle<User>()
+
+            result.firstName
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "User"
+        }
+    }
+
     suspend fun createTeam(teamName: String): String {
 
         val alphanum = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -267,7 +274,7 @@ class Database {
                 //  add team to table
                 supabase.from("teams").insert(newTeam)
                 //  add user to team members table
-                joinTeam(newTeam.teamCode.toString(), 1)
+                joinTeam(newTeam.teamCode.toString(), 1) // TODO combine with SQL function
                 errorMsg = ""
                 break
             } catch (e: Exception) {
@@ -408,7 +415,7 @@ class Database {
 
         return errorMsg
     }
-    suspend fun updateNote(noteID: Long, content: String): String {
+    suspend fun updateNote(noteID: Long, content: String): String { // TODO I think there is a function to combine insert and update. May be worth looking into, but not essential
         var errorMsg = ""
 
         try {

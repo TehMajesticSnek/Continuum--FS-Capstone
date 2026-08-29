@@ -6,14 +6,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,6 +28,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -32,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -55,6 +60,7 @@ import com.continuum.ui.theme.Surface
 @Composable
 fun RecordsScreen(
     db: Database,
+    toHome: () -> Unit = {},
     onBackClick: () -> Unit = {},
     onHandoffClick: (Database.Handoff) -> Unit = {}
 ) {
@@ -65,239 +71,270 @@ fun RecordsScreen(
         mutableStateOf<List<Database.Handoff>>(emptyList())
     }
 
+    val statOptions = mapOf(
+        0.toShort() to "New",
+        1.toShort() to "Acknowledged",
+        2.toShort() to "In Progress",
+        3.toShort() to "Under Review",
+        4.toShort() to "Complete"
+    )
+
+    val prioOptions = mapOf(
+        0.toShort() to "Urgent",
+        1.toShort() to "High",
+        2.toShort() to "Medium",
+        3.toShort() to "Neutral",
+        4.toShort() to "Low"
+    )
+
     LaunchedEffect(Unit) {
         handoffs = db.getHandoffs()
     }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NavyBackground)
-            .statusBarsPadding()
-            .padding(
-                start = 20.dp,
-                end = 20.dp,
-                top = 12.dp,
-                bottom = 24.dp
-            )
-            .verticalScroll(rememberScrollState()),
-    ) {
-
-        // Top bar
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-        ) {
-            IconButton(
-                onClick = onBackClick,
-                modifier = Modifier.align(Alignment.CenterStart)
+    Scaffold (
+        bottomBar = {
+            BottomAppBar(
+                containerColor = NavyBackground,
+                contentPadding = PaddingValues.Zero,
+                windowInsets = WindowInsets(0, 0, 0, 80),
+                modifier = Modifier.wrapContentHeight()
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = PrimaryText,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            Text(
-                text = "History",
-                color = PrimaryText,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(22.dp))
-
-        // Search
-        OutlinedTextField(
-            value = searchText,
-            onValueChange = {
-                searchText = it
-            },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = {
-                Text("Search handoffs and issues...")
-            },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = MutedText
-                )
-            },
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Surface,
-                unfocusedContainerColor = Surface,
-                focusedBorderColor = BluePrimary,
-                unfocusedBorderColor = Border,
-                focusedTextColor = PrimaryText,
-                unfocusedTextColor = PrimaryText,
-                focusedPlaceholderColor = MutedText,
-                unfocusedPlaceholderColor = MutedText,
-                cursorColor = BluePrimary
-            ),
-            shape = RoundedCornerShape(8.dp)
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // Filters
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterBox(
-                text = "Shift",
-                modifier = Modifier.weight(1f)
-            )
-
-            FilterBox(
-                text = "Department",
-                modifier = Modifier.weight(1.35f)
-            )
-
-            FilterBox(
-                text = "Status",
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Text(
-            text = "Handoff Records",
-            color = PrimaryText,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (handoffs.isEmpty()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Surface
-                ),
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = Border
-                )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "No handoff records found",
-                        color = PrimaryText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Handoffs for the selected team will appear here.",
-                        color = MutedText,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        } else {
-            handoffs.reversed().forEach { handoff ->
-                Card(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 10.dp)
-                        .clickable {
-                            onHandoffClick(handoff)
-                        },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Surface
-                    ),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = Border
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
+                        .padding(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+
                     ) {
-                        Text(
-                            text = handoff.title,
-                            color = PrimaryText,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+
+                    BottomNavItem(
+                        icon = Icons.Default.Home,
+                        label = "Home",
+                        onClick = toHome,
+
                         )
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                    BottomNavItem(
+                        icon = Icons.AutoMirrored.Outlined.Assignment,
+                        label = "Handoffs"
+                    )
 
-                        Text(
-                            text = handoff.content ?: "",
-                            color = MutedText,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    BottomNavItem(
+                        icon = Icons.Outlined.Warning,
+                        label = "Issues"
+                    )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                    BottomNavItem(
+                        icon = Icons.Default.Search,
+                        label = "History",
+                        selected = true,
+                    )
 
-                        Text(
-                            text = "Status: ${handoff.status}  •  Priority: ${handoff.priority}",
-                            color = BluePrimary,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    BottomNavItem(
+                        icon = Icons.Default.Settings,
+                        label = "Settings"
+                    )
                 }
             }
         }
-
-        // Push navigation to bottom
-        Spacer(modifier = Modifier.weight(1f))
-
-        Row(
+    ) {
+        it
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+                .fillMaxSize()
+                .background(NavyBackground)
+                .statusBarsPadding()
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = 12.dp,
+                    bottom = 24.dp
+                )
         ) {
-            RecordsBottomNavItem(
-                icon = Icons.Default.Home,
-                label = "Home"
+
+            // Top bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = PrimaryText,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Text(
+                    text = "History",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(22.dp))
+
+            // Search
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = {
+                    searchText = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = {
+                    Text("Search handoffs and issues...")
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = MutedText
+                    )
+                },
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Surface,
+                    unfocusedContainerColor = Surface,
+                    focusedBorderColor = BluePrimary,
+                    unfocusedBorderColor = Border,
+                    focusedTextColor = PrimaryText,
+                    unfocusedTextColor = PrimaryText,
+                    focusedPlaceholderColor = MutedText,
+                    unfocusedPlaceholderColor = MutedText,
+                    cursorColor = BluePrimary
+                ),
+                shape = RoundedCornerShape(8.dp)
             )
 
-            RecordsBottomNavItem(
-                icon = Icons.AutoMirrored.Outlined.Assignment,
-                label = "Handoffs"
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Filters
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterBox(
+                    text = "Shift",
+                    modifier = Modifier.weight(1f)
+                )
+
+                FilterBox(
+                    text = "Department",
+                    modifier = Modifier.weight(1.35f)
+                )
+
+                FilterBox(
+                    text = "Status",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Handoff Records",
+                color = PrimaryText,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
             )
 
-            RecordsBottomNavItem(
-                icon = Icons.Outlined.Warning,
-                label = "Issues"
-            )
+            Spacer(modifier = Modifier.height(12.dp))
 
-            RecordsBottomNavItem(
-                icon = Icons.Default.Search,
-                label = "History",
-                selected = true
-            )
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
+                if (handoffs.isEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Surface
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = Border
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "No handoff records found",
+                                color = PrimaryText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
 
-            RecordsBottomNavItem(
-                icon = Icons.Default.Settings,
-                label = "Settings"
-            )
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "Handoffs for the selected team will appear here.",
+                                color = MutedText,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                } else {
+                    handoffs.reversed().forEach { handoff ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 10.dp)
+                                .clickable {
+                                    onHandoffClick(handoff)
+                                },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Surface
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Border
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(
+                                    text = handoff.title,
+                                    color = PrimaryText,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Text(
+                                    text = handoff.content ?: "",
+                                    color = MutedText,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = "Status: ${statOptions[handoff.status]}  •  Priority: ${prioOptions[handoff.priority]}",
+                                    color = BluePrimary,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(80.dp))
+            }
         }
     }
 }
@@ -340,32 +377,5 @@ private fun FilterBox(
                 tint = MutedText
             )
         }
-    }
-}
-
-@Composable
-private fun RecordsBottomNavItem(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean = false
-) {
-    val itemColor =
-        if (selected) BluePrimary else MutedText
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = itemColor,
-            modifier = Modifier.size(27.dp)
-        )
-
-        Text(
-            text = label,
-            color = itemColor,
-            style = MaterialTheme.typography.bodySmall
-        )
     }
 }

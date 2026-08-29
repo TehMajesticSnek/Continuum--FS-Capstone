@@ -144,6 +144,9 @@ fun Navigate(db: Database) {
         composable<Records> {
             RecordsScreen(
                 db = db,
+                toHome = {
+                    navController.popBackStack()
+                },
                 onBackClick = {
                     navController.popBackStack()
                 },
