@@ -271,10 +271,8 @@ class Database {
             newTeam.teamCode = generateCode()
 
             try {
-                //  add team to table
+                //  add team to table, and add user handled by SQL trigger
                 supabase.from("teams").insert(newTeam)
-                //  add user to team members table
-                joinTeam(newTeam.teamCode.toString(), 1) // TODO combine with SQL function
                 errorMsg = ""
                 break
             } catch (e: Exception) {
