@@ -14,12 +14,13 @@ import com.continuum.data.Database
 import com.continuum.data.UserPreferences
 import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.ContinuumTheme
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,15 +30,13 @@ class MainActivity : ComponentActivity() {
         val userData = UserPreferences(applicationContext) // Selected team mostly. Settings are separate
         var startPage: Any = Login
 
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
         enableEdgeToEdge()
 
         setContent {
             val viewModel: ViewModel = viewModel(factory = ViewModel.Factory(userData, db))
 
             var isCheckingAuth by remember { mutableStateOf(true) }
-
-            db.activeTeam = viewModel.selectedTeam.collectAsState().value
 
             splashScreen.setKeepOnScreenCondition {
                 isCheckingAuth
@@ -46,7 +45,12 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 if (viewModel.db.isLoggedIn()) {
                     startPage = Home
+
+                    while (viewModel.selectedTeam.value == null) {
+                        delay(5.milliseconds)
+                    }
                 }
+                viewModel.db.activeTeam = viewModel.selectedTeam.value
                 isCheckingAuth = false
             }
 

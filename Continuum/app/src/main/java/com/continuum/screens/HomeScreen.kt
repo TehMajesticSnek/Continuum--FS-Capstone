@@ -693,8 +693,8 @@ fun HomeScreen(
         handoffs = viewModel.db.getHandoffs()
     }
 
-    LaunchedEffect(Unit) { // if a team is stored, run that first. Displays a little faster
-        if (viewModel.selectedTeam.value == 0) {
+    LaunchedEffect(Unit) { // if a team is stored, run handoffs first. Displays a little faster
+        if (viewModel.db.activeTeam == 0) {
             refreshTeams()
             return@LaunchedEffect
         }

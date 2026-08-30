@@ -13,11 +13,11 @@ import kotlinx.coroutines.launch
 
 class ViewModel(private val repository: UserPreferences, val db: Database) : ViewModel() {
 
-    val selectedTeam: StateFlow<Int> = repository.selectedTeamFlow
+    val selectedTeam: StateFlow<Int?> = repository.selectedTeamFlow
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = 0
+            started = SharingStarted.Eagerly,
+            initialValue = null
         )
 
     fun selectTeam(teamID: Int) { // TODO When logout is added, make sure to clear local team info

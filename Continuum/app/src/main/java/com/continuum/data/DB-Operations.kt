@@ -228,6 +228,7 @@ class Database {
 
         if (currentSession != null) {
             // User is already logged in, navigate straight to the Home Screen
+            uid = currentSession.user?.id.toString()
             return true
         } else {
             // No cached user found, direct them to the Login Screen
