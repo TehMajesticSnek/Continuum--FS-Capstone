@@ -573,7 +573,7 @@ class Database {
                                 }
                             }
                         }
-                        //order()
+                        // look into compareBy for order. Wait to do that until grouping by date works, though
                     }.decodeList<Handoff>()
             }
         } catch (e: Exception) {
