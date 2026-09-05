@@ -74,22 +74,6 @@ fun HandoffDetailsScreen(
         mutableStateOf(false)
     }
 
-    val statOptions = mapOf(
-        0.toShort() to "New",
-        1.toShort() to "Acknowledged",
-        2.toShort() to "In Progress",
-        3.toShort() to "Under Review",
-        4.toShort() to "Complete"
-    )
-
-    val prioOptions = mapOf(
-        0.toShort() to "Urgent",
-        1.toShort() to "High",
-        2.toShort() to "Medium",
-        3.toShort() to "Neutral",
-        4.toShort() to "Low"
-    )
-
     LaunchedEffect(handoff.handoffID) {
         val id = handoff.handoffID
 
@@ -181,14 +165,14 @@ fun HandoffDetailsScreen(
                 ) {
                     DetailLabel(
                         label = "Status",
-                        value = statOptions[handoff.status].toString()
+                        value = viewModel.db.statOptions[handoff.status].toString()
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
 
                     DetailLabel(
                         label = "Priority",
-                        value = prioOptions[handoff.priority].toString()
+                        value = viewModel.db.prioOptions[handoff.priority].toString()
                     )
                 }
 

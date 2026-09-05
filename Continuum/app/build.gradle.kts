@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 
     kotlin("plugin.serialization") version "2.2.10"
+    id("kotlin-parcelize")
 }
 
 android {

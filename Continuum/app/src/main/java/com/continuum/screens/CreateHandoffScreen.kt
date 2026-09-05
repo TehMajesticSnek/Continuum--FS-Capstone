@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -61,28 +62,13 @@ fun CreateHandoffScreen(
     var content by remember(initialContent) {
         mutableStateOf(initialContent)
     }
-    val blankMapEntry = java.util.AbstractMap.SimpleEntry((-1).toShort(), "")
 
     var statExpanded by remember { mutableStateOf(false) }
-    val statOptions = mapOf(
-        0.toShort() to "New",
-        1.toShort() to "Acknowledged",
-        2.toShort() to "In Progress",
-        3.toShort() to "Under Review",
-        4.toShort() to "Complete"
-    )
-    var statSelected by remember { mutableStateOf(statOptions.entries.find { it.key == 0.toShort() }) }
+    var statSelected by remember { mutableStateOf(viewModel.db.statOptions.entries.find { it.key == 0.toShort() }) }
     val statInteractionSource = remember { MutableInteractionSource() }
 
     var prioExpanded by remember { mutableStateOf(false) }
-    val prioOptions = mapOf(
-        0.toShort() to "Urgent",
-        1.toShort() to "High",
-        2.toShort() to "Medium",
-        3.toShort() to "Neutral",
-        4.toShort() to "Low"
-    )
-    var prioSelected by remember { mutableStateOf(prioOptions.entries.find { it.key == 3.toShort() }) }
+    var prioSelected by remember { mutableStateOf(viewModel.db.prioOptions.entries.find { it.key == 3.toShort() }) }
     val prioInteractionSource = remember { MutableInteractionSource() }
 
 
@@ -156,6 +142,13 @@ fun CreateHandoffScreen(
                     label = { Text("Status") },
                     readOnly = true,
                     interactionSource = statInteractionSource,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Dropdown Arrow",
+                            tint = MutedText,
+                        )
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Surface,
                         unfocusedContainerColor = Surface,
@@ -176,7 +169,7 @@ fun CreateHandoffScreen(
                     expanded = statExpanded,
                     onDismissRequest = { statExpanded = false }
                 ) {
-                    statOptions.forEach { option ->
+                    viewModel.db.statOptions.forEach { option ->
                         DropdownMenuItem(
                             text = { Text(option.value) },
                             onClick = {
@@ -196,6 +189,13 @@ fun CreateHandoffScreen(
                     label = { Text("Priority") },
                     readOnly = true,
                     interactionSource = prioInteractionSource,
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Dropdown Arrow",
+                            tint = MutedText,
+                        )
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Surface,
                         unfocusedContainerColor = Surface,
@@ -216,7 +216,7 @@ fun CreateHandoffScreen(
                     expanded = prioExpanded,
                     onDismissRequest = { prioExpanded = false }
                 ) {
-                    prioOptions.forEach { option ->
+                    viewModel.db.prioOptions.forEach { option ->
                         DropdownMenuItem(
                             text = { Text(option.value) },
                             onClick = {

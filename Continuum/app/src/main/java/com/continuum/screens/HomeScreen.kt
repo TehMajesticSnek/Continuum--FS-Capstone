@@ -58,6 +58,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -644,34 +645,18 @@ fun HomeScreen(
         else -> "Good Evening"
     }
 
-    var teams by remember {
+    var teams by rememberSaveable {
         mutableStateOf<List<Database.Team>>(emptyList())
     }
 
-    var selectedTeam by remember {
+    var selectedTeam by rememberSaveable {
         mutableStateOf<Database.Team?>(null)
     }
     val savedTeam by viewModel.selectedTeam.collectAsStateWithLifecycle()
 
-    var handoffs by remember {
+    var handoffs by rememberSaveable {
         mutableStateOf<List<Database.Handoff>>(emptyList())
     }
-
-    val statOptions = mapOf(
-        0.toShort() to "New",
-        1.toShort() to "Acknowledged",
-        2.toShort() to "In Progress",
-        3.toShort() to "Under Review",
-        4.toShort() to "Complete"
-    )
-
-    val prioOptions = mapOf(
-        0.toShort() to "Urgent",
-        1.toShort() to "High",
-        2.toShort() to "Medium",
-        3.toShort() to "Neutral",
-        4.toShort() to "Low"
-    )
 
     suspend fun refreshTeams() { // TODO update create and join to auto-select new team
 
@@ -693,18 +678,20 @@ fun HomeScreen(
         handoffs = viewModel.db.getHandoffs()
     }
 
-    LaunchedEffect(Unit) { // if a team is stored, run handoffs first. Displays a little faster
+    LaunchedEffect(Unit) {
+
+        if (handoffs.isEmpty()) {
+            handoffs = viewModel.db.getHandoffs()
+        }
+        if (teams.isEmpty()) {
+            teams = viewModel.db.getUserTeams()
+        }
+
         if (viewModel.db.activeTeam == 0) {
             refreshTeams()
             return@LaunchedEffect
         }
-
-        handoffs = viewModel.db.getHandoffs()
-
-        teams = viewModel.db.getUserTeams()
-        if (teams.isEmpty()) {
-            // prompt join team
-        } else if (savedTeam != 0) {
+        else if (savedTeam != 0) {
             for (team in teams) {
                 if (savedTeam == team.teamID) {
                     selectedTeam = team
@@ -1123,7 +1110,7 @@ fun HomeScreen(
                                     Spacer(modifier = Modifier.height(6.dp))
 
                                     Text(
-                                        text = "Status: ${statOptions[handoff.status]}  •  Priority: ${prioOptions[handoff.priority]}",
+                                        text = "Status: ${viewModel.db.statOptions[handoff.status]}  •  Priority: ${viewModel.db.prioOptions[handoff.priority]}",
                                         color = BluePrimary,
                                         style = MaterialTheme.typography.bodySmall
                                     )

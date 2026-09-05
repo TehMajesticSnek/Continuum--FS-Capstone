@@ -9,6 +9,8 @@ import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.security.SecureRandom
@@ -25,10 +27,26 @@ class Database {
         install(Postgrest)
         install(Auth)
     }
+
+    val statOptions = mapOf(
+        0.toShort() to "New",
+        1.toShort() to "Acknowledged",
+        2.toShort() to "In Progress",
+        3.toShort() to "Under Review",
+        4.toShort() to "Complete"
+    )
+    val prioOptions = mapOf(
+        0.toShort() to "Urgent",
+        1.toShort() to "High",
+        2.toShort() to "Medium",
+        3.toShort() to "Neutral",
+        4.toShort() to "Low"
+    )
+
     var uid: String? = null
     var activeTeam: Int? = null
 
-    @Serializable
+    @Serializable @Parcelize
     data class Team (
         @SerialName("team_name")
         var teamName: String? = null,
@@ -36,7 +54,8 @@ class Database {
         var teamID: Int? = null,
         @SerialName("team_code")
         var teamCode: String? = null,
-    )
+    ) : Parcelable
+
     @Serializable
     data class TeamUser(
         @SerialName("team_id")
@@ -58,7 +77,7 @@ class Database {
         //@SerialName("pfp_url") // Need to figure out specifics with the storage API first
         //val pfp: String
     )
-    @Serializable
+    @Serializable @Parcelize
     data class Handoff(
         @SerialName("team_id")
         val teamID: Int?,
@@ -74,7 +93,7 @@ class Database {
         val editTimestamp: Instant? = null,
         @SerialName("handoff_id")
         val handoffID: Int? = null
-    )
+    ) : Parcelable
     @Serializable
     data class Acknowledgement(
         @SerialName("handoff_id")
@@ -517,6 +536,7 @@ class Database {
                     .select {
                         filter {
                             eq("team_id", activeTeam!!)
+                            neq("status", 4)
                         }
                     }.decodeList<Handoff>()
             }
@@ -525,6 +545,44 @@ class Database {
             emptyList()
         }
     }
+    suspend fun getHandoffsFilter(keyword: String = "", status : Short = -1, priority: Short = -1, includeCompleted: Boolean = false): List<Handoff> {
+        return try {
+            if (activeTeam == null) {
+                emptyList()
+            } else {
+                supabase
+                    .from("handoffs")
+                    .select {
+                        filter {
+                            eq("team_id", activeTeam!!)
+
+                            if (status != (-1).toShort()) {
+                                eq("status", status)
+                            }
+                            else if (!includeCompleted) {
+                                neq("status", 4)
+                            }
+                            if (priority != (-1).toShort()) {
+                                eq("priority", priority)
+                            }
+
+                            or {
+                                if (keyword != "") {
+                                    ilike("title", "%$keyword%")
+                                    ilike("content", "%$keyword%")
+                                }
+                            }
+                        }
+                        //order()
+                    }.decodeList<Handoff>()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+
     suspend fun acknowledgeHandoff(handoffID: Int): String {
         var errorMsg = ""
 
