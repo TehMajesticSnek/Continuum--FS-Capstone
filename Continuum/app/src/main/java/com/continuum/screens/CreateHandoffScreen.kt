@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -59,8 +61,16 @@ fun CreateHandoffScreen(
 ) {
     var title by remember { mutableStateOf("") }
 
-    var content by remember(initialContent) {
+    var issueDetails by remember(initialContent) {
         mutableStateOf(initialContent)
+    }
+
+    var actionsTaken by remember {
+        mutableStateOf("")
+    }
+
+    var nextSteps by remember {
+        mutableStateOf("")
     }
 
     var statExpanded by remember { mutableStateOf(false) }
@@ -80,11 +90,12 @@ fun CreateHandoffScreen(
             .fillMaxSize()
             .background(NavyBackground)
             .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
             .padding(
                 start = 20.dp,
                 end = 20.dp,
                 top = 12.dp,
-                bottom = 24.dp
+                bottom = 32.dp
             )
     ) {
 
@@ -262,10 +273,8 @@ fun CreateHandoffScreen(
             shape = RoundedCornerShape(8.dp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
-
         Text(
-            text = "Handoff Notes",
+            text = "Issue Details",
             color = PrimaryText,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium
@@ -274,16 +283,14 @@ fun CreateHandoffScreen(
         Spacer(modifier = Modifier.height(6.dp))
 
         OutlinedTextField(
-            value = content,
-            onValueChange = { content = it },
+            value = issueDetails,
+            onValueChange = { issueDetails = it },
             placeholder = {
-                Text(
-                    "Enter shift updates, unresolved issues, and important notes..."
-                )
+                Text("Describe the issue or important shift information...")
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp),
+                .height(110.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Surface,
                 unfocusedContainerColor = Surface,
@@ -298,13 +305,97 @@ fun CreateHandoffScreen(
             shape = RoundedCornerShape(8.dp)
         )
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Actions Taken",
+            color = PrimaryText,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        OutlinedTextField(
+            value = actionsTaken,
+            onValueChange = { actionsTaken = it },
+            placeholder = {
+                Text("Enter any actions already taken...")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(90.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Surface,
+                unfocusedContainerColor = Surface,
+                focusedBorderColor = BluePrimary,
+                unfocusedBorderColor = Border,
+                focusedTextColor = PrimaryText,
+                unfocusedTextColor = PrimaryText,
+                focusedPlaceholderColor = MutedText,
+                unfocusedPlaceholderColor = MutedText,
+                cursorColor = BluePrimary
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "Next Steps",
+            color = PrimaryText,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        OutlinedTextField(
+            value = nextSteps,
+            onValueChange = { nextSteps = it },
+            placeholder = {
+                Text("Enter recommended next steps...")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(90.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Surface,
+                unfocusedContainerColor = Surface,
+                focusedBorderColor = BluePrimary,
+                unfocusedBorderColor = Border,
+                focusedTextColor = PrimaryText,
+                unfocusedTextColor = PrimaryText,
+                focusedPlaceholderColor = MutedText,
+                unfocusedPlaceholderColor = MutedText,
+                cursorColor = BluePrimary
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = {
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
-                        val response = viewModel.db.newHandoff(title, content, statSelected!!.key, prioSelected!!.key)
+                        val structuredContent = """
+    Issue Details:
+    ${issueDetails.trim()}
+
+    Actions Taken:
+    ${actionsTaken.trim()}
+
+    Next Steps:
+    ${nextSteps.trim()}
+""".trimIndent()
+
+                        val response = viewModel.db.newHandoff(
+                            title,
+                            structuredContent,
+                            statSelected!!.key,
+                            prioSelected!!.key
+                        )
 
                         if (response == "") {
                             withContext(Dispatchers.Main) {
