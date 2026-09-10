@@ -45,6 +45,7 @@ class Database {
 
     var uid: String? = null
     var activeTeam: Int? = null
+    var userRole: Int? = null
 
     @Serializable @Parcelize
     data class Team (
@@ -59,11 +60,24 @@ class Database {
     @Serializable
     data class TeamUser(
         @SerialName("team_id")
-        val teamID: Int,
+        val teamID: Int? = null,
         @SerialName("user_id")
-        val userID: String?,
+        val userID: String? = null,
         @SerialName("role_id")
-        val roleID: Long
+        val roleID: Long? = null
+    )
+
+    @Serializable
+    data class TeamUserDisplay(
+        @SerialName("user_id")
+        val userID: String,
+        @SerialName("f_name")
+        val firstName: String,
+        @SerialName("l_name")
+        val lastName: String,
+        @SerialName("team_members")
+        val teamData: List<TeamUser> = emptyList(),
+        //val pfp: String
     )
 
     @Serializable
@@ -348,10 +362,10 @@ class Database {
         return try {
 
             val memberships = supabase.from("team_members").select(columns = Columns.list("team_id")) {
-                    filter {
-                        eq("user_id", uid.toString())
-                    }
-                }.decodeList<Team>()
+                filter {
+                    eq("user_id", uid.toString())
+                }
+            }.decodeList<Team>()
 
             if (memberships.isEmpty()) {
                 emptyList()
@@ -373,6 +387,41 @@ class Database {
                 // return list as try-value
                 teams
             }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+    suspend fun getActiveTeam(): Team? {
+        return try {
+            val team = supabase.from("teams").select(columns = Columns.list("team_name", "team_code")) {
+                filter {
+                    eq("team_id", activeTeam as Int)
+                }
+            }.decodeSingle<Team>()
+            team
+        }
+        catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+    suspend fun getTeamMembers(): List<TeamUserDisplay> {
+        return try {
+            val columns = Columns.raw("""
+                user_id,
+                f_name,
+                l_name,
+                team_members!inner ( user_id, role_id )
+            """.trimIndent())
+
+            val members = supabase.from("users").select(columns = columns) {
+                filter {
+                    eq("team_members.team_id", activeTeam as Int)
+                }
+            }.decodeList<TeamUserDisplay>()
+            members
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -582,7 +631,6 @@ class Database {
         }
     }
 
-
     suspend fun acknowledgeHandoff(handoffID: Int): String {
         var errorMsg = ""
 
@@ -605,7 +653,6 @@ class Database {
 
         return errorMsg
     }
-
     suspend fun hasAcknowledgedHandoff(handoffID: Int): Boolean {
         return try {
             val currentUserID = uid ?: return false

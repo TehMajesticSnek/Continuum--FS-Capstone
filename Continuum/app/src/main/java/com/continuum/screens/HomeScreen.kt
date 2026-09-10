@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -621,7 +622,9 @@ fun HomeScreen(
     viewModel: ViewModel,
     toNewHandoff: () -> Unit = {},
     toHandoffFromNote: (String) -> Unit = {},
-    toHistory: () -> Unit = {}
+    onHandoffClick: (Database.Handoff) -> Unit = {},
+    toHandoffList: () -> Unit = {},
+    toTeams: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed
@@ -819,7 +822,7 @@ fun HomeScreen(
             bottomBar = {
                 BottomAppBar(
                     containerColor = NavyBackground,
-                    contentPadding = PaddingValues(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 30.dp),
+                    contentPadding = PaddingValues(start = 40.dp, top = 10.dp, end = 40.dp, bottom = 30.dp),
                     windowInsets = WindowInsets(0, 0, 0, 80),
                     modifier = Modifier.wrapContentHeight()
                 ) {
@@ -838,23 +841,14 @@ fun HomeScreen(
 
                         BottomNavItem(
                             icon = Icons.AutoMirrored.Outlined.Assignment,
-                            label = "Handoffs"
+                            label = "Handoffs",
+                            onClick = toHandoffList
                         )
 
                         BottomNavItem(
-                            icon = Icons.Outlined.Warning,
-                            label = "Issues"
-                        )
-
-                        BottomNavItem(
-                            icon = Icons.Default.Search,
-                            label = "History",
-                            onClick = toHistory
-                        )
-
-                        BottomNavItem(
-                            icon = Icons.Default.Settings,
-                            label = "Settings"
+                            icon = Icons.Outlined.Groups,
+                            label = "Team",
+                            onClick = toTeams
                         )
                     }
                 }
@@ -1079,7 +1073,10 @@ fun HomeScreen(
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 8.dp),
+                                    .padding(bottom = 8.dp)
+                                    .clickable {
+                                        onHandoffClick(handoff)
+                                    },
                                 shape = RoundedCornerShape(8.dp),
                                 colors = CardDefaults.cardColors(
                                     containerColor = Surface

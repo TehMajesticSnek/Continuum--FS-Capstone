@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -89,7 +90,8 @@ fun RecordsScreen(
     viewModel: ViewModel,
     toHome: () -> Unit = {},
     onBackClick: () -> Unit = {},
-    onHandoffClick: (Database.Handoff) -> Unit = {}
+    onHandoffClick: (Database.Handoff) -> Unit = {},
+    toTeams: () -> Unit = {}
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -348,11 +350,12 @@ fun RecordsScreen(
             handoffs = viewModel.db.getHandoffs()
         }
     }
+
     Scaffold (
         bottomBar = {
             BottomAppBar(
                 containerColor = NavyBackground,
-                contentPadding = PaddingValues(start = 20.dp, top = 10.dp, end = 20.dp, bottom = 30.dp),
+                contentPadding = PaddingValues(start = 40.dp, top = 10.dp, end = 40.dp, bottom = 30.dp),
                 windowInsets = WindowInsets(0, 0, 0, 80),
                 modifier = Modifier.wrapContentHeight()
             ) {
@@ -366,29 +369,19 @@ fun RecordsScreen(
                     BottomNavItem(
                         icon = Icons.Default.Home,
                         label = "Home",
-                        onClick = toHome,
-
-                        )
+                        onClick = toHome
+                    )
 
                     BottomNavItem(
                         icon = Icons.AutoMirrored.Outlined.Assignment,
-                        label = "Handoffs"
+                        label = "Handoffs",
+                        selected = true
                     )
 
                     BottomNavItem(
-                        icon = Icons.Outlined.Warning,
-                        label = "Issues"
-                    )
-
-                    BottomNavItem(
-                        icon = Icons.Default.Search,
-                        label = "History",
-                        selected = true,
-                    )
-
-                    BottomNavItem(
-                        icon = Icons.Default.Settings,
-                        label = "Settings"
+                        icon = Icons.Outlined.Groups,
+                        label = "Team",
+                        onClick = toTeams
                     )
                 }
             }
@@ -414,18 +407,6 @@ fun RecordsScreen(
                     .fillMaxWidth()
                     .height(48.dp)
             ) {
-                IconButton(
-                    onClick = onBackClick,
-                    modifier = Modifier.align(Alignment.CenterStart)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = PrimaryText,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
                 Text(
                     text = "History",
                     color = PrimaryText,

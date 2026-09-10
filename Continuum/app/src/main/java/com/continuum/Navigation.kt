@@ -21,6 +21,7 @@ import com.continuum.screens.HomeScreen
 import com.continuum.screens.LoginScreen
 import com.continuum.screens.RecordsScreen
 import com.continuum.screens.RegisterScreen
+import com.continuum.screens.TeamScreen
 import com.continuum.ui.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,6 +39,9 @@ object NewHandoff
 object HandoffDetails
 @Serializable
 object Records
+@Serializable
+object Teams
+
 @Composable
 fun Navigate(viewModel: ViewModel, startPage: Any) {
     val navController = rememberNavController()
@@ -116,8 +120,15 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                     handoffDraftContent = noteContent
                     navController.navigate(NewHandoff)
                 },
-                toHistory = {
+                onHandoffClick = { handoff ->
+                    selectedHandoff = handoff
+                    navController.navigate(HandoffDetails)
+                },
+                toHandoffList = {
                     navController.navigate(Records)
+                },
+                toTeams = {
+                    navController.navigate(Teams)
                 }
             )
         }
@@ -153,12 +164,25 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                 toHome = {
                     navController.popBackStack()
                 },
-                onBackClick = {
-                    navController.popBackStack()
-                },
                 onHandoffClick = { handoff ->
                     selectedHandoff = handoff
                     navController.navigate(HandoffDetails)
+                },
+                toTeams = {
+                    navController.popBackStack()
+                    navController.navigate(Teams)
+                }
+            )
+        }
+        composable<Teams> {
+            TeamScreen(
+                viewModel = viewModel,
+                toHome = {
+                    navController.popBackStack()
+                },
+                toHandoffList = {
+                    navController.popBackStack()
+                    navController.navigate(Records)
                 }
             )
         }
