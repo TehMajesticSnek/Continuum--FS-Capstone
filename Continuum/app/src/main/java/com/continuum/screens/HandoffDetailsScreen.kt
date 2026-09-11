@@ -63,7 +63,7 @@ fun HandoffDetailsScreen(
     }
 
     var commentAuthors by remember {
-        mutableStateOf<Map<String, String>>(emptyMap())
+        mutableStateOf(emptyMap<String, String>())
     }
 
     var newEntry by remember {

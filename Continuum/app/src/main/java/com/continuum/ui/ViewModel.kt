@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.continuum.data.Database
 import com.continuum.data.UserPreferences
-import com.continuum.data.Settings
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -20,7 +19,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database) : Vie
             initialValue = null
         )
 
-    fun selectTeam(teamID: Int) { // TODO When logout is added, make sure to clear local team info
+    fun selectTeam(teamID: Int?) { // TODO When logout is added, make sure to clear local team info
         viewModelScope.launch {
             repository.saveSelectedTeam(teamID)
             db.activeTeam = teamID

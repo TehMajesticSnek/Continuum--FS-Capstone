@@ -31,10 +31,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -79,8 +77,6 @@ import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -624,7 +620,8 @@ fun HomeScreen(
     toHandoffFromNote: (String) -> Unit = {},
     onHandoffClick: (Database.Handoff) -> Unit = {},
     toHandoffList: () -> Unit = {},
-    toTeams: () -> Unit = {}
+    toTeams: () -> Unit = {},
+    logout: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(
         initialValue = DrawerValue.Closed
@@ -890,7 +887,7 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    Text(
+                    Text( // TODO Center title
                         text = "CONTINUUM",
                         color = PrimaryText,
                         style = MaterialTheme.typography.titleMedium,
@@ -907,6 +904,24 @@ fun HomeScreen(
                             .size(40.dp)
                             .padding(7.dp)
                     )
+
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                viewModel.selectTeam(null)
+                                viewModel.db.logout()
+                                logout()
+                            }
+                        },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PowerSettingsNew,
+                            contentDescription = "Log out",
+                            tint = PrimaryText,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))

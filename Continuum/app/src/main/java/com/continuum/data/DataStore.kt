@@ -18,9 +18,15 @@ class UserPreferences(private val context: Context) {
 
     val selectedTeamFlow: Flow<Int> = context.userDataStore.data.map { preferences -> preferences[selTeamKey] ?: 0 }
 
-    suspend fun saveSelectedTeam(teamID: Int) {
+    suspend fun saveSelectedTeam(teamID: Int?) {
         context.userDataStore.edit { preferences ->
-            preferences[selTeamKey] = teamID
+            if (teamID != null) {
+                preferences[selTeamKey] = teamID
+            }
+            else {
+                preferences.remove(selTeamKey)
+            }
+
         }
     }
 }

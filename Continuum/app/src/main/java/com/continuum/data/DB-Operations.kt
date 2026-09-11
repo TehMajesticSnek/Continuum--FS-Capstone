@@ -269,6 +269,11 @@ class Database {
         }
     }
 
+    suspend fun logout() {
+
+        supabase.auth.signOut()
+    }
+
     fun getFirstName(): String {
         return supabase.auth.currentSessionOrNull()
             ?.user
