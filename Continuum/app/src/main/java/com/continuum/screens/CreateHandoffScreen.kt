@@ -26,6 +26,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -65,12 +66,20 @@ fun CreateHandoffScreen(
         mutableStateOf(initialContent)
     }
 
+    var aiSourceContent by remember(initialContent) {
+        mutableStateOf(initialContent)
+    }
+
     var actionsTaken by remember {
         mutableStateOf("")
     }
 
     var nextSteps by remember {
         mutableStateOf("")
+    }
+
+    var isGenerating by remember {
+        mutableStateOf(false)
     }
 
     var statExpanded by remember { mutableStateOf(false) }
@@ -305,6 +314,50 @@ fun CreateHandoffScreen(
             shape = RoundedCornerShape(8.dp)
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Button(
+            onClick = {
+                coroutineScope.launch {
+                    isGenerating = true
+
+                    val sourceContent = if (aiSourceContent.isNotBlank()) {
+                        aiSourceContent
+                    } else {
+                        issueDetails.also {
+                            aiSourceContent = it
+                        }
+                    }
+
+                    val draft = withContext(Dispatchers.IO) {
+                        viewModel.db.generateHandoffDraft(sourceContent)
+                    }
+
+                    if (draft != null) {
+                        title = draft.title
+                        issueDetails = draft.issueDetails
+                        actionsTaken = draft.actionsTaken
+                        nextSteps = draft.nextSteps
+                    } else {
+                        showError(
+                            context,
+                            "Unable to generate AI draft. Please try again."
+                        )
+                    }
+
+                    isGenerating = false
+                }
+            },
+            enabled = issueDetails.isNotBlank() && !isGenerating,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = if (isGenerating) "Generating..." else "Generate AI Draft"
+            )
+        }
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
@@ -374,6 +427,23 @@ fun CreateHandoffScreen(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedButton(
+            onClick = {
+                onBackClick()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = "Cancel",
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         Button(
             onClick = {

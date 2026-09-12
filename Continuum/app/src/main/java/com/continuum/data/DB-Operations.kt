@@ -1,6 +1,9 @@
 package com.continuum.data
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.functions.Functions
+import io.github.jan.supabase.functions.functions
+import io.ktor.client.call.body
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.auth.auth
@@ -26,6 +29,7 @@ class Database {
     ) {
         install(Postgrest)
         install(Auth)
+        install(Functions)
     }
 
     val statOptions = mapOf(
@@ -139,6 +143,18 @@ class Database {
         val timeEdited: Instant? = null
     )
 
+    @Serializable
+    data class GenerateHandoffRequest(
+        val note: String
+    )
+
+    @Serializable
+    data class GenerateHandoffResponse(
+        val title: String,
+        val issueDetails: String,
+        val actionsTaken: String,
+        val nextSteps: String
+    )
     @Serializable
     data class CommentInsert(
         @SerialName("handoff_id")
@@ -523,7 +539,20 @@ class Database {
             emptyList()
         }
     }
+    suspend fun generateHandoffDraft(noteContent: String): GenerateHandoffResponse? {
+        return try {
+            val response = supabase.functions.invoke(
+                function = "generate-handoff",
+                body = GenerateHandoffRequest(noteContent)
+            )
 
+            response.body<GenerateHandoffResponse>()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
     suspend fun newHandoff(title: String, content: String?, status: Short, priority: Short): String {
         var errorMsg = ""
 
