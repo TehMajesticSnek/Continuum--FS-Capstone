@@ -380,15 +380,15 @@ fun CreateHandoffScreen(
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
                         val structuredContent = """
-    Issue Details:
-    ${issueDetails.trim()}
-
-    Actions Taken:
-    ${actionsTaken.trim()}
-
-    Next Steps:
-    ${nextSteps.trim()}
-""".trimIndent()
+                            Issue Details:
+                            ${issueDetails.trim()}
+                        
+                            Actions Taken:
+                            ${actionsTaken.trim()}
+                        
+                            Next Steps:
+                            ${nextSteps.trim()}
+                        """.trimIndent()
 
                         val response = viewModel.db.newHandoff(
                             title,

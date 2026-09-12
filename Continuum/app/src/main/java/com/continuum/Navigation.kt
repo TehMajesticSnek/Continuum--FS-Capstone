@@ -125,10 +125,18 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                     navController.navigate(HandoffDetails)
                 },
                 toHandoffList = {
-                    navController.navigate(Records)
+                    navController.navigate(route = Records) {
+                        popUpTo(Home) {
+                            inclusive = false
+                        }
+                    }
                 },
                 toTeams = {
-                    navController.navigate(Teams)
+                    navController.navigate(route = Teams) {
+                        popUpTo(Home) {
+                            inclusive = false
+                        }
+                    }
                 },
                 logout = {
                     navController.navigate(route = Login) {
@@ -169,15 +177,22 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
             RecordsScreen(
                 viewModel = viewModel,
                 toHome = {
-                    navController.popBackStack()
+                    navController.navigate(route = Home) {
+                        popUpTo(Home) {
+                            inclusive = true
+                        }
+                    }
                 },
                 onHandoffClick = { handoff ->
                     selectedHandoff = handoff
                     navController.navigate(HandoffDetails)
                 },
                 toTeams = {
-                    navController.popBackStack()
-                    navController.navigate(Teams)
+                    navController.navigate(route = Teams) {
+                        popUpTo(Home) {
+                            inclusive = false
+                        }
+                    }
                 }
             )
         }
@@ -185,11 +200,18 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
             TeamScreen(
                 viewModel = viewModel,
                 toHome = {
-                    navController.popBackStack()
+                    navController.navigate(route = Home) {
+                        popUpTo(Home) {
+                            inclusive = true
+                        }
+                    }
                 },
                 toHandoffList = {
-                    navController.popBackStack()
-                    navController.navigate(Records)
+                    navController.navigate(route = Records) {
+                        popUpTo(Home) {
+                            inclusive = false
+                        }
+                    }
                 }
             )
         }

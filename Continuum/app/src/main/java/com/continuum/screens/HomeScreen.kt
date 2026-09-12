@@ -274,7 +274,9 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
                     onClick = {
                         coroutineScope.launch(Dispatchers.IO) {
                             val response = db.createTeam(teamName)
+
                             if (response == "") {
+                                // TODO set active team to new one
                                 onSuccessCreate()
                             }
                             else {
@@ -385,6 +387,8 @@ fun QuickNoteDialog(
                                 val response = db.saveNote(noteContent)
 
                                 if (response.isEmpty()) {
+
+
                                     withContext(Dispatchers.Main) {
                                         onSuccess()
                                     }
@@ -483,7 +487,7 @@ fun SavedNotesDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.weight(1f))
 
                 TextButton(
                     onClick = onDismiss,
@@ -658,6 +662,10 @@ fun HomeScreen(
         mutableStateOf<List<Database.Handoff>>(emptyList())
     }
 
+    var teamLoading by remember { mutableStateOf(true) }
+    var navToHandoffs by remember { mutableStateOf(false) }
+    var navToTeams by remember { mutableStateOf(false) }
+
     suspend fun refreshTeams() { // TODO update create and join to auto-select new team
 
         teams = viewModel.db.getUserTeams()
@@ -669,6 +677,7 @@ fun HomeScreen(
                 if (savedTeam == team.teamID) {
                     selectedTeam = team
                     viewModel.db.activeTeam = team.teamID
+                    viewModel.db.getTeamRole()
                     break
                 }
             }
@@ -676,6 +685,7 @@ fun HomeScreen(
             selectedTeam = null
         }
         handoffs = viewModel.db.getHandoffs()
+        teamLoading = false
     }
 
     LaunchedEffect(Unit) {
@@ -696,11 +706,26 @@ fun HomeScreen(
                 if (savedTeam == team.teamID) {
                     selectedTeam = team
                     viewModel.db.activeTeam = team.teamID
+                    viewModel.db.getTeamRole()
                     break
                 }
             }
         } else {
             selectedTeam = null
+        }
+        teamLoading = false
+    }
+
+    LaunchedEffect(teamLoading, navToHandoffs) {
+        if (!teamLoading && navToHandoffs) {
+            toHandoffList()
+            navToHandoffs = false
+        }
+    }
+    LaunchedEffect(teamLoading, navToTeams) {
+        if (!teamLoading && navToTeams) {
+            toTeams()
+            navToTeams = false
         }
     }
 
@@ -755,6 +780,8 @@ fun HomeScreen(
                             teamName = team.teamName.toString(),
                             selected = team.teamID == selectedTeam?.teamID,
                             onClick = {
+                                teamLoading = true
+
                                 selectedTeam = team
                                 viewModel.selectTeam(selectedTeam!!.teamID ?: 0)
 
@@ -839,13 +866,19 @@ fun HomeScreen(
                         BottomNavItem(
                             icon = Icons.AutoMirrored.Outlined.Assignment,
                             label = "Handoffs",
-                            onClick = toHandoffList
+                            enabled = (viewModel.db.activeTeam != 0),
+                            onClick = {
+                                navToHandoffs = true
+                            }
                         )
 
                         BottomNavItem(
                             icon = Icons.Outlined.Groups,
                             label = "Team",
-                            onClick = toTeams
+                            enabled = (viewModel.db.activeTeam != 0),
+                            onClick = {
+                                navToTeams = true
+                            }
                         )
                     }
                 }
@@ -1180,6 +1213,7 @@ fun HomeScreen(
             onSuccessJoin = {
                 showJoinDialog = false
                 scope.launch(Dispatchers.IO) {
+                    teamLoading = true
                     refreshTeams()
                 }
             }
@@ -1194,6 +1228,7 @@ fun HomeScreen(
                 showCreateDialog = false
                 showJoinDialog = false
                 scope.launch(Dispatchers.IO) {
+                    teamLoading = true
                     refreshTeams()
                 }
             }
@@ -1320,14 +1355,23 @@ fun BottomNavItem(
     icon: ImageVector,
     label: String,
     selected: Boolean = false,
+    enabled: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     val itemColor =
-        if (selected) BluePrimary else MutedText
+        if (selected) {
+            BluePrimary
+        } else if (enabled) {
+            MutedText
+        } else {
+            Color(0x4494A3B8)
+        }
 
     Column(
         modifier = Modifier.clickable {
-            onClick() //
+            if (enabled) {
+                onClick()
+            }
         },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

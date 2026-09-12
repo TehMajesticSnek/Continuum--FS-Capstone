@@ -45,7 +45,7 @@ class Database {
 
     var uid: String? = null
     var activeTeam: Int? = null
-    var userRole: Int? = null
+    var userRole: Long? = 0L
 
     @Serializable @Parcelize
     data class Team (
@@ -303,20 +303,50 @@ class Database {
         }
     }
 
-    suspend fun createTeam(teamName: String): String {
-
+    fun generateCode(): String {
         val alphanum = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         val random = SecureRandom()
+
+        return (1..8)
+            .map { alphanum[random.nextInt(alphanum.length)] }
+            .joinToString("")
+    }
+    suspend fun newCode(): String {
         val maxAttempts = 8
 
         var attempts = 0
+
+        var teamCode: String
+        var error = "There was an issue generating a new code. Please try again"
+
+        while (attempts < maxAttempts) {
+            teamCode = generateCode()
+
+            try {
+                supabase.from("teams").update(
+                    {
+                        set("team_code", teamCode)
+                    }
+                ) {
+                    filter {
+                        eq("team_id", activeTeam as Int)
+                    }
+                }
+                error = ""
+                return teamCode
+            } catch (e: Exception) {
+                attempts++
+            }
+        }
+        return error
+    }
+    suspend fun createTeam(teamName: String): String {
+        val maxAttempts = 8
+
+        var attempts = 0
+
         var errorMsg = "There was an issue creating the team. Please try again"
 
-        fun generateCode(): String {
-            return (1..8)
-                .map { alphanum[random.nextInt(alphanum.length)] }
-                .joinToString("")
-        }
         // create team object
         val newTeam = Team(teamName = teamName)
         // create team code
@@ -335,7 +365,6 @@ class Database {
 
         return errorMsg
     }
-
     suspend fun joinTeam(teamCode: String, roleID: Long = 0): String {
         var errorMsg = ""
 
@@ -360,6 +389,35 @@ class Database {
             errorMsg = "There was an issue creating the team. Please try again"
         }
         return errorMsg
+    }
+    suspend fun leaveTeam(): String {
+        if (userRole == 1L) {
+            var adminCount = 0
+            getTeamMembers().forEach { member ->
+                if (member.teamData[0].roleID == 1L) {
+                    adminCount++
+                }
+            }
+            if (adminCount < 2) {
+                return "There must be at least 1 admin on a team at all times"
+            }
+        }
+        supabase.from("team_members").delete {
+            filter {
+                eq("user_id", uid as String)
+                eq("team_id", activeTeam as Int )
+            }
+        }
+        activeTeam = 0
+        return ""
+    }
+    suspend fun deleteTeam() {
+        supabase.from("teams").delete {
+            filter {
+                eq("team_id", activeTeam as Int)
+            }
+        }
+        activeTeam = 0
     }
 
     suspend fun getUserTeams(): List<Team> {
@@ -410,6 +468,38 @@ class Database {
         catch (e: Exception) {
             e.printStackTrace()
             null
+        }
+    }
+    suspend fun updateTeamName(teamName: String?): String {
+        if (teamName == "") {
+            return "Please enter a name"
+        }
+        return try {
+            supabase.from("teams").update(
+                {
+                    set("team_name", teamName)
+                }
+            ) {
+                filter {
+                    eq("team_id", activeTeam as Int)
+                }
+            }
+            ""
+        } catch (e: Exception) {
+            "Error updating name. Please try again"
+        }
+    }
+    suspend fun getTeamRole() {
+        try {
+            userRole = supabase.from("team_members").select(columns = Columns.list("role_id")) {
+                filter {
+                    eq("user_id", uid as String)
+                    eq("team_id", activeTeam as Int)
+                }
+            }.decodeSingle<TeamUser>().roleID
+        }
+        catch (e: Exception) {
+            e.printStackTrace()
         }
     }
     suspend fun getTeamMembers(): List<TeamUserDisplay> {
