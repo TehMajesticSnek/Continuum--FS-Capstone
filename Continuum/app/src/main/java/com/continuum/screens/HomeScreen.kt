@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -734,6 +735,20 @@ fun HomeScreen(
     var showJoinDialog by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
 
+    var teamSearchQuery by rememberSaveable {
+        mutableStateOf("")
+    }
+
+    val filteredTeams = teams
+        .filter { team ->
+            team.teamID != selectedTeam?.teamID &&
+                    team.teamName?.contains(
+                        teamSearchQuery,
+                        ignoreCase = true
+                    ) == true
+        }
+        .sortedBy { it.teamName?.lowercase() }
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -765,38 +780,136 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
 
+                    // CURRENT TEAM
                     Text(
-                        text = "TEAMS",
+                        text = "CURRENT TEAM",
                         color = MutedText,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    teams.forEach { team ->
-
+                    if (selectedTeam != null) {
                         TeamMenuItem(
-                            teamName = team.teamName.toString(),
-                            selected = team.teamID == selectedTeam?.teamID,
-                            onClick = {
-                                teamLoading = true
-
-                                selectedTeam = team
-                                viewModel.selectTeam(selectedTeam!!.teamID ?: 0)
-
-                                scope.launch {
-                                    refreshTeams()
-                                    drawerState.close()
-                                }
-                            }
+                            teamName = selectedTeam?.teamName ?: "No Team Selected",
+                            selected = true,
+                            onClick = {}
                         )
-
-                        Spacer(modifier = Modifier.height(6.dp))
+                    } else {
+                        Text(
+                            text = "No Team Selected",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(
+                                horizontal = 12.dp,
+                                vertical = 14.dp
+                            )
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
+// SEARCH TEAMS
+                    OutlinedTextField(
+                        value = teamSearchQuery,
+                        onValueChange = { teamSearchQuery = it },
+                        placeholder = {
+                            Text("Search teams...")
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search Teams",
+                                tint = MutedText
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Surface,
+                            unfocusedContainerColor = Surface,
+                            focusedBorderColor = BluePrimary,
+                            unfocusedBorderColor = Border,
+                            focusedTextColor = PrimaryText,
+                            unfocusedTextColor = PrimaryText,
+                            cursorColor = BluePrimary,
+                            focusedPlaceholderColor = MutedText,
+                            unfocusedPlaceholderColor = MutedText
+                        ),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+// TEAM LIST LABEL
+                    Text(
+                        text = if (teamSearchQuery.isBlank()) {
+                            "YOUR TEAMS"
+                        } else {
+                            "SEARCH RESULTS"
+                        },
+                        color = MutedText,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+// SCROLLABLE TEAM LIST
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+
+                        if (filteredTeams.isEmpty()) {
+
+                            Text(
+                                text = if (teamSearchQuery.isBlank()) {
+                                    "No other teams"
+                                } else {
+                                    "No teams found"
+                                },
+                                color = MutedText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(
+                                    horizontal = 12.dp,
+                                    vertical = 16.dp
+                                )
+                            )
+
+                        } else {
+
+                            filteredTeams.forEach { team ->
+
+                                TeamMenuItem(
+                                    teamName = team.teamName.toString(),
+                                    selected = false,
+                                    onClick = {
+                                        teamLoading = true
+
+                                        selectedTeam = team
+                                        viewModel.selectTeam(team.teamID ?: 0)
+
+                                        scope.launch {
+                                            refreshTeams()
+                                            teamSearchQuery = ""
+                                            drawerState.close()
+                                        }
+                                    }
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+// JOIN TEAM
                     OutlinedButton(
                         onClick = { showJoinDialog = true },
                         modifier = Modifier.fillMaxWidth(),
@@ -823,21 +936,8 @@ fun HomeScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        text = "Current Team",
-                        color = MutedText,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = selectedTeam?.teamName ?: "No Team Selected", color = PrimaryText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
                 }
             }
         }
