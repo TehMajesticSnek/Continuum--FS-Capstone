@@ -566,11 +566,47 @@ fun RecordsScreen(
 
                                 Spacer(modifier = Modifier.height(10.dp))
 
-                                Text(
-                                    text = "Status: ${viewModel.db.statOptions[handoff.status]}  •  Priority: ${viewModel.db.prioOptions[handoff.priority]}",
-                                    color = BluePrimary,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Status: ${viewModel.db.statOptions[handoff.status]}  •  Priority: ${viewModel.db.prioOptions[handoff.priority]}",
+                                        color = BluePrimary,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+
+                                    Text(
+                                        text = handoff.timestamp?.toString()?.let { timestamp ->
+                                            val dateParts = timestamp
+                                                .substringBefore("T")
+                                                .split("-")
+
+                                            val date = "${dateParts[1].toInt()}/${dateParts[2].toInt()}"
+
+                                            val timeParts = timestamp
+                                                .substringAfter("T")
+                                                .substringBefore(".")
+                                                .split(":")
+
+                                            val hour24 = timeParts[0].toInt()
+                                            val minute = timeParts[1]
+
+                                            val hour12 = when {
+                                                hour24 == 0 -> 12
+                                                hour24 > 12 -> hour24 - 12
+                                                else -> hour24
+                                            }
+
+                                            val amPm = if (hour24 >= 12) "PM" else "AM"
+
+                                            "$date • $hour12:$minute $amPm"
+                                        } ?: "",
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                     }

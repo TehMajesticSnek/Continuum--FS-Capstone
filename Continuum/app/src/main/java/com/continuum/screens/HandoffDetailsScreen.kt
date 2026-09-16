@@ -3,6 +3,7 @@ package com.continuum.screens
 import com.continuum.data.Database
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +19,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,6 +57,14 @@ fun HandoffDetailsScreen(
     onBackClick: () -> Unit = {}
 ) {
     var acknowledged by remember {
+        mutableStateOf(false)
+    }
+
+    var currentStatus by remember(handoff.handoffID) {
+        mutableStateOf(handoff.status)
+    }
+
+    var statusMenuExpanded by remember {
         mutableStateOf(false)
     }
 
@@ -150,10 +162,28 @@ fun HandoffDetailsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = handoff.timestamp
-                        ?.toString()
-                        ?.substringBefore("T")
-                        ?: "Unknown date",
+                    text = handoff.timestamp?.toString()?.let { timestamp ->
+                        val date = timestamp.substringBefore("T")
+
+                        val timeParts = timestamp
+                            .substringAfter("T")
+                            .substringBefore(".")
+                            .split(":")
+
+                        val hour24 = timeParts[0].toInt()
+                        val minute = timeParts[1]
+
+                        val hour12 = when {
+                            hour24 == 0 -> 12
+                            hour24 > 12 -> hour24 - 12
+                            else -> hour24
+                        }
+
+                        val amPm = if (hour24 >= 12) "PM" else "AM"
+                        val time = "$hour12:$minute $amPm"
+
+                        "$date • $time"
+                    } ?: "Unknown date",
                     color = MutedText,
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -163,10 +193,69 @@ fun HandoffDetailsScreen(
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DetailLabel(
-                        label = "Status",
-                        value = viewModel.db.statOptions[handoff.status].toString()
-                    )
+                    Column {
+                        Text(
+                            text = "Status",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable {
+                                statusMenuExpanded = true
+                            }
+                        ) {
+                            Text(
+                                text = viewModel.db.statOptions[currentStatus].toString(),
+                                color = PrimaryText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Change Status",
+                                tint = MutedText
+                            )
+
+                            DropdownMenu(
+                                expanded = statusMenuExpanded,
+                                onDismissRequest = {
+                                    statusMenuExpanded = false
+                                }
+                            ) {
+                                viewModel.db.statOptions
+                                    .filterKeys { it >= 2 }
+                                    .forEach { (statusValue, statusName) ->                                    DropdownMenuItem(
+                                        text = {
+                                            Text(statusName)
+                                        },
+                                        onClick = {
+                                            val id = handoff.handoffID
+
+                                            if (id != null) {
+                                                coroutineScope.launch {
+                                                    val result = viewModel.db.updateHandoffStatus(
+                                                        handoffID = id,
+                                                        status = statusValue
+                                                    )
+
+                                                    if (result.isEmpty()) {
+                                                        currentStatus = statusValue
+                                                    }
+                                                }
+                                            }
+
+                                            statusMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.weight(1f))
 
