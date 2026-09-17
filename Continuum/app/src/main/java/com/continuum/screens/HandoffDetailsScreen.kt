@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import kotlinx.coroutines.launch
+import kotlin.time.toJavaInstant
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -163,27 +164,14 @@ fun HandoffDetailsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = handoff.timestamp?.toString()?.let { timestamp ->
-                        val date = timestamp.substringBefore("T")
+                    text = handoff.timestamp?.let { timestamp ->
+                        val localDateTime = timestamp
+                            .toJavaInstant()
+                            .atZone(java.time.ZoneId.systemDefault())
 
-                        val timeParts = timestamp
-                            .substringAfter("T")
-                            .substringBefore(".")
-                            .split(":")
-
-                        val hour24 = timeParts[0].toInt()
-                        val minute = timeParts[1]
-
-                        val hour12 = when {
-                            hour24 == 0 -> 12
-                            hour24 > 12 -> hour24 - 12
-                            else -> hour24
-                        }
-
-                        val amPm = if (hour24 >= 12) "PM" else "AM"
-                        val time = "$hour12:$minute $amPm"
-
-                        "$date • $time"
+                        java.time.format.DateTimeFormatter
+                            .ofPattern("M/d/yyyy • h:mm a")
+                            .format(localDateTime)
                     } ?: "Unknown date",
                     color = MutedText,
                     style = MaterialTheme.typography.bodySmall
@@ -386,9 +374,13 @@ fun HandoffDetailsScreen(
                             Text(
                                 text = "${commentAuthors[comment.userID] ?: "User"} • ${
                                     comment.timeCreated
-                                        .toString()
-                                        .replace("T", " ")
-                                        .substringBefore(".")
+                                        .toJavaInstant()
+                                        .atZone(java.time.ZoneId.systemDefault())
+                                        .format(
+                                            java.time.format.DateTimeFormatter.ofPattern(
+                                                "M/d/yyyy • h:mm a"
+                                            )
+                                        )
                                 }",
                                 color = MutedText,
                                 style = MaterialTheme.typography.bodySmall
