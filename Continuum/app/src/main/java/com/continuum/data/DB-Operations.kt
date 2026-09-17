@@ -572,6 +572,37 @@ class Database {
         }
         return errorMsg
     }
+
+    suspend fun updateHandoffStatus(
+        handoffID: Int,
+        status: Short
+    ): String {
+        var errorMsg = ""
+
+        try {
+            supabase
+                .from("handoffs")
+                .update(
+                    {
+                        set("status", status.toInt())
+                        set("time_edited", Clock.System.now())
+                    }
+                ) {
+                    filter {
+                        eq("handoff_id", handoffID)
+                    }
+                    println("STATUS UPDATE: handoffID=$handoffID status=$status")
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            println("STATUS UPDATE ERROR: ${e.message}")
+            errorMsg = "Unable to update handoff status. Please try again."
+        }
+
+        return errorMsg
+    }
+
     suspend fun getNotes(): List<Note> {
         return try {
             val currentTeamID = activeTeam ?: return emptyList()

@@ -34,6 +34,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
@@ -68,4 +69,5 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.ktor:ktor-client-android:3.5.1")
     implementation("io.github.jan-tennert.supabase:functions-kt")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

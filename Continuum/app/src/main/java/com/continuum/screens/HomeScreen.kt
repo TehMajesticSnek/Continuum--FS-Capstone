@@ -691,9 +691,8 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
 
-        if (handoffs.isEmpty()) {
-            handoffs = viewModel.db.getHandoffs()
-        }
+        handoffs = viewModel.db.getHandoffs()
+
         if (teams.isEmpty()) {
             teams = viewModel.db.getUserTeams()
         }
@@ -749,6 +748,17 @@ fun HomeScreen(
         }
         .sortedBy { it.teamName?.lowercase() }
 
+    val unresolvedHandoffs = handoffs.filter {
+        it.status.toInt() != 4
+    }
+
+    val highPriorityHandoffs = unresolvedHandoffs.filter {
+        it.priority.toInt() <= 1
+    }
+
+    val recentHandoffs = handoffs
+        .sortedByDescending { it.timestamp }
+        .take(3)
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -1172,31 +1182,113 @@ fun HomeScreen(
 
                         SummaryCard(
                             label = "Open\nIssues",
-                            value = handoffs.count { it.status.toInt() == 0 }.toString(),
+                            value = unresolvedHandoffs.size.toString(),
                             indicatorColor = BluePrimary,
                             modifier = Modifier.weight(1f)
                         )
 
                         SummaryCard(
-                            label = "Critical",
-                            value = handoffs.count { it.priority.toInt() >= 4 }.toString(),
+                            label = "High\nPriority",
+                            value = highPriorityHandoffs.size.toString(),
                             indicatorColor = Color.Red,
                             modifier = Modifier.weight(1f)
                         )
 
                         SummaryCard(
-                            label = "Resolved\nToday",
-                            value = handoffs.count { handoff ->
-                                handoff.status.toInt() == 3 &&
-                                        handoff.timestamp?.toString()?.substringBefore("T") ==
-                                        kotlin.time.Clock.System.now().toString().substringBefore("T")
+                            label = "In\nProgress",
+                            value = unresolvedHandoffs.count {
+                                it.status.toInt() == 2
                             }.toString(),
                             indicatorColor = Color.Green,
                             modifier = Modifier.weight(1f)
                         )
                     }
                     Spacer(modifier = Modifier.height(18.dp))
+                    Text(
+                        text = "Needs Attention",
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (highPriorityHandoffs.isEmpty()) {
+                        Text(
+                            text = "No high-priority items need attention.",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    } else {
+                        highPriorityHandoffs
+                            .sortedWith(
+                                compareBy<Database.Handoff> { it.priority }
+                                    .thenByDescending { it.timestamp }
+                            )
+                            .take(3)
+                            .forEach { handoff ->
+
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 8.dp)
+                                        .clickable {
+                                            onHandoffClick(handoff)
+                                        },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Surface
+                                    ),
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = Border
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp)
+                                    ) {
+
+                                        Text(
+                                            text = handoff.title,
+                                            color = PrimaryText,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        Text(
+                                            text = handoff.content ?: "",
+                                            color = MutedText,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+
+                                        Spacer(modifier = Modifier.height(6.dp))
+
+                                        Row {
+                                            Text(
+                                                text = viewModel.db.prioOptions[handoff.priority] ?: "",
+                                                color = if (handoff.priority.toInt() == 0) {
+                                                    Color.Red
+                                                } else {
+                                                    BluePrimary
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+
+                                            Text(
+                                                text = " • ${viewModel.db.statOptions[handoff.status]}",
+                                                color = BluePrimary,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
                     Text(
                         text = "Recent Handoffs",
                         color = PrimaryText,
@@ -1206,18 +1298,7 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    handoffs.reversed()
-                        .filter { handoff ->
-                            val isRecent =
-                                handoff.timestamp != null &&
-                                        handoff.timestamp >= kotlin.time.Clock.System.now() - kotlin.time.Duration.parse("24h")
-
-                            val isHighPriority = handoff.priority >= 4
-
-                            isRecent || isHighPriority
-                        }
-                        .take(3)
-                        .forEach { handoff ->
+                    recentHandoffs.forEach { handoff ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1242,6 +1323,20 @@ fun HomeScreen(
                                         color = PrimaryText,
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = handoff.timestamp?.let { timestamp ->
+                                            java.time.Instant
+                                                .parse(timestamp.toString())
+                                                .atZone(java.time.ZoneId.systemDefault())
+                                                .format(
+                                                    java.time.format.DateTimeFormatter.ofPattern(
+                                                        "M/d/yyyy • h:mm a"
+                                                    )
+                                                )
+                                        } ?: "",
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodySmall
                                     )
 
                                     Spacer(modifier = Modifier.height(4.dp))
