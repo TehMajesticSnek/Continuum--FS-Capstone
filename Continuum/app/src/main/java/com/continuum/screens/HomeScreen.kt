@@ -1258,9 +1258,15 @@ fun HomeScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         Text(
-                                            text = handoff.content ?: "",
+                                            text = handoff.content
+                                                ?.substringAfter("Issue Details:")
+                                                ?.substringBefore("Actions Taken:")
+                                                ?.trim()
+                                                ?: "",
                                             color = MutedText,
-                                            style = MaterialTheme.typography.bodySmall
+                                            style = MaterialTheme.typography.bodySmall,
+                                            maxLines = 2,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                         )
 
                                         Spacer(modifier = Modifier.height(6.dp))
@@ -1349,9 +1355,15 @@ fun HomeScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
 
                                     Text(
-                                        text = handoff.content ?: "",
+                                        text = handoff.content
+                                            ?.substringAfter("Issue Details:")
+                                            ?.substringBefore("Actions Taken:")
+                                            ?.trim()
+                                            ?: "",
                                         color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
 
                                     Spacer(modifier = Modifier.height(6.dp))

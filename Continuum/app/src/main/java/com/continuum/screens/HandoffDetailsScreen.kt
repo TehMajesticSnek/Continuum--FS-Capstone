@@ -310,6 +310,17 @@ fun HandoffDetailsScreen(
 
                                 if (result.isEmpty()) {
                                     acknowledged = true
+
+                                    if (currentStatus.toInt() == 0) {
+                                        val statusResult = viewModel.db.updateHandoffStatus(
+                                            handoffID = id,
+                                            status = 1.toShort()
+                                        )
+
+                                        if (statusResult.isEmpty()) {
+                                            currentStatus = 1.toShort()
+                                        }
+                                    }
                                 }
                             }
                         }
