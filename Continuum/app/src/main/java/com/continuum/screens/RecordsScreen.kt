@@ -65,6 +65,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -572,7 +576,21 @@ fun RecordsScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Status: ${viewModel.db.statOptions[handoff.status]}  •  Priority: ${viewModel.db.prioOptions[handoff.priority]}",
+                                        text = buildAnnotatedString {
+                                            append("Status: ${viewModel.db.statOptions[handoff.status]}  •  Priority: ")
+
+                                            withStyle(
+                                                style = SpanStyle(
+                                                    color = if (handoff.priority.toInt() <= 1) {
+                                                        Color.Red
+                                                    } else {
+                                                        BluePrimary
+                                                    }
+                                                )
+                                            ) {
+                                                append(viewModel.db.prioOptions[handoff.priority].toString())
+                                            }
+                                        },
                                         color = BluePrimary,
                                         style = MaterialTheme.typography.bodySmall
                                     )

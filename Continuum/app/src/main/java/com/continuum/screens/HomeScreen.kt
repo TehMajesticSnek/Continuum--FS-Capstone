@@ -1265,21 +1265,42 @@ fun HomeScreen(
 
                                         Spacer(modifier = Modifier.height(6.dp))
 
-                                        Row {
-                                            Text(
-                                                text = viewModel.db.prioOptions[handoff.priority] ?: "",
-                                                color = if (handoff.priority.toInt() == 0) {
-                                                    Color.Red
-                                                } else {
-                                                    BluePrimary
-                                                },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row {
+                                                Text(
+                                                    text = viewModel.db.prioOptions[handoff.priority] ?: "",
+                                                    color = if (handoff.priority.toInt() <= 1) {
+                                                        Color.Red
+                                                    } else {
+                                                        BluePrimary
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+
+                                                Text(
+                                                    text = " • ${viewModel.db.statOptions[handoff.status]}",
+                                                    color = BluePrimary,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                            }
 
                                             Text(
-                                                text = " • ${viewModel.db.statOptions[handoff.status]}",
-                                                color = BluePrimary,
+                                                text = handoff.timestamp?.let { timestamp ->
+                                                    java.time.Instant
+                                                        .parse(timestamp.toString())
+                                                        .atZone(java.time.ZoneId.systemDefault())
+                                                        .format(
+                                                            java.time.format.DateTimeFormatter.ofPattern(
+                                                                "M/d/yyyy • h:mm a"
+                                                            )
+                                                        )
+                                                } ?: "",
+                                                color = MutedText,
                                                 style = MaterialTheme.typography.bodySmall
                                             )
                                         }
@@ -1324,20 +1345,6 @@ fun HomeScreen(
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
-                                    Text(
-                                        text = handoff.timestamp?.let { timestamp ->
-                                            java.time.Instant
-                                                .parse(timestamp.toString())
-                                                .atZone(java.time.ZoneId.systemDefault())
-                                                .format(
-                                                    java.time.format.DateTimeFormatter.ofPattern(
-                                                        "M/d/yyyy • h:mm a"
-                                                    )
-                                                )
-                                        } ?: "",
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
 
                                     Spacer(modifier = Modifier.height(4.dp))
 
@@ -1349,11 +1356,45 @@ fun HomeScreen(
 
                                     Spacer(modifier = Modifier.height(6.dp))
 
-                                    Text(
-                                        text = "Status: ${viewModel.db.statOptions[handoff.status]}  •  Priority: ${viewModel.db.prioOptions[handoff.priority]}",
-                                        color = BluePrimary,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row {
+                                            Text(
+                                                text = viewModel.db.prioOptions[handoff.priority] ?: "",
+                                                color = if (handoff.priority.toInt() <= 1) {
+                                                    Color.Red
+                                                } else {
+                                                    BluePrimary
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+
+                                            Text(
+                                                text = " • ${viewModel.db.statOptions[handoff.status]}",
+                                                color = BluePrimary,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+
+                                        Text(
+                                            text = handoff.timestamp?.let { timestamp ->
+                                                java.time.Instant
+                                                    .parse(timestamp.toString())
+                                                    .atZone(java.time.ZoneId.systemDefault())
+                                                    .format(
+                                                        java.time.format.DateTimeFormatter.ofPattern(
+                                                            "M/d/yyyy • h:mm a"
+                                                        )
+                                                    )
+                                            } ?: "",
+                                            color = MutedText,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
                                 }
                             }
                         }

@@ -39,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -259,10 +260,26 @@ fun HandoffDetailsScreen(
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    DetailLabel(
-                        label = "Priority",
-                        value = viewModel.db.prioOptions[handoff.priority].toString()
-                    )
+                    Column {
+                        Text(
+                            text = "Priority",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = viewModel.db.prioOptions[handoff.priority].toString(),
+                            color = if (handoff.priority.toInt() <= 1) {
+                                Color.Red
+                            } else {
+                                BluePrimary
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
