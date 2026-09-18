@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +45,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.core.content.ContextCompat
+import android.media.MediaRecorder
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
@@ -111,6 +117,34 @@ fun CreateHandoffScreen(
         mutableStateOf<Uri?>(null)
     }
 
+    var mediaRecorder by remember {
+        mutableStateOf<MediaRecorder?>(null)
+    }
+
+    var isRecording by remember {
+        mutableStateOf(false)
+    }
+
+    var audioFile by remember {
+        mutableStateOf<File?>(null)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isRecording) {
+                try {
+                    mediaRecorder?.stop()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                mediaRecorder?.release()
+                mediaRecorder = null
+                isRecording = false
+            }
+        }
+    }
+
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -164,6 +198,57 @@ fun CreateHandoffScreen(
         if (success && cameraPhotoUri != null) {
             selectedFileUri = cameraPhotoUri
             selectedFileName = "handoff_photo_${System.currentTimeMillis()}.jpg"
+        }
+    }
+
+    val microphonePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(
+                context,
+                "Microphone permission is required to record a voice note.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    fun startVoiceRecording() {
+        val file = File.createTempFile(
+            "voice_note_",
+            ".m4a",
+            context.cacheDir
+        )
+
+        audioFile = file
+
+        @Suppress("DEPRECATION")
+        val recorder = MediaRecorder().apply {
+            setAudioSource(MediaRecorder.AudioSource.MIC)
+            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            setOutputFile(file.absolutePath)
+            prepare()
+            start()
+        }
+
+        mediaRecorder = recorder
+        isRecording = true
+    }
+
+    fun stopVoiceRecording() {
+        try {
+            mediaRecorder?.stop()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            mediaRecorder?.release()
+            mediaRecorder = null
+            isRecording = false
+        }
+
+        audioFile?.let { file ->
+            selectedFileUri = Uri.fromFile(file)
+            selectedFileName = file.name
         }
     }
 
@@ -567,6 +652,41 @@ fun CreateHandoffScreen(
             shape = RoundedCornerShape(8.dp)
         ) {
             Text("Take Photo")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = {
+                if (isRecording) {
+                    stopVoiceRecording()
+                } else {
+                    if (
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.RECORD_AUDIO
+                        ) == PackageManager.PERMISSION_GRANTED
+                    ) {
+                        startVoiceRecording()
+                    } else {
+                        microphonePermissionLauncher.launch(
+                            Manifest.permission.RECORD_AUDIO
+                        )
+                    }
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = if (isRecording) {
+                    "Stop Recording"
+                } else {
+                    "Record Voice Note"
+                }
+            )
         }
 
         if (selectedFileName != null) {

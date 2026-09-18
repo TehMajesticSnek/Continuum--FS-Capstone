@@ -372,6 +372,17 @@ fun HandoffDetailsScreen(
                                 modifier = Modifier.padding(12.dp)
                             ) {
 
+                                val fileName = attachment.fileURL
+                                    .substringAfterLast("/")
+                                    .substringAfter("_")
+
+                                val isAudio = fileName.lowercase().let {
+                                    it.endsWith(".m4a") ||
+                                            it.endsWith(".mp3") ||
+                                            it.endsWith(".wav") ||
+                                            it.endsWith(".aac")
+                                }
+
                                 val imageUrl = attachmentImageUrls[attachment.fileURL]
 
                                 if (imageUrl != null) {
@@ -398,7 +409,7 @@ fun HandoffDetailsScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 Text(
-                                    text = "File attachment",
+                                    text = if (isAudio) "Voice note • Tap to play" else "File attachment",
                                     color = MutedText,
                                     style = MaterialTheme.typography.bodySmall
                                 )
