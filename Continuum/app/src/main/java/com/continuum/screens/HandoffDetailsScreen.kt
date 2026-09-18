@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.continuum.ui.ViewModel
@@ -51,6 +52,8 @@ import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
+import android.content.Intent
+import android.net.Uri
 
 @Composable
 fun HandoffDetailsScreen(
@@ -72,8 +75,14 @@ fun HandoffDetailsScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
+    val context = LocalContext.current
+
     var comments by remember {
         mutableStateOf<List<Database.Comment>>(emptyList())
+    }
+
+    var attachments by remember {
+        mutableStateOf<List<Database.FileAttachment>>(emptyList())
     }
 
     var commentAuthors by remember {
@@ -95,6 +104,8 @@ fun HandoffDetailsScreen(
             acknowledged = viewModel.db.hasAcknowledgedHandoff(id)
 
             comments = viewModel.db.getComments(id)
+
+            attachments = viewModel.db.getFileAttachments(id)
 
             commentAuthors = comments
                 .map { it.userID }
@@ -286,6 +297,70 @@ fun HandoffDetailsScreen(
                     color = PrimaryText,
                     style = MaterialTheme.typography.bodyMedium
                 )
+
+                if (attachments.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Text(
+                        text = "Attachments",
+                        color = BluePrimary,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    attachments.forEach { attachment ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .clickable {
+                                    coroutineScope.launch {
+                                        val signedUrl = viewModel.db.getAttachmentSignedUrl(
+                                            attachment.fileURL
+                                        )
+
+                                        if (signedUrl != null) {
+                                            val intent = Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse(signedUrl)
+                                            )
+                                            context.startActivity(intent)
+                                        }
+                                    }
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = NavyBackground
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Border
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Text(
+                                    text = attachment.fileURL
+                                        .substringAfterLast("/")
+                                        .substringAfter("_"),
+                                    color = PrimaryText,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = "File attachment",
+                                    color = MutedText,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(

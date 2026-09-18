@@ -10,6 +10,8 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import android.os.Parcelable
@@ -19,6 +21,7 @@ import kotlinx.serialization.json.buildJsonObject
 import java.security.SecureRandom
 import kotlin.Int
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 
@@ -30,6 +33,7 @@ class Database {
         install(Postgrest)
         install(Auth)
         install(Functions)
+        install(Storage)
     }
 
     val statOptions = mapOf(
@@ -113,6 +117,18 @@ class Database {
         val handoffID: Int? = null
     ) : Parcelable
     @Serializable
+    data class FileAttachment(
+        @SerialName("handoff_id")
+        val handoffID: Int,
+        @SerialName("file_url")
+        val fileURL: String
+    )
+
+    data class NewHandoffResult(
+        val handoff: Handoff? = null,
+        val error: String = ""
+    )
+    @Serializable
     data class Acknowledgement(
         @SerialName("handoff_id")
         val handoffID: Int,
@@ -184,6 +200,66 @@ class Database {
         @SerialName("is_action")
         val isAction: Boolean
     )
+    suspend fun getFileAttachments(handoffID: Int): List<FileAttachment> {
+        return try {
+            supabase
+                .from("file_attachments")
+                .select {
+                    filter {
+                        eq("handoff_id", handoffID)
+                    }
+                }
+                .decodeList<FileAttachment>()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    suspend fun uploadFileAttachment(
+        handoffID: Int,
+        fileName: String,
+        fileBytes: ByteArray
+    ): String {
+        return try {
+            val bucket = supabase.storage.from("handoff_attachments")
+
+            val filePath = "$handoffID/${System.currentTimeMillis()}_$fileName"
+
+            bucket.upload(filePath, fileBytes) {
+                upsert = false
+            }
+
+            val attachment = FileAttachment(
+                handoffID = handoffID,
+                fileURL = filePath
+            )
+
+            supabase
+                .from("file_attachments")
+                .insert(attachment)
+
+            ""
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "There was an issue uploading this file. Please try again."
+        }
+    }
+
+    suspend fun getAttachmentSignedUrl(filePath: String): String? {
+        return try {
+            supabase.storage
+                .from("handoff_attachments")
+                .createSignedUrl(
+                    path = filePath,
+                    expiresIn = 60.seconds
+                )
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
     suspend fun registerUser(inputEmail: String, inputPassword: String, passwordConfirm: String, fName: String, lName: String) : String {
         // check all are not null
         if (inputPassword != passwordConfirm)
@@ -553,10 +629,14 @@ class Database {
             null
         }
     }
-    suspend fun newHandoff(title: String, content: String?, status: Short, priority: Short): String {
-        var errorMsg = ""
+    suspend fun newHandoff(
+        title: String,
+        content: String?,
+        status: Short,
+        priority: Short
+    ): NewHandoffResult {
 
-        try {
+        return try {
             val newHandoffObj = Handoff(
                 activeTeam,
                 uid,
@@ -566,11 +646,25 @@ class Database {
                 priority,
                 Clock.System.now()
             )
-            supabase.from("handoffs").insert(newHandoffObj)
+
+            val createdHandoff = supabase
+                .from("handoffs")
+                .insert(newHandoffObj) {
+                    select()
+                }
+                .decodeSingle<Handoff>()
+
+            NewHandoffResult(
+                handoff = createdHandoff
+            )
+
         } catch (e: Exception) {
-            errorMsg = "There was an issue creating this record. Please try again"
+            e.printStackTrace()
+
+            NewHandoffResult(
+                error = "There was an issue creating this record. Please try again"
+            )
         }
-        return errorMsg
     }
 
     suspend fun updateHandoffStatus(

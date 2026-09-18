@@ -1,5 +1,8 @@
 package com.continuum.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -93,6 +96,37 @@ fun CreateHandoffScreen(
 
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    var selectedFileUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+    var selectedFileName by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            selectedFileUri = uri
+
+            selectedFileName = context.contentResolver
+                .query(uri, null, null, null, null)
+                ?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(
+                        android.provider.OpenableColumns.DISPLAY_NAME
+                    )
+
+                    if (cursor.moveToFirst() && nameIndex >= 0) {
+                        cursor.getString(nameIndex)
+                    } else {
+                        null
+                    }
+                }
+                ?: "Selected file"
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -426,6 +460,45 @@ fun CreateHandoffScreen(
             shape = RoundedCornerShape(8.dp)
         )
 
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Attachment",
+            color = PrimaryText,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        OutlinedButton(
+            onClick = {
+                filePickerLauncher.launch(arrayOf("*/*"))
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(
+                text = if (selectedFileUri == null) {
+                    "Attach File"
+                } else {
+                    "Change File"
+                }
+            )
+        }
+
+        if (selectedFileName != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = selectedFileName!!,
+                color = MutedText,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedButton(
@@ -460,20 +533,49 @@ fun CreateHandoffScreen(
                             ${nextSteps.trim()}
                         """.trimIndent()
 
-                        val response = viewModel.db.newHandoff(
+                        val result = viewModel.db.newHandoff(
                             title,
                             structuredContent,
                             statSelected!!.key,
                             prioSelected!!.key
                         )
 
-                        if (response == "") {
+                        if (result.error.isEmpty()) {
+                            val handoffID = result.handoff?.handoffID
+
+                            if (selectedFileUri != null && handoffID != null) {
+                                val fileBytes = context.contentResolver
+                                    .openInputStream(selectedFileUri!!)
+                                    ?.use { it.readBytes() }
+
+                                if (fileBytes == null) {
+                                    withContext(Dispatchers.Main) {
+                                        showError(context, "Unable to read the selected file.")
+                                    }
+                                    return@withContext
+                                }
+
+                                val uploadResult = viewModel.db.uploadFileAttachment(
+                                    handoffID = handoffID,
+                                    fileName = selectedFileName ?: "attachment",
+                                    fileBytes = fileBytes
+                                )
+
+                                if (uploadResult.isNotEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        showError(context, uploadResult)
+                                    }
+                                    return@withContext
+                                }
+                            }
+
                             withContext(Dispatchers.Main) {
                                 onSubmitClick()
                             }
-                        }
-                        else {
-                            showError(context, response)
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                showError(context, result.error)
+                            }
                         }
                     }
                 }
