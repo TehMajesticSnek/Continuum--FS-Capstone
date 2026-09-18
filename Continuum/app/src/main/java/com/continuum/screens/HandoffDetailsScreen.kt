@@ -1,6 +1,7 @@
 package com.continuum.screens
 
 import com.continuum.data.Database
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +87,10 @@ fun HandoffDetailsScreen(
         mutableStateOf<List<Database.FileAttachment>>(emptyList())
     }
 
+    var attachmentImageUrls by remember {
+        mutableStateOf<Map<String, String>>(emptyMap())
+    }
+
     var commentAuthors by remember {
         mutableStateOf(emptyMap<String, String>())
     }
@@ -106,6 +112,29 @@ fun HandoffDetailsScreen(
             comments = viewModel.db.getComments(id)
 
             attachments = viewModel.db.getFileAttachments(id)
+
+            val imageUrls = mutableMapOf<String, String>()
+
+            attachments.forEach { attachment ->
+                val fileName = attachment.fileURL.lowercase()
+
+                val isImage = fileName.endsWith(".jpg") ||
+                        fileName.endsWith(".jpeg") ||
+                        fileName.endsWith(".png") ||
+                        fileName.endsWith(".webp")
+
+                if (isImage) {
+                    val signedUrl = viewModel.db.getAttachmentSignedUrl(
+                        attachment.fileURL
+                    )
+
+                    if (signedUrl != null) {
+                        imageUrls[attachment.fileURL] = signedUrl
+                    }
+                }
+            }
+
+            attachmentImageUrls = imageUrls
 
             commentAuthors = comments
                 .map { it.userID }
@@ -342,6 +371,22 @@ fun HandoffDetailsScreen(
                             Column(
                                 modifier = Modifier.padding(12.dp)
                             ) {
+
+                                val imageUrl = attachmentImageUrls[attachment.fileURL]
+
+                                if (imageUrl != null) {
+                                    AsyncImage(
+                                        model = imageUrl,
+                                        contentDescription = "Handoff photo",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(180.dp),
+                                        contentScale = ContentScale.Crop
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                }
+
                                 Text(
                                     text = attachment.fileURL
                                         .substringAfterLast("/")

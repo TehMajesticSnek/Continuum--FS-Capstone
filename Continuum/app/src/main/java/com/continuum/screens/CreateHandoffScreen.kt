@@ -55,6 +55,8 @@ import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.content.FileProvider
+import java.io.File
 
 @Composable
 fun CreateHandoffScreen(
@@ -105,6 +107,11 @@ fun CreateHandoffScreen(
         mutableStateOf<String?>(null)
     }
 
+    var cameraPhotoUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -125,6 +132,38 @@ fun CreateHandoffScreen(
                     }
                 }
                 ?: "Selected file"
+        }
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            selectedFileUri = uri
+
+            selectedFileName = context.contentResolver
+                .query(uri, null, null, null, null)
+                ?.use { cursor ->
+                    val nameIndex = cursor.getColumnIndex(
+                        android.provider.OpenableColumns.DISPLAY_NAME
+                    )
+
+                    if (cursor.moveToFirst() && nameIndex >= 0) {
+                        cursor.getString(nameIndex)
+                    } else {
+                        null
+                    }
+                }
+                ?: "Selected photo"
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && cameraPhotoUri != null) {
+            selectedFileUri = cameraPhotoUri
+            selectedFileName = "handoff_photo_${System.currentTimeMillis()}.jpg"
         }
     }
 
@@ -487,6 +526,47 @@ fun CreateHandoffScreen(
                     "Change File"
                 }
             )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = {
+                photoPickerLauncher.launch("image/*")
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("Add Photo")
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = {
+                val photoFile = File.createTempFile(
+                    "handoff_photo_",
+                    ".jpg",
+                    context.cacheDir
+                )
+
+                val photoUri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    photoFile
+                )
+
+                cameraPhotoUri = photoUri
+                cameraLauncher.launch(photoUri)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text("Take Photo")
         }
 
         if (selectedFileName != null) {
