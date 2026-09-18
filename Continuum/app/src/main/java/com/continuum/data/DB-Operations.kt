@@ -470,6 +470,7 @@ class Database {
             if (teamIDResult == null) {
                 return "Invalid team code"
             }
+
             val newUser = TeamUser(
                 teamIDResult.teamID ?: throw IllegalArgumentException("Invalid team code"),
                 uid,
@@ -477,6 +478,13 @@ class Database {
             )
             supabase.from("team_members").insert(newUser)
 
+        } catch (e: io.github.jan.supabase.postgrest.exception.PostgrestRestException) {
+
+            if (e.code == "23505" || e.message?.contains("duplicate key") == true) {
+                errorMsg = "You are already a member of this team"
+            } else {
+                errorMsg = "An unexpected error occurred: ${e.message}"
+            }
         } catch (e: Exception) {
             errorMsg = "There was an issue creating the team. Please try again"
         }

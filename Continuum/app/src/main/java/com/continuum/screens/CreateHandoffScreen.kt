@@ -50,6 +50,7 @@ import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import android.media.MediaRecorder
+import androidx.compose.foundation.layout.imePadding
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
@@ -257,6 +258,7 @@ fun CreateHandoffScreen(
             .fillMaxSize()
             .background(NavyBackground)
             .statusBarsPadding()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(
                 start = 20.dp,

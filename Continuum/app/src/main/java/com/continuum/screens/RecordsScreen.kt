@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -135,8 +137,6 @@ fun RecordsScreen(
 
     var showComplete by remember { mutableStateOf(false) }
 
-    //TODO Make a modal or whatever for filters. Button next to search bar opens. For now, just have status, prio, and showComplete.
-    // filter icon is just called filter list
     @Composable
     fun FilterDialog(
         db: Database,
@@ -494,7 +494,7 @@ fun RecordsScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
             ) {
                 if (handoffs.isEmpty()) {
                     Card(

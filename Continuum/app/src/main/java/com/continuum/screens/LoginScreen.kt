@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.autofill.ContentType
@@ -40,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import com.continuum.data.Database
@@ -130,6 +132,9 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .semantics { contentType = ContentType.EmailAddress },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email
+            ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Surface,
                 unfocusedContainerColor = Surface,

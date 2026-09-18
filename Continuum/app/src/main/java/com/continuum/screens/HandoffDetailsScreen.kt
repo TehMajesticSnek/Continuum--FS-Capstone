@@ -56,6 +56,7 @@ import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.layout.imePadding
 
 @Composable
 fun HandoffDetailsScreen(
@@ -149,6 +150,7 @@ fun HandoffDetailsScreen(
             .fillMaxSize()
             .background(NavyBackground)
             .statusBarsPadding()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .padding(
                 start = 20.dp,

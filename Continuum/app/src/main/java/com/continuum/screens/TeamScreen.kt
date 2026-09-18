@@ -679,7 +679,7 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Are you sure you want to delete this team?"
+                    text = "Are you sure you want to delete this team? This action is permanent."
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
