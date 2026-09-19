@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,6 +23,7 @@ import com.continuum.screens.LoginScreen
 import com.continuum.screens.RecordsScreen
 import com.continuum.screens.RegisterScreen
 import com.continuum.screens.TeamScreen
+import com.continuum.screens.onSwipeNavigation
 import com.continuum.ui.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -111,6 +113,16 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
 
         composable<Home> {
             HomeScreen(
+                modifier = Modifier.onSwipeNavigation(
+                    onSwipeLeft = {
+                        navController.navigate(route = Records) {
+                            popUpTo(Home) {
+                                inclusive = false
+                            }
+                        }
+                    },
+                    onSwipeRight = { }
+                ),
                 viewModel = viewModel,
                 toNewHandoff = {
                     handoffDraftContent = ""
@@ -144,7 +156,8 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                             inclusive = true
                         }
                     }
-                }
+                },
+
             )
         }
 
@@ -193,7 +206,23 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                             inclusive = false
                         }
                     }
-                }
+                },
+                modifier = Modifier.onSwipeNavigation(
+                    onSwipeLeft = {
+                        navController.navigate(route = Teams) {
+                            popUpTo(Home) {
+                                inclusive = false
+                            }
+                        }
+                    },
+                    onSwipeRight = {
+                        navController.navigate(route = Home) {
+                            popUpTo(Home) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                ),
             )
         }
         composable<Teams> {
@@ -212,7 +241,17 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                             inclusive = false
                         }
                     }
-                }
+                },
+                modifier = Modifier.onSwipeNavigation(
+                    onSwipeLeft = { },
+                    onSwipeRight = {
+                        navController.navigate(route = Records) {
+                            popUpTo(Home) {
+                                inclusive = false
+                            }
+                        }
+                    }
+                ),
             )
         }
     }

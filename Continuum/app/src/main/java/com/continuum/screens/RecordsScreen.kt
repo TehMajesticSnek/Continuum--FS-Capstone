@@ -88,15 +88,11 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.time.toJavaInstant
 
-
-
-
-
 @Composable
 fun RecordsScreen(
+    modifier: Modifier = Modifier,
     viewModel: ViewModel,
     toHome: () -> Unit = {},
-    onBackClick: () -> Unit = {},
     onHandoffClick: (Database.Handoff) -> Unit = {},
     toTeams: () -> Unit = {}
 ) {
@@ -198,8 +194,22 @@ fun RecordsScreen(
                                     unfocusedContainerColor = Surface,
                                     focusedBorderColor = BluePrimary,
                                     unfocusedBorderColor = Border,
-                                    focusedTextColor = PrimaryText,
-                                    unfocusedTextColor = PrimaryText,
+                                    focusedTextColor = when (statSelected!!.key.toInt()) {
+                                        0 -> Color(0xffFF5F15)
+                                        1 -> Color.Yellow
+                                        2 -> BluePrimary
+                                        3 -> Color.Cyan
+                                        4 -> Color.Green
+                                        else -> PrimaryText
+                                    },
+                                    unfocusedTextColor = when (statSelected!!.key.toInt()) {
+                                        0 -> Color(0xffFF5F15)
+                                        1 -> Color.Yellow
+                                        2 -> BluePrimary
+                                        3 -> Color.Cyan
+                                        4 -> Color.Green
+                                        else -> PrimaryText
+                                    },
                                     focusedLabelColor = BluePrimary,
                                     unfocusedLabelColor = MutedText,
                                     cursorColor = BluePrimary,
@@ -215,7 +225,16 @@ fun RecordsScreen(
                             ) {
                                 statOptions.forEach { option ->
                                     DropdownMenuItem(
-                                        text = { Text(option.value) },
+                                        text = { Text(option.value,
+                                            color = when (option.key.toInt()) {
+                                                0 -> Color(0xffFF5F15)
+                                                1 -> Color.Yellow
+                                                2 -> BluePrimary
+                                                3 -> Color.Cyan
+                                                4 -> Color.Green
+                                                else -> PrimaryText
+                                            })
+                                        },
                                         onClick = {
                                             coroutineScope.launch(Dispatchers.IO) {
                                                 handoffs = viewModel.db.getHandoffsFilter(
@@ -248,8 +267,22 @@ fun RecordsScreen(
                                     unfocusedContainerColor = Surface,
                                     focusedBorderColor = BluePrimary,
                                     unfocusedBorderColor = Border,
-                                    focusedTextColor = PrimaryText,
-                                    unfocusedTextColor = PrimaryText,
+                                    focusedTextColor = when (prioSelected!!.key.toInt()) {
+                                        0 -> Color.Red
+                                        1 -> Color(0xffFF5F15)
+                                        2 -> Color.Yellow
+                                        3 -> BluePrimary
+                                        4 -> Color.Green
+                                        else -> PrimaryText
+                                    },
+                                    unfocusedTextColor = when (prioSelected!!.key.toInt()) {
+                                        0 -> Color.Red
+                                        1 -> Color(0xffFF5F15)
+                                        2 -> Color.Yellow
+                                        3 -> BluePrimary
+                                        4 -> Color.Green
+                                        else -> PrimaryText
+                                    },
                                     focusedLabelColor = BluePrimary,
                                     unfocusedLabelColor = MutedText,
                                     cursorColor = BluePrimary,
@@ -265,7 +298,17 @@ fun RecordsScreen(
                             ) {
                                 prioOptions.forEach { option ->
                                     DropdownMenuItem(
-                                        text = { Text(option.value) },
+                                        text = { Text(
+                                            option.value,
+                                            color = when (option.key.toInt()) {
+                                                0 -> Color.Red
+                                                1 -> Color(0xffFF5F15)
+                                                2 -> Color.Yellow
+                                                3 -> BluePrimary
+                                                4 -> Color.Green
+                                                else -> PrimaryText
+                                            })
+                                        },
                                         onClick = {
                                             coroutineScope.launch(Dispatchers.IO) {
                                                 handoffs = viewModel.db.getHandoffsFilter(
@@ -357,6 +400,7 @@ fun RecordsScreen(
     }
 
     Scaffold (
+        modifier = modifier.fillMaxSize(),
         bottomBar = {
             BottomAppBar(
                 containerColor = NavyBackground,
@@ -578,14 +622,33 @@ fun RecordsScreen(
                                 ) {
                                     Text(
                                         text = buildAnnotatedString {
-                                            append("Status: ${viewModel.db.statOptions[handoff.status]}  •  Priority: ")
+                                            append("Status: ")
+                                            withStyle(
+                                                style = SpanStyle(
+                                                    color = when (handoff.status.toInt()) {
+                                                        0 -> Color(0xffFF5F15)
+                                                        1 -> Color.Yellow
+                                                        2 -> BluePrimary
+                                                        3 -> Color.Cyan
+                                                        4 -> Color.Green
+                                                        else -> BluePrimary
+                                                    }
+                                                )
+                                            ) {
+                                                append(viewModel.db.statOptions[handoff.status].toString())
+                                            }
+
+                                            append("  •  Priority: ")
 
                                             withStyle(
                                                 style = SpanStyle(
-                                                    color = if (handoff.priority.toInt() <= 1) {
-                                                        Color.Red
-                                                    } else {
-                                                        BluePrimary
+                                                    color = when (handoff.priority.toInt()) {
+                                                        0 -> Color.Red
+                                                        1 -> Color(0xffFF5F15)
+                                                        2 -> Color.Yellow
+                                                        3 -> BluePrimary
+                                                        4 -> Color.Green
+                                                        else -> BluePrimary
                                                     }
                                                 )
                                             ) {
@@ -595,22 +658,22 @@ fun RecordsScreen(
                                         color = BluePrimary,
                                         style = MaterialTheme.typography.bodySmall
                                     )
-
-                                    Text(
-                                        text = handoff.timestamp?.let { timestamp ->
-                                            timestamp
-                                                .toJavaInstant()
-                                                .atZone(java.time.ZoneId.systemDefault())
-                                                .format(
-                                                    java.time.format.DateTimeFormatter.ofPattern(
-                                                        "M/d/yyyy • h:mm a"
-                                                    )
-                                                )
-                                        } ?: "",
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
                                 }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = handoff.timestamp?.let { timestamp ->
+                                        timestamp
+                                            .toJavaInstant()
+                                            .atZone(java.time.ZoneId.systemDefault())
+                                            .format(
+                                                java.time.format.DateTimeFormatter.ofPattern(
+                                                    "M/d/yyyy • h:mm a"
+                                                )
+                                            )
+                                    } ?: "",
+                                    color = MutedText,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
                         }
                     }
@@ -624,46 +687,5 @@ fun RecordsScreen(
             db = viewModel.db,
             onDismiss = { showFilterDialog = false },
         )
-    }
-}
-
-@Composable
-private fun FilterBox(
-    text: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Surface
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = Border
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = 10.dp,
-                    vertical = 12.dp
-                ),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = text,
-                color = PrimaryText,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.weight(1f)
-            )
-
-            Icon(
-                imageVector = Icons.Default.ArrowDropDown,
-                contentDescription = "$text filter",
-                tint = MutedText
-            )
-        }
     }
 }

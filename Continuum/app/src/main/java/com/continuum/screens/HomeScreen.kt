@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -80,6 +82,7 @@ import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 suspend fun showError(context: Context, error: String) {
     withContext(Dispatchers.Main) {
@@ -620,6 +623,7 @@ fun EditNoteDialog(
 
 @Composable
 fun HomeScreen(
+    modifier: Modifier = Modifier,
     viewModel: ViewModel,
     toNewHandoff: () -> Unit = {},
     toHandoffFromNote: (String) -> Unit = {},
@@ -953,6 +957,17 @@ fun HomeScreen(
         }
     ) {
         Scaffold (
+            modifier = Modifier.onSwipeNavigation(
+                onSwipeLeft = {
+                    if (viewModel.db.activeTeam != 0) {
+                        toHandoffList()
+                    }
+                },
+                onSwipeRight = { scope.launch {
+                        drawerState.open()
+                    }
+                }
+            ),
             bottomBar = {
                 BottomAppBar(
                     containerColor = NavyBackground,
@@ -1278,21 +1293,34 @@ fun HomeScreen(
                                         ) {
                                             Row {
                                                 Text(
+                                                    text = "${viewModel.db.statOptions[handoff.status]}",
+                                                    color = when (handoff.status.toInt()) {
+                                                        0 -> Color(0xffFF5F15)
+                                                        1 -> Color.Yellow
+                                                        2 -> BluePrimary
+                                                        3 -> Color.Cyan
+                                                        4 -> Color.Green
+                                                        else -> BluePrimary
+                                                    },
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+
+                                                Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall) // TODO Maybe change color of this one
+
+                                                Text(
                                                     text = viewModel.db.prioOptions[handoff.priority] ?: "",
-                                                    color = if (handoff.priority.toInt() <= 1) {
-                                                        Color.Red
-                                                    } else {
-                                                        BluePrimary
+                                                    color = when (handoff.priority.toInt()) {
+                                                        0 -> Color.Red
+                                                        1 -> Color(0xffFF5F15)
+                                                        2 -> Color.Yellow
+                                                        3 -> BluePrimary
+                                                        4 -> Color.Green
+                                                        else -> BluePrimary
                                                     },
                                                     style = MaterialTheme.typography.bodySmall,
                                                     fontWeight = FontWeight.SemiBold
                                                 )
 
-                                                Text(
-                                                    text = " • ${viewModel.db.statOptions[handoff.status]}",
-                                                    color = BluePrimary,
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
                                             }
 
                                             Text(
@@ -1637,4 +1665,24 @@ fun BottomNavItem(
             style = MaterialTheme.typography.bodySmall
         )
     }
+}
+
+fun Modifier.onSwipeNavigation(
+    onSwipeLeft: () -> Unit,
+    onSwipeRight: () -> Unit,
+    swipeThreshold: Float = 100f
+): Modifier = this.pointerInput(Unit) {
+    var totalDragX = 0f
+    detectHorizontalDragGestures(
+        onDragStart = { totalDragX = 0f },
+        onDragEnd = {
+            if (abs(totalDragX) > swipeThreshold) {
+                if (totalDragX < 0) onSwipeLeft() else onSwipeRight()
+            }
+        },
+        onHorizontalDrag = { change, dragAmount ->
+            change.consume()
+            totalDragX += dragAmount
+        }
+    )
 }

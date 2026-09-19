@@ -51,6 +51,7 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import android.media.MediaRecorder
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.ui.graphics.Color
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
@@ -334,8 +335,22 @@ fun CreateHandoffScreen(
                         unfocusedContainerColor = Surface,
                         focusedBorderColor = BluePrimary,
                         unfocusedBorderColor = Border,
-                        focusedTextColor = PrimaryText,
-                        unfocusedTextColor = PrimaryText,
+                        focusedTextColor = when (statSelected!!.key.toInt()) {
+                            0 -> Color(0xffFF5F15)
+                            1 -> Color.Yellow
+                            2 -> BluePrimary
+                            3 -> Color.Cyan
+                            4 -> Color.Green
+                            else -> BluePrimary
+                        },
+                        unfocusedTextColor = when (statSelected!!.key.toInt()) {
+                            0 -> Color(0xffFF5F15)
+                            1 -> Color.Yellow
+                            2 -> BluePrimary
+                            3 -> Color.Cyan
+                            4 -> Color.Green
+                            else -> BluePrimary
+                        },
                         focusedLabelColor = BluePrimary,
                         unfocusedLabelColor = MutedText,
                         cursorColor = BluePrimary,
@@ -351,7 +366,16 @@ fun CreateHandoffScreen(
                 ) {
                     viewModel.db.statOptions.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option.value) },
+                            text = { Text(option.value,
+                                color = when (option.key.toInt()) {
+                                    0 -> Color(0xffFF5F15)
+                                    1 -> Color.Yellow
+                                    2 -> BluePrimary
+                                    3 -> Color.Cyan
+                                    4 -> Color.Green
+                                    else -> BluePrimary
+                                })
+                            },
                             onClick = {
                                 statSelected = option
                                 statExpanded = false
@@ -381,8 +405,22 @@ fun CreateHandoffScreen(
                         unfocusedContainerColor = Surface,
                         focusedBorderColor = BluePrimary,
                         unfocusedBorderColor = Border,
-                        focusedTextColor = PrimaryText,
-                        unfocusedTextColor = PrimaryText,
+                        focusedTextColor = when (prioSelected!!.key.toInt()) {
+                            0 -> Color.Red
+                            1 -> Color(0xffFF5F15)
+                            2 -> Color.Yellow
+                            3 -> BluePrimary
+                            4 -> Color.Green
+                            else -> BluePrimary
+                        },
+                        unfocusedTextColor = when (prioSelected!!.key.toInt()) {
+                            0 -> Color.Red
+                            1 -> Color(0xffFF5F15)
+                            2 -> Color.Yellow
+                            3 -> BluePrimary
+                            4 -> Color.Green
+                            else -> BluePrimary
+                        },
                         focusedLabelColor = BluePrimary,
                         unfocusedLabelColor = MutedText,
                         cursorColor = BluePrimary,
@@ -398,7 +436,17 @@ fun CreateHandoffScreen(
                 ) {
                     viewModel.db.prioOptions.forEach { option ->
                         DropdownMenuItem(
-                            text = { Text(option.value) },
+                            text = { Text(option.value,
+                                color = when (option.key.toInt()) {
+                                    0 -> Color.Red
+                                    1 -> Color(0xffFF5F15)
+                                    2 -> Color.Yellow
+                                    3 -> BluePrimary
+                                    4 -> Color.Green
+                                    else -> BluePrimary
+                                },)
+                           },
+
                             onClick = {
                                 prioSelected = option
                                 prioExpanded = false

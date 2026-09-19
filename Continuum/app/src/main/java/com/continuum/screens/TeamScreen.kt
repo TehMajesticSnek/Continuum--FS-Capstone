@@ -72,6 +72,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun TeamScreen(
+    modifier: Modifier = Modifier,
     viewModel: ViewModel,
     toHome: () -> Unit = {},
     toHandoffList: () -> Unit = {},
@@ -107,6 +108,7 @@ fun TeamScreen(
         }
     }
     Scaffold (
+        modifier = modifier.fillMaxSize(),
         bottomBar = {
             BottomAppBar(
                 containerColor = NavyBackground,
@@ -215,13 +217,13 @@ fun TeamScreen(
                         }
 
                         DropdownMenuItem(
-                            text = { Text("Leave Team", color = Color(0xffff0000)) }, // make red
+                            text = { Text("Leave Team", color = Color(0xffff0000)) },
                             onClick = { showConfirmLeaveDialog = true } // ensure there will be an admin if you are an admin and leave
                         )
 
                         if (viewModel.db.userRole == 1L) {
                             DropdownMenuItem(
-                                text = { Text("Delete Team", color = Color(0xffff0000)) }, // make red
+                                text = { Text("Delete Team", color = Color(0xffff0000)) },
                                 onClick = { showConfirmDeleteDialog = true } // confirm popup for both this and leave
                             )
                         }

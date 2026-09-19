@@ -241,7 +241,14 @@ fun HandoffDetailsScreen(
                         ) {
                             Text(
                                 text = viewModel.db.statOptions[currentStatus].toString(),
-                                color = PrimaryText,
+                                color = when (currentStatus.toInt()) {
+                                    0 -> Color(0xffFF5F15)
+                                    1 -> Color.Yellow
+                                    2 -> BluePrimary
+                                    3 -> Color.Cyan
+                                    4 -> Color.Green
+                                    else -> BluePrimary
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -259,10 +266,16 @@ fun HandoffDetailsScreen(
                                 }
                             ) {
                                 viewModel.db.statOptions
-                                    .filterKeys { it >= 2 }
-                                    .forEach { (statusValue, statusName) ->                                    DropdownMenuItem(
+                                    .forEach { (statusValue, statusName) -> DropdownMenuItem(
                                         text = {
-                                            Text(statusName)
+                                            Text(statusName, color = when (statusValue.toInt()) {
+                                                0 -> Color(0xffFF5F15)
+                                                1 -> Color.Yellow
+                                                2 -> BluePrimary
+                                                3 -> Color.Cyan
+                                                4 -> Color.Green
+                                                else -> BluePrimary
+                                            })
                                         },
                                         onClick = {
                                             val id = handoff.handoffID
@@ -279,7 +292,6 @@ fun HandoffDetailsScreen(
                                                     }
                                                 }
                                             }
-
                                             statusMenuExpanded = false
                                         }
                                     )
@@ -301,10 +313,13 @@ fun HandoffDetailsScreen(
 
                         Text(
                             text = viewModel.db.prioOptions[handoff.priority].toString(),
-                            color = if (handoff.priority.toInt() <= 1) {
-                                Color.Red
-                            } else {
-                                BluePrimary
+                            color = when (handoff.priority.toInt()) {
+                                0 -> Color.Red
+                                1 -> Color(0xffFF5F15)
+                                2 -> Color.Yellow
+                                3 -> BluePrimary
+                                4 -> Color.Green
+                                else -> BluePrimary
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold
