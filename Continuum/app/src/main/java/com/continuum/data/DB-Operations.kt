@@ -619,7 +619,7 @@ class Database {
             "Error updating name. Please try again"
         }
     }
-    suspend fun getTeamRole() {
+    suspend fun getTeamRole(): Long {
         try {
             userRole = supabase.from("team_members").select(columns = Columns.list("role_id")) {
                 filter {
@@ -631,6 +631,7 @@ class Database {
         catch (e: Exception) {
             e.printStackTrace()
         }
+        return userRole ?: 0L
     }
     suspend fun reassignRole(userID: String?, roleID: Long = 0): String {
         if (userRole == 1L) {

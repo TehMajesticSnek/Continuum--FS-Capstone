@@ -747,7 +747,7 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
     Dialog(onDismissRequest = onDismissOwner) {
         Box(
             modifier = Modifier
-                .size(width = 300.dp, height = 350.dp)
+                .size(width = 300.dp, height = 300.dp)
                 .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {

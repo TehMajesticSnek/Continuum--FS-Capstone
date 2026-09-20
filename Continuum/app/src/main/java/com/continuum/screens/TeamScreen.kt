@@ -116,6 +116,7 @@ fun TeamScreen(
             teamName = team?.teamName
             teamCode = team?.teamCode
         }
+        viewModel.db.getTeamRole() // TODO consider looking into Realtime stuff for live role updates. Same with handoff ownership and such
     }
 
     Scaffold (
@@ -459,6 +460,7 @@ fun TeamScreen(
             onSuccessRole = {
                 coroutineScope.launch {
                     val freshMembers = viewModel.db.getTeamMembers()
+                    viewModel.db.userRole = viewModel.db.getTeamRole()
                     members = freshMembers.map { it.copy() }
                 }
                 showRoleDialog = false
