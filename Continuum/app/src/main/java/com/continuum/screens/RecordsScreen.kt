@@ -192,7 +192,7 @@ fun RecordsScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = Surface,
                                     unfocusedContainerColor = Surface,
-                                    focusedBorderColor = BluePrimary,
+                                    focusedBorderColor = Border,
                                     unfocusedBorderColor = Border,
                                     focusedTextColor = when (statSelected!!.key.toInt()) {
                                         0 -> Color(0xffFF5F15)
@@ -210,7 +210,7 @@ fun RecordsScreen(
                                         4 -> Color.Green
                                         else -> PrimaryText
                                     },
-                                    focusedLabelColor = BluePrimary,
+                                    focusedLabelColor = MutedText,
                                     unfocusedLabelColor = MutedText,
                                     cursorColor = BluePrimary,
                                     focusedPlaceholderColor = MutedText,
@@ -218,39 +218,41 @@ fun RecordsScreen(
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             )
+                            Box (Modifier.align(Alignment.BottomStart)) {
+                                DropdownMenu(
+                                    expanded = statExpanded,
+                                    onDismissRequest = { statExpanded = false }
+                                ) {
+                                    statOptions.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option.value,
+                                                color = when (option.key.toInt()) {
+                                                    0 -> Color(0xffFF5F15)
+                                                    1 -> Color.Yellow
+                                                    2 -> BluePrimary
+                                                    3 -> Color.Cyan
+                                                    4 -> Color.Green
+                                                    else -> PrimaryText
+                                                })
+                                            },
+                                            onClick = {
+                                                coroutineScope.launch(Dispatchers.IO) {
+                                                    handoffs = viewModel.db.getHandoffsFilter(
+                                                        keyword = searchText,
+                                                        status = statSelected!!.key,
+                                                        priority = prioSelected!!.key,
+                                                        includeCompleted = showComplete
+                                                    )
+                                                }
 
-                            DropdownMenu(
-                                expanded = statExpanded,
-                                onDismissRequest = { statExpanded = false }
-                            ) {
-                                statOptions.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(option.value,
-                                            color = when (option.key.toInt()) {
-                                                0 -> Color(0xffFF5F15)
-                                                1 -> Color.Yellow
-                                                2 -> BluePrimary
-                                                3 -> Color.Cyan
-                                                4 -> Color.Green
-                                                else -> PrimaryText
-                                            })
-                                        },
-                                        onClick = {
-                                            coroutineScope.launch(Dispatchers.IO) {
-                                                handoffs = viewModel.db.getHandoffsFilter(
-                                                    keyword = searchText,
-                                                    status = statSelected!!.key,
-                                                    priority = prioSelected!!.key,
-                                                    includeCompleted = showComplete
-                                                )
+                                                statSelected = option
+                                                statExpanded = false
                                             }
-
-                                            statSelected = option
-                                            statExpanded = false
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
+
                         }
 
                         Box(modifier = Modifier.weight(0.5f))
@@ -265,7 +267,7 @@ fun RecordsScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = Surface,
                                     unfocusedContainerColor = Surface,
-                                    focusedBorderColor = BluePrimary,
+                                    focusedBorderColor = Border,
                                     unfocusedBorderColor = Border,
                                     focusedTextColor = when (prioSelected!!.key.toInt()) {
                                         0 -> Color.Red
@@ -283,7 +285,7 @@ fun RecordsScreen(
                                         4 -> Color.Green
                                         else -> PrimaryText
                                     },
-                                    focusedLabelColor = BluePrimary,
+                                    focusedLabelColor = MutedText,
                                     unfocusedLabelColor = MutedText,
                                     cursorColor = BluePrimary,
                                     focusedPlaceholderColor = MutedText,
@@ -291,38 +293,39 @@ fun RecordsScreen(
                                 ),
                                 shape = RoundedCornerShape(10.dp)
                             )
+                            Box(Modifier.align(Alignment.BottomEnd)) {
+                                DropdownMenu(
+                                    expanded = prioExpanded,
+                                    onDismissRequest = { prioExpanded = false }
+                                ) {
+                                    prioOptions.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(
+                                                option.value,
+                                                color = when (option.key.toInt()) {
+                                                    0 -> Color.Red
+                                                    1 -> Color(0xffFF5F15)
+                                                    2 -> Color.Yellow
+                                                    3 -> BluePrimary
+                                                    4 -> Color.Green
+                                                    else -> PrimaryText
+                                                })
+                                            },
+                                            onClick = {
+                                                coroutineScope.launch(Dispatchers.IO) {
+                                                    handoffs = viewModel.db.getHandoffsFilter(
+                                                        keyword = searchText,
+                                                        status = statSelected!!.key,
+                                                        priority = prioSelected!!.key,
+                                                        includeCompleted = showComplete
+                                                    )
+                                                }
 
-                            DropdownMenu(
-                                expanded = prioExpanded,
-                                onDismissRequest = { prioExpanded = false }
-                            ) {
-                                prioOptions.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(
-                                            option.value,
-                                            color = when (option.key.toInt()) {
-                                                0 -> Color.Red
-                                                1 -> Color(0xffFF5F15)
-                                                2 -> Color.Yellow
-                                                3 -> BluePrimary
-                                                4 -> Color.Green
-                                                else -> PrimaryText
-                                            })
-                                        },
-                                        onClick = {
-                                            coroutineScope.launch(Dispatchers.IO) {
-                                                handoffs = viewModel.db.getHandoffsFilter(
-                                                    keyword = searchText,
-                                                    status = statSelected!!.key,
-                                                    priority = prioSelected!!.key,
-                                                    includeCompleted = showComplete
-                                                )
+                                                prioSelected = option
+                                                prioExpanded = false
                                             }
-
-                                            prioSelected = option
-                                            prioExpanded = false
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -382,8 +385,6 @@ fun RecordsScreen(
                             onDismiss()
                         },
                             modifier = Modifier.align(Alignment.End),
-
-
                         ) {
                         Text("Confirm")
                     }

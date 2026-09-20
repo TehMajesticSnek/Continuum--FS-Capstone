@@ -51,6 +51,8 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import android.media.MediaRecorder
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
@@ -315,7 +317,7 @@ fun CreateHandoffScreen(
                 }
             }
 
-            Box (modifier = Modifier.weight(0.75f))
+            Box (modifier = Modifier.weight(0.5f))
             {
                 OutlinedTextField(
                     value = statSelected!!.value,
@@ -324,16 +326,24 @@ fun CreateHandoffScreen(
                     readOnly = true,
                     interactionSource = statInteractionSource,
                     trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Dropdown Arrow",
-                            tint = MutedText,
-                        )
+                        if (!statExpanded) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Change Status",
+                                tint = MutedText
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropUp,
+                                contentDescription = "Change Status",
+                                tint = MutedText
+                            )
+                        }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Surface,
                         unfocusedContainerColor = Surface,
-                        focusedBorderColor = BluePrimary,
+                        focusedBorderColor = Border,
                         unfocusedBorderColor = Border,
                         focusedTextColor = when (statSelected!!.key.toInt()) {
                             0 -> Color(0xffFF5F15)
@@ -351,7 +361,7 @@ fun CreateHandoffScreen(
                             4 -> Color.Green
                             else -> BluePrimary
                         },
-                        focusedLabelColor = BluePrimary,
+                        focusedLabelColor = MutedText,
                         unfocusedLabelColor = MutedText,
                         cursorColor = BluePrimary,
                         focusedPlaceholderColor = MutedText,
@@ -359,33 +369,37 @@ fun CreateHandoffScreen(
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
-
-                DropdownMenu(
-                    expanded = statExpanded,
-                    onDismissRequest = { statExpanded = false }
-                ) {
-                    viewModel.db.statOptions.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option.value,
-                                color = when (option.key.toInt()) {
-                                    0 -> Color(0xffFF5F15)
-                                    1 -> Color.Yellow
-                                    2 -> BluePrimary
-                                    3 -> Color.Cyan
-                                    4 -> Color.Green
-                                    else -> BluePrimary
-                                })
-                            },
-                            onClick = {
-                                statSelected = option
-                                statExpanded = false
-                            }
-                        )
+                Box (Modifier.align(Alignment.BottomStart)) {
+                    DropdownMenu(
+                        expanded = statExpanded,
+                        onDismissRequest = { statExpanded = false }
+                    ) {
+                        viewModel.db.statOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        option.value,
+                                        color = when (option.key.toInt()) {
+                                            0 -> Color(0xffFF5F15)
+                                            1 -> Color.Yellow
+                                            2 -> BluePrimary
+                                            3 -> Color.Cyan
+                                            4 -> Color.Green
+                                            else -> BluePrimary
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    statSelected = option
+                                    statExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
 
-            Box (modifier = Modifier.weight(0.75f))
+            Box (modifier = Modifier.weight(0.5f))
             {
                 OutlinedTextField(
                     value = prioSelected!!.value,
@@ -394,16 +408,24 @@ fun CreateHandoffScreen(
                     readOnly = true,
                     interactionSource = prioInteractionSource,
                     trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Dropdown Arrow",
-                            tint = MutedText,
-                        )
+                        if (!prioExpanded) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Change Status",
+                                tint = MutedText
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropUp,
+                                contentDescription = "Change Status",
+                                tint = MutedText
+                            )
+                        }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Surface,
                         unfocusedContainerColor = Surface,
-                        focusedBorderColor = BluePrimary,
+                        focusedBorderColor = Border,
                         unfocusedBorderColor = Border,
                         focusedTextColor = when (prioSelected!!.key.toInt()) {
                             0 -> Color.Red
@@ -421,7 +443,7 @@ fun CreateHandoffScreen(
                             4 -> Color.Green
                             else -> BluePrimary
                         },
-                        focusedLabelColor = BluePrimary,
+                        focusedLabelColor = MutedText,
                         unfocusedLabelColor = MutedText,
                         cursorColor = BluePrimary,
                         focusedPlaceholderColor = MutedText,
@@ -429,29 +451,33 @@ fun CreateHandoffScreen(
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
+                Box (Modifier.align(Alignment.BottomEnd)) {
+                    DropdownMenu(
+                        expanded = prioExpanded,
+                        onDismissRequest = { prioExpanded = false }
+                    ) {
+                        viewModel.db.prioOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        option.value,
+                                        color = when (option.key.toInt()) {
+                                            0 -> Color.Red
+                                            1 -> Color(0xffFF5F15)
+                                            2 -> Color.Yellow
+                                            3 -> BluePrimary
+                                            4 -> Color.Green
+                                            else -> BluePrimary
+                                        },
+                                    )
+                                },
 
-                DropdownMenu(
-                    expanded = prioExpanded,
-                    onDismissRequest = { prioExpanded = false }
-                ) {
-                    viewModel.db.prioOptions.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(option.value,
-                                color = when (option.key.toInt()) {
-                                    0 -> Color.Red
-                                    1 -> Color(0xffFF5F15)
-                                    2 -> Color.Yellow
-                                    3 -> BluePrimary
-                                    4 -> Color.Green
-                                    else -> BluePrimary
-                                },)
-                           },
-
-                            onClick = {
-                                prioSelected = option
-                                prioExpanded = false
-                            }
-                        )
+                                onClick = {
+                                    prioSelected = option
+                                    prioExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }

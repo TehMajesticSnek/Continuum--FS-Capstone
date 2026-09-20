@@ -3,6 +3,8 @@ package com.continuum.screens
 import android.R
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Groups
@@ -84,13 +88,19 @@ fun TeamScreen(
     var members by rememberSaveable {
         mutableStateOf<List<Database.TeamUserDisplay>>(emptyList())
     }
+    var selectedMember by remember { mutableStateOf<Database.TeamUserDisplay?>(null) }
+
     var teamOptionsExpanded by remember { mutableStateOf(false) }
+
+    var showRoleDialog by remember { mutableStateOf(false) }
 
     var showNameDialog by remember { mutableStateOf(false) }
     var teamName: String? by remember { mutableStateOf("") }
 
     var showCodeDialog by remember { mutableStateOf(false) }
     var teamCode: String? by remember { mutableStateOf("") }
+
+    var showConfirmKickDialog by remember { mutableStateOf(false) }
 
     var showConfirmLeaveDialog by remember { mutableStateOf(false) }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
@@ -107,6 +117,7 @@ fun TeamScreen(
             teamCode = team?.teamCode
         }
     }
+
     Scaffold (
         modifier = modifier.fillMaxSize(),
         bottomBar = {
@@ -208,23 +219,35 @@ fun TeamScreen(
                         if (viewModel.db.userRole == 1L) {
                             DropdownMenuItem(
                                 text = { Text("Change team name") },
-                                onClick = { showNameDialog = true }
+                                onClick = {
+                                    showNameDialog = true
+                                    teamOptionsExpanded = false
+                                }
                             )
                             DropdownMenuItem(
                                 text = { Text("Request new code") },
-                                onClick = { showCodeDialog = true }
+                                onClick = {
+                                    showCodeDialog = true
+                                    teamOptionsExpanded = false
+                                }
                             )
                         }
 
                         DropdownMenuItem(
                             text = { Text("Leave Team", color = Color(0xffff0000)) },
-                            onClick = { showConfirmLeaveDialog = true } // ensure there will be an admin if you are an admin and leave
+                            onClick = {
+                                showConfirmLeaveDialog = true
+                                teamOptionsExpanded = false
+                            } // ensure there will be an admin if you are an admin and leave
                         )
 
                         if (viewModel.db.userRole == 1L) {
                             DropdownMenuItem(
                                 text = { Text("Delete Team", color = Color(0xffff0000)) },
-                                onClick = { showConfirmDeleteDialog = true } // confirm popup for both this and leave
+                                onClick = {
+                                    showConfirmDeleteDialog = true
+                                    teamOptionsExpanded = false
+                                } // confirm popup for both this and leave
                             )
                         }
                     }
@@ -276,14 +299,11 @@ fun TeamScreen(
                     }
                 } else {
                     members.forEach { member ->
+                        var userOptionsExpanded by remember { mutableStateOf(false) }
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 10.dp),
-                                // TODO see if this can be clickable only if you are admin, and if other user isn't
-//                                .clickable {
-//
-//                                },
                             shape = RoundedCornerShape(8.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = Surface
@@ -293,31 +313,69 @@ fun TeamScreen(
                                 color = Border
                             )
                         ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Text(
-                                    text = "${member.firstName} ${member.lastName}",
-                                    color = PrimaryText,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                if (member.teamData[0].roleID == 1L) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
                                     Text(
-                                        text = "Admin",
+                                        text = "${member.firstName} ${member.lastName}",
+                                        color = PrimaryText,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Text(
+                                        text = if (member.teamData[0].roleID == 1L) {
+                                            "Admin"
+                                        } else {
+                                            ""
+                                        },
                                         color = MutedText,
                                         style = MaterialTheme.typography.bodySmall
                                     )
+
                                 }
-                                else {
-                                    Text(
-                                        text = "",
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
+                                if (viewModel.db.userRole == 1L) {
+                                    Box(Modifier.align(Alignment.CenterVertically)) {
+                                        IconButton(onClick = { userOptionsExpanded = !userOptionsExpanded }) {
+                                            Icon(
+                                                Icons.Default.MoreVert,
+                                                contentDescription = "Team options dropdown menu")
+                                        }
+                                        DropdownMenu(
+                                            expanded = userOptionsExpanded,
+                                            onDismissRequest = { userOptionsExpanded = false }
+                                        ) {
+
+                                            DropdownMenuItem(
+                                                text = { Text("Change user role") },
+                                                onClick = {
+                                                    selectedMember = member
+                                                    showRoleDialog = true
+                                                    userOptionsExpanded = false
+                                                }
+                                            )
+
+                                            if (member.userID != viewModel.db.uid) {
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Text(
+                                                            "Remove User",
+                                                            color = Color(0xffff0000)
+                                                        )
+                                                    },
+                                                    onClick = {
+                                                        selectedMember = member
+                                                        showConfirmKickDialog = true
+                                                        userOptionsExpanded = false
+                                                    } // ensure there will be an admin if you are an admin and leave
+                                                )
+                                            }
+
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -335,7 +393,6 @@ fun TeamScreen(
             onSuccessName = { result ->
                 teamName = result
                 showNameDialog = false
-                teamOptionsExpanded = false
             }
         )
     }
@@ -346,7 +403,6 @@ fun TeamScreen(
             onDismissCode = { showCodeDialog = false},
             onSuccessCode = { result ->
                 teamCode = result
-                teamOptionsExpanded = false
             }
         )
     }
@@ -357,9 +413,26 @@ fun TeamScreen(
             onDismissLeave = { showConfirmLeaveDialog = false},
             onSuccessLeave = {
                 showConfirmLeaveDialog = false
-                teamOptionsExpanded = false
                 viewModel.selectTeam(0)
                 toHome()
+            }
+        )
+    }
+    if (showConfirmKickDialog) {
+        ConfirmKickDialog(
+            user = selectedMember,
+            db = viewModel.db,
+            onDismissKick = {
+                showConfirmKickDialog = false
+                selectedMember = null
+            },
+            onSuccessKick = {
+                showConfirmKickDialog = false
+                selectedMember = null
+
+                coroutineScope.launch {
+                    members = viewModel.db.getTeamMembers()
+                }
             }
         )
     }
@@ -370,9 +443,26 @@ fun TeamScreen(
             onDismissDelete = { showConfirmDeleteDialog = false},
             onSuccessDelete = {
                 showConfirmDeleteDialog = false
-                teamOptionsExpanded = false
                 viewModel.selectTeam(0)
                 toHome()
+            }
+        )
+    }
+    if (showRoleDialog) {
+        RoleDialog(
+            user = selectedMember,
+            db = viewModel.db,
+            onDismissRole = {
+                showRoleDialog = false
+                selectedMember = null
+            },
+            onSuccessRole = {
+                coroutineScope.launch {
+                    val freshMembers = viewModel.db.getTeamMembers()
+                    members = freshMembers.map { it.copy() }
+                }
+                showRoleDialog = false
+                selectedMember = null
             }
         )
     }
@@ -649,6 +739,78 @@ fun ConfirmLeaveDialog(teamName: String?, db: Database, onDismissLeave: () -> Un
     }
 }
 @Composable
+fun ConfirmKickDialog(user: Database.TeamUserDisplay?, db: Database, onDismissKick: () -> Unit, onSuccessKick: () -> Unit) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = onDismissKick) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Confirm Leave",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Are you sure you want to remove ${user?.firstName + " " + user?.lastName}?"
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = {
+                            onDismissKick()
+                        },
+                    ) {
+                        Text("Cancel")
+                    }
+                    TextButton(
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val result = db.leaveTeam(user?.userID)
+
+                                if (result == "") {
+                                    withContext(Dispatchers.Main) {
+                                        onSuccessKick()
+                                    }
+                                } else {
+                                    showError(context, result)
+                                }
+                            }
+
+                        },
+                    ) {
+                        Text("Confirm", color = Color(0xffff0000))
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
 fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> Unit, onSuccessDelete: () -> Unit) {
 
     var teamNameInput by remember { mutableStateOf("") }
@@ -672,7 +834,7 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                     )
             ) {
                 Text(
-                    text = "Confirm Leave",
+                    text = "Confirm Delete",
                     color = PrimaryText,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -741,6 +903,155 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                         enabled = (teamNameInput == teamName),
                     ) {
                         Text("Delete", color = PrimaryText)
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun RoleDialog(user: Database.TeamUserDisplay?, db: Database, onDismissRole: () -> Unit, onSuccessRole: () -> Unit) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var roleSelection by remember { mutableStateOf(user?.teamData[0]?.roleID) }
+    var roleExpanded by remember { mutableStateOf(false) }
+    val roleInteractionSource = remember { MutableInteractionSource() }
+
+    LaunchedEffect(roleInteractionSource) {
+        roleInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                roleExpanded = true
+            }
+        }
+    }
+
+    Dialog(onDismissRequest = onDismissRole) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 350.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Change Role",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Select a role for ${user?.firstName + " " + user?.lastName}"
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value =
+                            if (roleSelection == 1L) {
+                                "Admin"
+                            } else {
+                                "User"
+                            },
+                        onValueChange = { },
+                        label = { Text("Role") },
+                        readOnly = true,
+                        singleLine = true,
+                        interactionSource = roleInteractionSource,
+                        trailingIcon = {
+                            if (!roleExpanded) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Change Status",
+                                    tint = MutedText
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropUp,
+                                    contentDescription = "Change Status",
+                                    tint = MutedText
+                                )
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Surface,
+                            unfocusedContainerColor = Surface,
+                            focusedBorderColor = Border,
+                            unfocusedBorderColor = Border,
+                            focusedTextColor = PrimaryText,
+                            unfocusedTextColor = PrimaryText,
+                            focusedLabelColor = MutedText,
+                            unfocusedLabelColor = MutedText,
+                            cursorColor = BluePrimary,
+                            focusedPlaceholderColor = MutedText,
+                            unfocusedPlaceholderColor = MutedText
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Box(modifier = Modifier.align(Alignment.BottomEnd)) {
+                        DropdownMenu(
+                            expanded = roleExpanded,
+                            onDismissRequest = { roleExpanded = false }
+                        ) {
+
+                            DropdownMenuItem(
+                                text = { Text("Admin") },
+                                onClick = {
+                                    roleSelection = 1L
+                                    roleExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("User") },
+                                onClick = {
+                                    roleSelection = 0L
+                                    roleExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = {
+                            onDismissRole()
+                        },
+                    ) {
+                        Text("Cancel")
+                    }
+                    TextButton(
+                        onClick = {
+                            var result = ""
+                            coroutineScope.launch(Dispatchers.IO) {
+                                result = db.reassignRole(user?.userID, roleSelection ?: 0L)
+                                if (result == "") {
+                                    onSuccessRole()
+                                } else {
+                                    showError(context, result)
+                                }
+                            }
+                        },
+                    ) {
+                        Text("Confirm")
                     }
                 }
             }

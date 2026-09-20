@@ -57,6 +57,7 @@ import com.continuum.ui.theme.Surface
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.material.icons.filled.ArrowDropUp
 
 @Composable
 fun HandoffDetailsScreen(
@@ -253,11 +254,19 @@ fun HandoffDetailsScreen(
                                 fontWeight = FontWeight.SemiBold
                             )
 
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Change Status",
-                                tint = MutedText
-                            )
+                            if (!statusMenuExpanded) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Change Status",
+                                    tint = MutedText
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropUp,
+                                    contentDescription = "Change Status",
+                                    tint = MutedText
+                                )
+                            }
 
                             DropdownMenu(
                                 expanded = statusMenuExpanded,

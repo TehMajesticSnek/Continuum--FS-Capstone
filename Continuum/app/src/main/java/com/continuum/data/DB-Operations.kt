@@ -65,7 +65,7 @@ class Database {
         var teamCode: String? = null,
     ) : Parcelable
 
-    @Serializable
+    @Serializable @Parcelize
     data class TeamUser(
         @SerialName("team_id")
         val teamID: Int? = null,
@@ -73,9 +73,9 @@ class Database {
         val userID: String? = null,
         @SerialName("role_id")
         val roleID: Long? = null
-    )
+    ) : Parcelable
 
-    @Serializable
+    @Serializable @Parcelize
     data class TeamUserDisplay(
         @SerialName("user_id")
         val userID: String,
@@ -86,7 +86,7 @@ class Database {
         @SerialName("team_members")
         val teamData: List<TeamUser> = emptyList(),
         //val pfp: String
-    )
+    ) : Parcelable
 
     @Serializable
     data class User(
@@ -511,6 +511,18 @@ class Database {
         activeTeam = 0
         return ""
     }
+    suspend fun leaveTeam(userID: String?): String {
+        if (userRole == 1L && userID == uid) {
+            return "ERROR: Cannot kick yourself"
+        }
+        supabase.from("team_members").delete {
+            filter {
+                eq("user_id", userID as String)
+                eq("team_id", activeTeam as Int)
+            }
+        }
+        return ""
+    }
     suspend fun deleteTeam() {
         supabase.from("teams").delete {
             filter {
@@ -600,6 +612,34 @@ class Database {
         }
         catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+    suspend fun reassignRole(userID: String?, roleID: Long = 0): String {
+        if (userRole == 1L) {
+            var adminCount = 0
+            getTeamMembers().forEach { member ->
+                if (member.teamData[0].roleID == 1L) {
+                    adminCount++
+                }
+            }
+            if (roleID != 1L && adminCount < 2) {
+                return "There must be at least 1 admin on a team at all times"
+            }
+        }
+        return try {
+            supabase.from("team_members").update(
+                {
+                    set("role_id", roleID)
+                }
+            ) {
+                filter {
+                    eq("team_id", activeTeam as Int)
+                    eq("user_id", userID as String)
+                }
+            }
+            ""
+        } catch (e: Exception) {
+            "Error updating role. Please try again"
         }
     }
     suspend fun getTeamMembers(): List<TeamUserDisplay> {
