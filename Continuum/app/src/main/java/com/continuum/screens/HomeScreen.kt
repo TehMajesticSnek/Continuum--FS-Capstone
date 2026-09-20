@@ -1403,21 +1403,34 @@ fun HomeScreen(
                                     ) {
                                         Row {
                                             Text(
+                                                text = "${viewModel.db.statOptions[handoff.status]}",
+                                                color = when (handoff.status.toInt()) {
+                                                    0 -> Color(0xffFF5F15)
+                                                    1 -> Color.Yellow
+                                                    2 -> BluePrimary
+                                                    3 -> Color.Cyan
+                                                    4 -> Color.Green
+                                                    else -> BluePrimary
+                                                },
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+
+                                            Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall) // TODO Maybe change color of this one
+
+                                            Text(
                                                 text = viewModel.db.prioOptions[handoff.priority] ?: "",
-                                                color = if (handoff.priority.toInt() <= 1) {
-                                                    Color.Red
-                                                } else {
-                                                    BluePrimary
+                                                color = when (handoff.priority.toInt()) {
+                                                    0 -> Color.Red
+                                                    1 -> Color(0xffFF5F15)
+                                                    2 -> Color.Yellow
+                                                    3 -> BluePrimary
+                                                    4 -> Color.Green
+                                                    else -> BluePrimary
                                                 },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.SemiBold
                                             )
 
-                                            Text(
-                                                text = " • ${viewModel.db.statOptions[handoff.status]}",
-                                                color = BluePrimary,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
                                         }
 
                                         Text(

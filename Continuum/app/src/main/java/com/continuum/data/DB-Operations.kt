@@ -101,6 +101,8 @@ class Database {
     )
     @Serializable @Parcelize
     data class Handoff(
+        @SerialName("handoff_id")
+        val handoffID: Long? = null,
         @SerialName("team_id")
         val teamID: Int?,
         @SerialName("user_id")
@@ -113,13 +115,11 @@ class Database {
         val timestamp: Instant?,
         @SerialName("time_edited")
         val editTimestamp: Instant? = null,
-        @SerialName("handoff_id")
-        val handoffID: Int? = null
     ) : Parcelable
     @Serializable
     data class FileAttachment(
         @SerialName("handoff_id")
-        val handoffID: Int,
+        val handoffID: Long,
         @SerialName("file_url")
         val fileURL: String
     )
@@ -131,7 +131,7 @@ class Database {
     @Serializable
     data class Acknowledgement(
         @SerialName("handoff_id")
-        val handoffID: Int,
+        val handoffID: Long,
         @SerialName("user_id")
         val userID: String
     )
@@ -174,7 +174,7 @@ class Database {
     @Serializable
     data class CommentInsert(
         @SerialName("handoff_id")
-        val handoffID: Int,
+        val handoffID: Long,
         @SerialName("user_id")
         val userID: String,
         val content: String,
@@ -200,7 +200,7 @@ class Database {
         @SerialName("is_action")
         val isAction: Boolean
     )
-    suspend fun getFileAttachments(handoffID: Int): List<FileAttachment> {
+    suspend fun getFileAttachments(handoffID: Long): List<FileAttachment> {
         return try {
             supabase
                 .from("file_attachments")
@@ -218,7 +218,7 @@ class Database {
     }
 
     suspend fun uploadFileAttachment(
-        handoffID: Int,
+        handoffID: Long,
         fileName: String,
         fileBytes: ByteArray
     ): String {
@@ -392,6 +392,24 @@ class Database {
         } catch (e: Exception) {
             e.printStackTrace()
             "User"
+        }
+    }
+    suspend fun getUserInfo(userID: String): User? {
+        return try {
+            val result = supabase
+                .from("users")
+                .select {
+                    filter {
+                        eq("user_id", userID)
+                    }
+                }
+                .decodeSingle<User>()
+
+            result
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 
@@ -686,13 +704,13 @@ class Database {
 
         return try {
             val newHandoffObj = Handoff(
-                activeTeam,
-                uid,
-                title,
-                content,
-                status,
-                priority,
-                Clock.System.now()
+                teamID = activeTeam,
+                userID = uid,
+                title = title,
+                content = content,
+                status = status,
+                priority = priority,
+                timestamp = Clock.System.now()
             )
 
             val createdHandoff = supabase
@@ -716,7 +734,7 @@ class Database {
     }
 
     suspend fun updateHandoffStatus(
-        handoffID: Int,
+        handoffID: Long,
         status: Short
     ): String {
         var errorMsg = ""
@@ -742,6 +760,28 @@ class Database {
             errorMsg = "Unable to update handoff status. Please try again."
         }
 
+        return errorMsg
+    }
+
+    suspend fun updateHandoffOwner(handoffID: Long, userID: String): String {
+        var errorMsg = ""
+        try {
+            supabase
+                .from("handoffs")
+                .update(
+                    {
+                        set("user_id", userID)
+                    }
+                ) {
+                    filter {
+                        eq("handoff_id", handoffID)
+                    }
+                }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorMsg = "Unable to update handoff status. Please try again."
+        }
         return errorMsg
     }
 
@@ -823,7 +863,7 @@ class Database {
     }
 
     suspend fun addComment(
-        handoffID: Int,
+        handoffID: Long,
         content: String,
         isAction: Boolean
     ): String {
@@ -856,7 +896,7 @@ class Database {
         return errorMsg
     }
 
-    suspend fun getComments(handoffID: Int): List<Comment> {
+    suspend fun getComments(handoffID: Long): List<Comment> {
         return try {
             supabase
                 .from("comments")
@@ -928,7 +968,7 @@ class Database {
         }
     }
 
-    suspend fun acknowledgeHandoff(handoffID: Int): String {
+    suspend fun acknowledgeHandoff(handoffID: Long): String {
         var errorMsg = ""
 
         try {
@@ -950,7 +990,7 @@ class Database {
 
         return errorMsg
     }
-    suspend fun hasAcknowledgedHandoff(handoffID: Int): Boolean {
+    suspend fun hasAcknowledgedHandoff(handoffID: Long): Boolean {
         return try {
             val currentUserID = uid ?: return false
 

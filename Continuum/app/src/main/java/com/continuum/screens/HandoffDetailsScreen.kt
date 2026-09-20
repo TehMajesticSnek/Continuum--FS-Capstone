@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.Modifier
@@ -56,8 +55,20 @@ import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.Dispatchers
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun HandoffDetailsScreen(
@@ -65,6 +76,10 @@ fun HandoffDetailsScreen(
     handoff: Database.Handoff,
     onBackClick: () -> Unit = {}
 ) {
+    var optionsMenuExpanded by remember { mutableStateOf(false) }
+    var showOwnerDialog by remember { mutableStateOf(false) }
+    var owner by remember { mutableStateOf<Database.User?>(null) }
+
     var acknowledged by remember {
         mutableStateOf(false)
     }
@@ -84,23 +99,18 @@ fun HandoffDetailsScreen(
     var comments by remember {
         mutableStateOf<List<Database.Comment>>(emptyList())
     }
-
     var attachments by remember {
         mutableStateOf<List<Database.FileAttachment>>(emptyList())
     }
-
     var attachmentImageUrls by remember {
         mutableStateOf<Map<String, String>>(emptyMap())
     }
-
     var commentAuthors by remember {
         mutableStateOf(emptyMap<String, String>())
     }
-
     var newEntry by remember {
         mutableStateOf("")
     }
-
     var isAction by remember {
         mutableStateOf(false)
     }
@@ -109,6 +119,8 @@ fun HandoffDetailsScreen(
         val id = handoff.handoffID
 
         if (id != null) {
+            owner = viewModel.db.getUserInfo(handoff.userID ?: "")
+
             acknowledged = viewModel.db.hasAcknowledgedHandoff(id)
 
             comments = viewModel.db.getComments(id)
@@ -173,12 +185,51 @@ fun HandoffDetailsScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
-            text = "Handoff Details",
-            color = PrimaryText,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Row(modifier = Modifier.fillMaxWidth().height(48.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Handoff Details",
+                color = PrimaryText,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            if (viewModel.db.userRole == 1L || owner?.userID == viewModel.db.uid) {
+                Box(Modifier.align(Alignment.CenterVertically)) {
+                    IconButton(onClick = { optionsMenuExpanded = !optionsMenuExpanded }) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "Team options dropdown menu")
+                    }
+                    DropdownMenu(
+                        expanded = optionsMenuExpanded,
+                        onDismissRequest = { optionsMenuExpanded = false }
+                    ) {
+
+                        DropdownMenuItem(
+                            text = { Text("Reassign owner") },
+                            onClick = {
+                                showOwnerDialog = true
+                                optionsMenuExpanded = false
+                            }
+                        )
+
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "Delete handoff",
+                                    color = Color(0xffff0000)
+                                )
+                            },
+                            onClick = { //TODO add functionality
+                                //showConfirmKickDialog = true
+                                optionsMenuExpanded = false
+                            } // ensure there will be an admin if you are an admin and leave
+                        )
+                    }
+                }
+            }
+        }
+
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -207,12 +258,20 @@ fun HandoffDetailsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
+                    text = owner?.firstName + " " + owner?.lastName,
+                    color = MutedText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
                     text = handoff.timestamp?.let { timestamp ->
                         val localDateTime = timestamp
                             .toJavaInstant()
-                            .atZone(java.time.ZoneId.systemDefault())
+                            .atZone(ZoneId.systemDefault())
 
-                        java.time.format.DateTimeFormatter
+                        DateTimeFormatter
                             .ofPattern("M/d/yyyy • h:mm a")
                             .format(localDateTime)
                     } ?: "Unknown date",
@@ -532,9 +591,9 @@ fun HandoffDetailsScreen(
                                 text = "${commentAuthors[comment.userID] ?: "User"} • ${
                                     comment.timeCreated
                                         .toJavaInstant()
-                                        .atZone(java.time.ZoneId.systemDefault())
+                                        .atZone(ZoneId.systemDefault())
                                         .format(
-                                            java.time.format.DateTimeFormatter.ofPattern(
+                                            DateTimeFormatter.ofPattern(
                                                 "M/d/yyyy • h:mm a"
                                             )
                                         )
@@ -633,6 +692,178 @@ fun HandoffDetailsScreen(
                             "Add Comment"
                         }
                     )
+                }
+            }
+        }
+    }
+    if (showOwnerDialog) {
+        OwnerDialog(
+            currentOwner = owner,
+            handoff = handoff,
+            db = viewModel.db,
+            onDismissOwner = {
+                showOwnerDialog = false
+            },
+            onSuccessOwner = { ownerID ->
+                coroutineScope.launch {
+                    owner = viewModel.db.getUserInfo(ownerID)
+                    showOwnerDialog = false
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Database, onDismissOwner: () -> Unit, onSuccessOwner: (String) -> Unit) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var ownerSelection by remember {
+        mutableStateOf(
+            Database.TeamUserDisplay(
+                currentOwner?.userID ?: "",
+                currentOwner?.firstName ?: "",
+                currentOwner?.lastName ?: "",
+                emptyList()
+            )
+        )
+    }
+    var ownerExpanded by remember { mutableStateOf(false) }
+    val ownerInteractionSource = remember { MutableInteractionSource() }
+    var teamList by remember { mutableStateOf<List<Database.TeamUserDisplay>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        teamList = db.getTeamMembers()
+    }
+
+    LaunchedEffect(ownerInteractionSource) {
+        ownerInteractionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Release) {
+                ownerExpanded = true
+            }
+        }
+    }
+
+    Dialog(onDismissRequest = onDismissOwner) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 350.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Change Role",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Select a new owner"
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = ownerSelection.firstName + " " + ownerSelection.lastName,
+                        onValueChange = { },
+                        label = { Text("Select User") },
+                        readOnly = true,
+                        singleLine = true,
+                        interactionSource = ownerInteractionSource,
+                        trailingIcon = {
+                            if (!ownerExpanded) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Change Status",
+                                    tint = MutedText
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropUp,
+                                    contentDescription = "Change Status",
+                                    tint = MutedText
+                                )
+                            }
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Surface,
+                            unfocusedContainerColor = Surface,
+                            focusedBorderColor = Border,
+                            unfocusedBorderColor = Border,
+                            focusedTextColor = PrimaryText,
+                            unfocusedTextColor = PrimaryText,
+                            focusedLabelColor = MutedText,
+                            unfocusedLabelColor = MutedText,
+                            cursorColor = BluePrimary,
+                            focusedPlaceholderColor = MutedText,
+                            unfocusedPlaceholderColor = MutedText
+                        ),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Box(modifier = Modifier.align(Alignment.BottomEnd)) {
+                        DropdownMenu(
+                            expanded = ownerExpanded,
+                            onDismissRequest = { ownerExpanded = false }
+                        ) {
+
+                        teamList.forEach { teamMember ->
+                            val teamName = teamMember.firstName + " " + teamMember.lastName
+                            DropdownMenuItem(
+                                text = {
+                                    Text(teamName)
+                                },
+                                onClick = {
+                                    ownerSelection = teamMember
+                                    ownerExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = {
+                            onDismissOwner()
+                        },
+                    ) {
+                        Text("Cancel")
+                    }
+                    TextButton(
+                        onClick = {
+                            var result: String
+                            coroutineScope.launch(Dispatchers.IO) {
+                                result = db.updateHandoffOwner(handoffID = handoff.handoffID ?: 0L, userID = ownerSelection.userID)
+                                if (result == "") {
+                                    onSuccessOwner(ownerSelection.userID)
+                                } else {
+                                    showError(context, result)
+                                }
+                            }
+                        },
+                    ) {
+                        Text("Confirm")
+                    }
                 }
             }
         }
