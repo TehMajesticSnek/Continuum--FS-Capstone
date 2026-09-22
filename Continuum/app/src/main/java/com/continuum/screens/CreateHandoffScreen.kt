@@ -49,7 +49,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import android.media.AudioAttributes
 import android.media.MediaRecorder
+import android.media.MediaPlayer
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.ui.Alignment
@@ -123,6 +125,10 @@ fun CreateHandoffScreen(
 
     var mediaRecorder by remember {
         mutableStateOf<MediaRecorder?>(null)
+    }
+
+    var mediaPlayer by remember {
+        mutableStateOf<MediaPlayer?>(null)
     }
 
     var isRecording by remember {
@@ -253,6 +259,49 @@ fun CreateHandoffScreen(
         audioFile?.let { file ->
             selectedFileUri = Uri.fromFile(file)
             selectedFileName = file.name
+        }
+    }
+
+    fun playVoiceRecording() {
+        val file = audioFile ?: return
+
+        mediaPlayer?.release()
+
+        try {
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(file.absolutePath)
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                setOnPreparedListener { player ->
+                    player.start()
+                }
+
+                setOnCompletionListener {
+                    it.release()
+                    mediaPlayer = null
+                }
+
+                setOnErrorListener { _, what, extra ->
+                    Toast.makeText(
+                        context,
+                        "Playback error: $what / $extra",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    true
+                }
+
+                prepareAsync()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "Playback failed: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
@@ -763,6 +812,22 @@ fun CreateHandoffScreen(
                     "Record Voice Note"
                 }
             )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (audioFile != null && !isRecording) {
+            OutlinedButton(
+                onClick = {
+                    playVoiceRecording()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("Play Voice Note")
+            }
         }
 
         if (selectedFileName != null) {
