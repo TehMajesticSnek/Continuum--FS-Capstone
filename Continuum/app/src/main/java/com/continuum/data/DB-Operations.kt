@@ -171,6 +171,7 @@ class Database {
         val actionsTaken: String,
         val nextSteps: String
     )
+
     @Serializable
     data class CommentInsert(
         @SerialName("handoff_id")
@@ -217,11 +218,16 @@ class Database {
         }
     }
 
+    data class FileUploadResult(
+        val filePath: String? = null,
+        val error: String = ""
+    )
+
     suspend fun uploadFileAttachment(
         handoffID: Long,
         fileName: String,
         fileBytes: ByteArray
-    ): String {
+    ): FileUploadResult {
         return try {
             val bucket = supabase.storage.from("handoff_attachments")
 
@@ -240,10 +246,14 @@ class Database {
                 .from("file_attachments")
                 .insert(attachment)
 
-            ""
+            FileUploadResult(
+                filePath = filePath
+            )
         } catch (e: Exception) {
             e.printStackTrace()
-            "There was an issue uploading this file. Please try again."
+            FileUploadResult(
+                error = "There was an issue uploading this file. Please try again."
+            )
         }
     }
 
@@ -696,6 +706,7 @@ class Database {
             null
         }
     }
+
     suspend fun newHandoff(
         title: String,
         content: String?,

@@ -72,5 +72,6 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:storage-kt")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.3.0")
+    implementation(files("libs/sherpa-onnx-1.13.8.aar"))
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

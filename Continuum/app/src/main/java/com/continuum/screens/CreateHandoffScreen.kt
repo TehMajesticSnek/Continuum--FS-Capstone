@@ -41,17 +41,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.Manifest
+import android.os.Bundle
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import android.media.AudioAttributes
 import android.media.MediaRecorder
 import android.media.MediaPlayer
+import android.media.MediaCodec
+import android.media.MediaExtractor
+import android.media.MediaFormat
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.ui.Alignment
@@ -64,7 +72,10 @@ import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
-import kotlinx.coroutines.Dispatchers
+import com.k2fsa.sherpa.onnx.OfflineRecognizer
+import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
+import com.k2fsa.sherpa.onnx.OfflineModelConfig
+import com.k2fsa.sherpa.onnx.OfflineNemoEncDecCtcModelConfig
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.core.content.FileProvider
@@ -99,6 +110,8 @@ fun CreateHandoffScreen(
         mutableStateOf(false)
     }
 
+    var voiceTranscription by remember { mutableStateOf("") }
+
     var statExpanded by remember { mutableStateOf(false) }
     var statSelected by remember { mutableStateOf(viewModel.db.statOptions.entries.find { it.key == 0.toShort() }) }
     val statInteractionSource = remember { MutableInteractionSource() }
@@ -110,6 +123,22 @@ fun CreateHandoffScreen(
 
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val offlineRecognizer = remember {
+        OfflineRecognizer(
+            assetManager = context.assets,
+            config = OfflineRecognizerConfig(
+                modelConfig = OfflineModelConfig(
+                    nemo = OfflineNemoEncDecCtcModelConfig(
+                        model = "sherpa/model.onnx"
+                    ),
+                    tokens = "sherpa/tokens.txt",
+                    numThreads = 2,
+                    debug = false
+                )
+            )
+        )
+    }
 
     var selectedFileUri by remember {
         mutableStateOf<Uri?>(null)
@@ -222,6 +251,152 @@ fun CreateHandoffScreen(
             ).show()
         }
     }
+
+    fun decodeM4aToPcm(file: File): Pair<FloatArray, Int> {
+        val extractor = MediaExtractor()
+        extractor.setDataSource(file.absolutePath)
+
+        var audioTrackIndex = -1
+        var audioFormat: MediaFormat? = null
+
+        for (i in 0 until extractor.trackCount) {
+            val format = extractor.getTrackFormat(i)
+            val mime = format.getString(MediaFormat.KEY_MIME)
+
+            if (mime?.startsWith("audio/") == true) {
+                audioTrackIndex = i
+                audioFormat = format
+                break
+            }
+        }
+
+        if (audioTrackIndex == -1 || audioFormat == null) {
+            extractor.release()
+            throw IllegalArgumentException("No audio track found in recording")
+        }
+
+        extractor.selectTrack(audioTrackIndex)
+
+        val mime = audioFormat.getString(MediaFormat.KEY_MIME)
+            ?: throw IllegalArgumentException("Audio format has no MIME type")
+
+        val sampleRate = audioFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+
+        val codec = MediaCodec.createDecoderByType(mime)
+        codec.configure(audioFormat, null, null, 0)
+        codec.start()
+
+        val samples = mutableListOf<Float>()
+        val bufferInfo = MediaCodec.BufferInfo()
+
+        var inputFinished = false
+        var outputFinished = false
+
+        try {
+            while (!outputFinished) {
+
+                if (!inputFinished) {
+                    val inputIndex = codec.dequeueInputBuffer(10_000)
+
+                    if (inputIndex >= 0) {
+                        val inputBuffer = codec.getInputBuffer(inputIndex)
+
+                        if (inputBuffer != null) {
+                            val sampleSize = extractor.readSampleData(inputBuffer, 0)
+
+                            if (sampleSize < 0) {
+                                codec.queueInputBuffer(
+                                    inputIndex,
+                                    0,
+                                    0,
+                                    0,
+                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                                )
+                                inputFinished = true
+                            } else {
+                                codec.queueInputBuffer(
+                                    inputIndex,
+                                    0,
+                                    sampleSize,
+                                    extractor.sampleTime,
+                                    0
+                                )
+
+                                extractor.advance()
+                            }
+                        }
+                    }
+                }
+
+                val outputIndex = codec.dequeueOutputBuffer(bufferInfo, 10_000)
+
+                if (outputIndex >= 0) {
+                    val outputBuffer = codec.getOutputBuffer(outputIndex)
+
+                    if (outputBuffer != null && bufferInfo.size > 0) {
+                        outputBuffer.position(bufferInfo.offset)
+                        outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
+
+                        while (outputBuffer.remaining() >= 2) {
+                            val low = outputBuffer.get().toInt() and 0xFF
+                            val high = outputBuffer.get().toInt()
+
+                            val pcm16 = ((high shl 8) or low).toShort()
+
+                            samples.add(
+                                pcm16.toFloat() / 32768.0f
+                            )
+                        }
+                    }
+
+                    codec.releaseOutputBuffer(outputIndex, false)
+
+                    if (
+                        bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0
+                    ) {
+                        outputFinished = true
+                    }
+                }
+            }
+        } finally {
+            codec.stop()
+            codec.release()
+            extractor.release()
+        }
+
+        return Pair(samples.toFloatArray(), sampleRate)
+    }
+
+    fun transcribeVoiceRecording(file: File): String {
+        return try {
+            val (samples, sampleRate) = decodeM4aToPcm(file)
+
+            println("SHERPA AUDIO: ${samples.size} samples @ $sampleRate Hz")
+
+            val stream = offlineRecognizer.createStream()
+
+            stream.acceptWaveform(
+                samples = samples,
+                sampleRate = sampleRate
+            )
+
+            offlineRecognizer.decode(stream)
+
+            val result = offlineRecognizer.getResult(stream)
+            val text = result.text
+
+            println("SHERPA TRANSCRIPTION: $text")
+
+            stream.release()
+
+            text
+        } catch (e: Exception) {
+            println("SHERPA TRANSCRIPTION ERROR: ${e.message}")
+            e.printStackTrace()
+            ""
+        }
+    }
+
     fun startVoiceRecording() {
         val file = File.createTempFile(
             "voice_note_",
@@ -243,6 +418,7 @@ fun CreateHandoffScreen(
 
         mediaRecorder = recorder
         isRecording = true
+
     }
 
     fun stopVoiceRecording() {
@@ -259,6 +435,15 @@ fun CreateHandoffScreen(
         audioFile?.let { file ->
             selectedFileUri = Uri.fromFile(file)
             selectedFileName = file.name
+
+            coroutineScope.launch {
+                val transcription = withContext(Dispatchers.Default) {
+                    transcribeVoiceRecording(file)
+                }
+
+                voiceTranscription = transcription
+                println("FINAL VOICE TRANSCRIPTION: $voiceTranscription")
+            }
         }
     }
 
@@ -840,6 +1025,23 @@ fun CreateHandoffScreen(
             )
         }
 
+        if (voiceTranscription.isNotBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Transcription",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = voiceTranscription,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedButton(
@@ -902,9 +1104,9 @@ fun CreateHandoffScreen(
                                     fileBytes = fileBytes
                                 )
 
-                                if (uploadResult.isNotEmpty()) {
+                                if (uploadResult.error.isNotEmpty()) {
                                     withContext(Dispatchers.Main) {
-                                        showError(context, uploadResult)
+                                        showError(context, uploadResult.error)
                                     }
                                     return@withContext
                                 }
