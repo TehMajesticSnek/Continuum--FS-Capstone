@@ -190,6 +190,7 @@ fun CreateHandoffScreen(
     ) { uri ->
         if (uri != null) {
             selectedFileUri = uri
+            voiceTranscription = ""
 
             selectedFileName = context.contentResolver
                 .query(uri, null, null, null, null)
@@ -213,6 +214,7 @@ fun CreateHandoffScreen(
     ) { uri ->
         if (uri != null) {
             selectedFileUri = uri
+            voiceTranscription = ""
 
             selectedFileName = context.contentResolver
                 .query(uri, null, null, null, null)
@@ -236,6 +238,7 @@ fun CreateHandoffScreen(
     ) { success ->
         if (success && cameraPhotoUri != null) {
             selectedFileUri = cameraPhotoUri
+            voiceTranscription = ""
             selectedFileName = "handoff_photo_${System.currentTimeMillis()}.jpg"
         }
     }
@@ -1101,7 +1104,8 @@ fun CreateHandoffScreen(
                                 val uploadResult = viewModel.db.uploadFileAttachment(
                                     handoffID = handoffID,
                                     fileName = selectedFileName ?: "attachment",
-                                    fileBytes = fileBytes
+                                    fileBytes = fileBytes,
+                                    transcription = voiceTranscription.ifBlank { null }
                                 )
 
                                 if (uploadResult.error.isNotEmpty()) {
