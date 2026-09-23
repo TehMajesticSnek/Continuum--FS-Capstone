@@ -484,9 +484,13 @@ fun HandoffDetailsScreen(
                                 }
 
                                 Text(
-                                    text = attachment.fileURL
-                                        .substringAfterLast("/")
-                                        .substringAfter("_"),
+                                    text = if (isAudio) {
+                                        "Voice Note"
+                                    } else {
+                                        attachment.fileURL
+                                            .substringAfterLast("/")
+                                            .substringAfter("_")
+                                    },
                                     color = PrimaryText,
                                     fontWeight = FontWeight.SemiBold
                                 )
