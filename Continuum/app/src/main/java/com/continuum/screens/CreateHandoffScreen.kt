@@ -1022,7 +1022,11 @@ fun CreateHandoffScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = selectedFileName!!,
+                text = if (audioFile != null) {
+                    "Voice Note"
+                } else {
+                    selectedFileName!!
+                },
                 color = MutedText,
                 style = MaterialTheme.typography.bodySmall
             )
