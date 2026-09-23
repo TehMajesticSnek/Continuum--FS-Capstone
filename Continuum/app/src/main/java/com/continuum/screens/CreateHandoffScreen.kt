@@ -72,6 +72,9 @@ import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
@@ -111,6 +114,7 @@ fun CreateHandoffScreen(
     }
 
     var voiceTranscription by remember { mutableStateOf("") }
+    var photoExtractedText by remember { mutableStateOf("") }
 
     var statExpanded by remember { mutableStateOf(false) }
     var statSelected by remember { mutableStateOf(viewModel.db.statOptions.entries.find { it.key == 0.toShort() }) }
@@ -184,6 +188,39 @@ fun CreateHandoffScreen(
         }
     }
 
+    fun extractTextFromPhoto(uri: Uri) {
+        println("PHOTO OCR STARTED: $uri")
+        try {
+            val image = InputImage.fromFilePath(context, uri)
+
+            val recognizer = TextRecognition.getClient(
+                TextRecognizerOptions.DEFAULT_OPTIONS
+            )
+
+            recognizer.process(image)
+                .addOnSuccessListener { visionText ->
+                    photoExtractedText = visionText.text.trim()
+
+                    println("PHOTO EXTRACTED TEXT: $photoExtractedText")
+
+                    recognizer.close()
+                }
+                .addOnFailureListener { exception ->
+                    photoExtractedText = ""
+
+                    println("PHOTO TEXT EXTRACTION ERROR: ${exception.message}")
+                    exception.printStackTrace()
+
+                    recognizer.close()
+                }
+
+        } catch (e: Exception) {
+            photoExtractedText = ""
+
+            println("PHOTO TEXT EXTRACTION ERROR: ${e.message}")
+            e.printStackTrace()
+        }
+    }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -191,6 +228,7 @@ fun CreateHandoffScreen(
         if (uri != null) {
             selectedFileUri = uri
             voiceTranscription = ""
+            photoExtractedText = ""
 
             selectedFileName = context.contentResolver
                 .query(uri, null, null, null, null)
@@ -215,6 +253,9 @@ fun CreateHandoffScreen(
         if (uri != null) {
             selectedFileUri = uri
             voiceTranscription = ""
+            photoExtractedText = ""
+
+            extractTextFromPhoto(uri)
 
             selectedFileName = context.contentResolver
                 .query(uri, null, null, null, null)
@@ -239,6 +280,10 @@ fun CreateHandoffScreen(
         if (success && cameraPhotoUri != null) {
             selectedFileUri = cameraPhotoUri
             voiceTranscription = ""
+            photoExtractedText = ""
+
+            extractTextFromPhoto(cameraPhotoUri!!)
+
             selectedFileName = "handoff_photo_${System.currentTimeMillis()}.jpg"
         }
     }
@@ -1022,10 +1067,12 @@ fun CreateHandoffScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = if (audioFile != null) {
-                    "Voice Note"
-                } else {
-                    selectedFileName!!
+                text = when {
+                    audioFile != null -> "Voice Note"
+                    selectedFileName?.endsWith(".jpg", ignoreCase = true) == true ||
+                            selectedFileName?.endsWith(".jpeg", ignoreCase = true) == true ||
+                            selectedFileName?.endsWith(".png", ignoreCase = true) == true -> "Photo"
+                    else -> selectedFileName!!
                 },
                 color = MutedText,
                 style = MaterialTheme.typography.bodySmall
@@ -1045,6 +1092,23 @@ fun CreateHandoffScreen(
 
             Text(
                 text = voiceTranscription,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (photoExtractedText.isNotBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Extracted Text",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = photoExtractedText,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
