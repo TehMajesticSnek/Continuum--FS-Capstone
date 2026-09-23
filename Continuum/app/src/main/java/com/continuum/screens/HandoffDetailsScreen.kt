@@ -115,6 +115,10 @@ fun HandoffDetailsScreen(
         mutableStateOf(false)
     }
 
+    var recurringIssueResult by remember {
+        mutableStateOf<Database.RecurringIssueResult?>(null)
+    }
+
     LaunchedEffect(handoff.handoffID) {
         val id = handoff.handoffID
 
@@ -156,6 +160,9 @@ fun HandoffDetailsScreen(
                 .associateWith { userID ->
                     viewModel.db.getUserFirstName(userID)
                 }
+
+            recurringIssueResult = viewModel.db.getRecurringIssues(handoff)
+
         }
     }
     Column(

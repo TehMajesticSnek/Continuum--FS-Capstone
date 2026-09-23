@@ -116,6 +116,14 @@ class Database {
         @SerialName("time_edited")
         val editTimestamp: Instant? = null,
     ) : Parcelable
+    data class RecurringIssueResult(
+        val sourceHandoff: Handoff,
+        val matchingHandoffs: List<Handoff>
+    ) {
+        val occurrenceCount: Int
+            get() = matchingHandoffs.size + 1
+    }
+
     @Serializable
     data class FileAttachment(
         @SerialName("handoff_id")
@@ -950,6 +958,110 @@ class Database {
             emptyList()
         }
     }
+
+    suspend fun getAllTeamHandoffs(): List<Handoff> {
+        return try {
+            val currentTeamID = activeTeam ?: return emptyList()
+
+            supabase
+                .from("handoffs")
+                .select {
+                    filter {
+                        eq("team_id", currentTeamID)
+                    }
+                }
+                .decodeList<Handoff>()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
+    private fun normalizeIssueText(handoff: Handoff): Set<String> {
+        val stopWords = setOf(
+            "the", "a", "an", "and", "or", "but",
+            "to", "of", "in", "on", "at", "for",
+            "with", "is", "was", "are", "were",
+            "be", "been", "being", "this", "that",
+            "it", "as", "by", "from"
+        )
+
+        return "${handoff.title} ${handoff.content.orEmpty()}"
+            .lowercase()
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .split(Regex("\\s+"))
+            .filter { word ->
+                word.length >= 3 && word !in stopWords
+            }
+            .toSet()
+    }
+    private fun normalizeIssueTitle(handoff: Handoff): Set<String> {
+        val stopWords = setOf(
+            "the", "a", "an", "and", "or", "but",
+            "to", "of", "in", "on", "at", "for",
+            "with", "is", "was", "are", "were",
+            "be", "been", "being", "this", "that",
+            "it", "as", "by", "from",
+            "test", "testing"
+        )
+
+        return handoff.title
+            .lowercase()
+            .replace(Regex("[^a-z0-9\\s]"), " ")
+            .split(Regex("\\s+"))
+            .filter { word ->
+                word.length >= 3 && word !in stopWords
+            }
+            .toSet()
+    }
+    private fun calculateIssueSimilarity(
+        first: Handoff,
+        second: Handoff
+    ): Double {
+        val firstTitleWords = normalizeIssueTitle(first)
+        val secondTitleWords = normalizeIssueTitle(second)
+
+        // Handoffs must share at least one meaningful title word
+        // before their full issue text is considered similar.
+        if (firstTitleWords.intersect(secondTitleWords).isEmpty()) {
+            return 0.0
+        }
+
+        val firstWords = normalizeIssueText(first)
+        val secondWords = normalizeIssueText(second)
+
+        if (firstWords.isEmpty() || secondWords.isEmpty()) {
+            return 0.0
+        }
+
+        val sharedWords = firstWords.intersect(secondWords).size
+        val totalUniqueWords = firstWords.union(secondWords).size
+
+        return sharedWords.toDouble() / totalUniqueWords.toDouble()
+    }
+
+    suspend fun getRecurringIssues(
+        handoff: Handoff,
+        similarityThreshold: Double = 0.30
+    ): RecurringIssueResult {
+        val allHandoffs = getAllTeamHandoffs()
+
+        val matches = allHandoffs
+            .filter { other ->
+                other.handoffID != handoff.handoffID &&
+                        calculateIssueSimilarity(handoff, other) >= similarityThreshold
+            }
+            .sortedByDescending { other ->
+                calculateIssueSimilarity(handoff, other)
+            }
+
+        return RecurringIssueResult(
+            sourceHandoff = handoff,
+            matchingHandoffs = matches
+        )
+    }
+
     suspend fun getHandoffsFilter(keyword: String = "", status : Short = -1, priority: Short = -1, includeCompleted: Boolean = false): List<Handoff> {
         return try {
             if (activeTeam == null) {
