@@ -498,6 +498,25 @@ fun HandoffDetailsScreen(
                                     color = MutedText,
                                     style = MaterialTheme.typography.bodySmall
                                 )
+
+                                if (isAudio && !attachment.transcription.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    Text(
+                                        text = "Transcription",
+                                        color = PrimaryText,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text = attachment.transcription!!,
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
                             }
                         }
                     }
