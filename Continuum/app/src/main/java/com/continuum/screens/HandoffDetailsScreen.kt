@@ -484,10 +484,10 @@ fun HandoffDetailsScreen(
                                 }
 
                                 Text(
-                                    text = if (isAudio) {
-                                        "Voice Note"
-                                    } else {
-                                        attachment.fileURL
+                                    text = when {
+                                        isAudio -> "Voice Note"
+                                        imageUrl != null -> "Photo"
+                                        else -> attachment.fileURL
                                             .substringAfterLast("/")
                                             .substringAfter("_")
                                     },
@@ -498,7 +498,11 @@ fun HandoffDetailsScreen(
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 Text(
-                                    text = if (isAudio) "Voice note • Tap to play" else "File attachment",
+                                    text = when {
+                                        isAudio -> "Voice note • Tap to play"
+                                        imageUrl != null -> "Photo attachment"
+                                        else -> "File attachment"
+                                    },
                                     color = MutedText,
                                     style = MaterialTheme.typography.bodySmall
                                 )
@@ -517,6 +521,24 @@ fun HandoffDetailsScreen(
 
                                     Text(
                                         text = attachment.transcription!!,
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                if (imageUrl != null && !attachment.extractedText.isNullOrBlank()) {
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    Text(
+                                        text = "Extracted Text",
+                                        color = PrimaryText,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text = attachment.extractedText!!,
                                         color = MutedText,
                                         style = MaterialTheme.typography.bodyMedium
                                     )

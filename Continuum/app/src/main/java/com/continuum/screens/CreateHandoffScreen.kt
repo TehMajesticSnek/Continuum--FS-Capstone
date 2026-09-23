@@ -1173,7 +1173,8 @@ fun CreateHandoffScreen(
                                     handoffID = handoffID,
                                     fileName = selectedFileName ?: "attachment",
                                     fileBytes = fileBytes,
-                                    transcription = voiceTranscription.ifBlank { null }
+                                    transcription = voiceTranscription.ifBlank { null },
+                                    extractedText = photoExtractedText.ifBlank { null }
                                 )
 
                                 if (uploadResult.error.isNotEmpty()) {

@@ -122,7 +122,9 @@ class Database {
         val handoffID: Long,
         @SerialName("file_url")
         val fileURL: String,
-        val transcription: String? = null
+        val transcription: String? = null,
+        @SerialName("extracted_text")
+        val extractedText: String? = null
     )
 
     data class NewHandoffResult(
@@ -228,7 +230,8 @@ class Database {
         handoffID: Long,
         fileName: String,
         fileBytes: ByteArray,
-        transcription: String? = null
+        transcription: String? = null,
+        extractedText: String? = null
     ): FileUploadResult {
         return try {
             val bucket = supabase.storage.from("handoff_attachments")
@@ -242,7 +245,8 @@ class Database {
             val attachment = FileAttachment(
                 handoffID = handoffID,
                 fileURL = filePath,
-                transcription = transcription
+                transcription = transcription,
+                extractedText = extractedText
             )
 
             supabase
