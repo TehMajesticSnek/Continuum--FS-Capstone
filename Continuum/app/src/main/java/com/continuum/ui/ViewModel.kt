@@ -19,7 +19,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database) : Vie
             initialValue = null
         )
 
-    fun selectTeam(teamID: Int?) { // TODO When logout is added, make sure to clear local team info
+    fun selectTeam(teamID: Int?) {
         viewModelScope.launch {
             repository.saveSelectedTeam(teamID)
             db.activeTeam = teamID

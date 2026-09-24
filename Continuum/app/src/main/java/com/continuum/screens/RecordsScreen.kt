@@ -395,9 +395,7 @@ fun RecordsScreen(
 
 
     LaunchedEffect(Unit) {
-        if (handoffs.isEmpty()) {
-            handoffs = viewModel.db.getHandoffs()
-        }
+       handoffs = viewModel.db.getHandoffs()
     }
 
     Scaffold (
@@ -579,7 +577,7 @@ fun RecordsScreen(
                         }
                     }
                 } else {
-                    handoffs.reversed().forEach { handoff ->
+                    handoffs.forEach { handoff ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -609,7 +607,20 @@ fun RecordsScreen(
                                 Spacer(modifier = Modifier.height(6.dp))
 
                                 Text(
-                                    text = handoff.content ?: "",
+                                    text = run {
+                                        val parsedContent =
+                                            viewModel.db.separateContent(handoff.content ?: "")
+                                        """
+                                            |Issue Details: 
+                                            |${parsedContent.issue}
+                                            |
+                                            |Attempted Actions: 
+                                            |${parsedContent.action}
+                                            |
+                                            |Next Steps: 
+                                            |${parsedContent.next}
+                                        """.trimMargin()
+                                    },
                                     color = MutedText,
                                     style = MaterialTheme.typography.bodySmall
                                 )

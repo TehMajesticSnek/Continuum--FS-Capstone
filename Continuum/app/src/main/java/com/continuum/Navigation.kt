@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -125,6 +126,7 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                 ),
                 viewModel = viewModel,
                 toNewHandoff = {
+                    selectedHandoff = null
                     handoffDraftContent = ""
                     navController.navigate(NewHandoff)
                 },
@@ -168,9 +170,11 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                 onBackClick = {
                     navController.popBackStack()
                 },
-                onSubmitClick = {
+                onSubmitClick = { newHandoff ->
+                    selectedHandoff = newHandoff
                     navController.popBackStack()
-                }
+                },
+                editHandoff = selectedHandoff,
             )
         }
 
@@ -180,8 +184,13 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                     viewModel = viewModel,
                     handoff = handoff,
                     onBackClick = {
+                        selectedHandoff = null
                         navController.popBackStack()
-                    }
+                    },
+                    toEditScreen = { handoff ->
+                        selectedHandoff = handoff
+                        navController.navigate(NewHandoff)
+                    },
                 )
             }
         }

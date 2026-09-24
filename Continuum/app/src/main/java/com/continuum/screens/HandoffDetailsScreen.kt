@@ -62,11 +62,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -74,11 +79,15 @@ import java.time.format.DateTimeFormatter
 fun HandoffDetailsScreen(
     viewModel: ViewModel,
     handoff: Database.Handoff,
-    onBackClick: () -> Unit = {}
+    onBackClick: () -> Unit = {},
+    toEditScreen: (Database.Handoff) -> Unit = {}
 ) {
+
     var optionsMenuExpanded by remember { mutableStateOf(false) }
     var showOwnerDialog by remember { mutableStateOf(false) }
     var owner by remember { mutableStateOf<Database.User?>(null) }
+
+    var showDeleteHandoffDialog by remember { mutableStateOf(false) }
 
     var acknowledged by remember {
         mutableStateOf(false)
@@ -119,7 +128,7 @@ fun HandoffDetailsScreen(
         mutableStateOf<Database.RecurringIssueResult?>(null)
     }
 
-    LaunchedEffect(handoff.handoffID) {
+    LaunchedEffect(handoff) {
         val id = handoff.handoffID
 
         if (id != null) {
@@ -201,11 +210,21 @@ fun HandoffDetailsScreen(
             )
 
             if (viewModel.db.userRole == 1L || owner?.userID == viewModel.db.uid) {
+                Spacer(modifier = Modifier.weight(1f))
+
+                Box(Modifier.align(Alignment.CenterVertically)) {
+                    IconButton(onClick = { toEditScreen(handoff) }) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit handoff button")
+                    }
+                }
+
                 Box(Modifier.align(Alignment.CenterVertically)) {
                     IconButton(onClick = { optionsMenuExpanded = !optionsMenuExpanded }) {
                         Icon(
                             Icons.Default.MoreVert,
-                            contentDescription = "Team options dropdown menu")
+                            contentDescription = "Handoff options dropdown menu")
                     }
                     DropdownMenu(
                         expanded = optionsMenuExpanded,
@@ -227,10 +246,10 @@ fun HandoffDetailsScreen(
                                     color = Color(0xffff0000)
                                 )
                             },
-                            onClick = { //TODO add functionality
-                                //showConfirmKickDialog = true
+                            onClick = {
+                                showDeleteHandoffDialog = true
                                 optionsMenuExpanded = false
-                            } // ensure there will be an admin if you are an admin and leave
+                            }
                         )
                     }
                 }
@@ -414,7 +433,19 @@ fun HandoffDetailsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = handoff.content ?: "",
+                    text = run {
+                        val parsedContent = viewModel.db.separateContent(handoff.content ?: "")
+                        """
+                            |Issue Details: 
+                            |${parsedContent.issue}
+                            |
+                            |Attempted Actions: 
+                            |${parsedContent.action}
+                            |
+                            |Next Steps: 
+                            |${parsedContent.next}
+                        """.trimMargin()
+                    },
                     color = PrimaryText,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -764,6 +795,19 @@ fun HandoffDetailsScreen(
             }
         )
     }
+    if (showDeleteHandoffDialog) {
+        ConfirmDeleteHandoffDialog(
+            handoff = handoff,
+            db = viewModel.db,
+            onDismissDelete = {
+                showDeleteHandoffDialog = false
+            },
+            onSuccessDelete = {
+                showDeleteHandoffDialog = false
+                onBackClick()
+            }
+        )
+    }
 }
 
 @Composable
@@ -923,24 +967,75 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
 }
 
 @Composable
-private fun DetailLabel(
-    label: String,
-    value: String
-) {
-    Column {
-        Text(
-            text = label,
-            color = MutedText,
-            style = MaterialTheme.typography.bodySmall
-        )
+fun ConfirmDeleteHandoffDialog(handoff: Database.Handoff, db: Database, onDismissDelete: () -> Unit, onSuccessDelete: () -> Unit) {
 
-        Spacer(modifier = Modifier.height(4.dp))
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-        Text(
-            text = value,
-            color = PrimaryText,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold
-        )
+    Dialog(onDismissRequest = onDismissDelete) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Confirm Leave",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Are you sure you want to delete this handoff?"
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = {
+                            onDismissDelete()
+                        },
+                    ) {
+                        Text("Cancel")
+                    }
+                    TextButton(
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val result = db.deleteHandoff(handoff.handoffID)
+
+                                if (result == "") {
+                                    withContext(Dispatchers.Main) {
+                                        onSuccessDelete()
+                                    }
+                                } else {
+                                    showError(context, result)
+                                }
+                            }
+
+                        },
+                    ) {
+                        Text("Delete", color = Color(0xffff0000))
+                    }
+                }
+            }
+        }
     }
 }

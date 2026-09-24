@@ -63,7 +63,9 @@ import android.media.MediaFormat
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.motionEventSpy
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
@@ -89,7 +91,8 @@ fun CreateHandoffScreen(
     viewModel: ViewModel,
     initialContent: String = "",
     onBackClick: () -> Unit = {},
-    onSubmitClick: () -> Unit = {}
+    onSubmitClick: (Database.Handoff) -> Unit = {},
+    editHandoff: Database.Handoff? = null,
 ) {
     var title by remember { mutableStateOf("") }
 
@@ -111,6 +114,9 @@ fun CreateHandoffScreen(
 
     var isGenerating by remember {
         mutableStateOf(false)
+    }
+    var showGenerateButton by remember {
+        mutableStateOf(true)
     }
 
     var voiceTranscription by remember { mutableStateOf("") }
@@ -172,6 +178,7 @@ fun CreateHandoffScreen(
         mutableStateOf<File?>(null)
     }
 
+
     DisposableEffect(Unit) {
         onDispose {
             if (isRecording) {
@@ -185,6 +192,21 @@ fun CreateHandoffScreen(
                 mediaRecorder = null
                 isRecording = false
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (editHandoff != null) {
+            showGenerateButton = false
+
+            title = editHandoff.title
+            statSelected = viewModel.db.statOptions.entries.find { it.key == editHandoff.status }
+            prioSelected = viewModel.db.prioOptions.entries.find { it.key == editHandoff.priority }
+
+            val parsedContent = viewModel.db.separateContent(editHandoff.content ?: "")
+            issueDetails = parsedContent.issue ?: ""
+            actionsTaken = parsedContent.action ?: ""
+            nextSteps = parsedContent.next ?: ""
         }
     }
 
@@ -565,8 +587,9 @@ fun CreateHandoffScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+
         Text(
-            text = "New Handoff",
+            text = (if (editHandoff == null) "New Handoff" else "Edit Handoff Content"),
             color = PrimaryText,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
@@ -575,7 +598,7 @@ fun CreateHandoffScreen(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Capture the important details from your shift.",
+            text = (if (editHandoff == null) "Capture the important details from your shift." else "Edit the important details from your shift"),
             color = MutedText,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -606,6 +629,7 @@ fun CreateHandoffScreen(
                     onValueChange = { },
                     label = { Text("Status") },
                     readOnly = true,
+                    singleLine = true,
                     interactionSource = statInteractionSource,
                     trailingIcon = {
                         if (!statExpanded) {
@@ -688,6 +712,7 @@ fun CreateHandoffScreen(
                     onValueChange = { },
                     label = { Text("Priority") },
                     readOnly = true,
+                    singleLine = true,
                     interactionSource = prioInteractionSource,
                     trailingIcon = {
                         if (!prioExpanded) {
@@ -798,6 +823,8 @@ fun CreateHandoffScreen(
             shape = RoundedCornerShape(8.dp)
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
         Text(
             text = "Issue Details",
             color = PrimaryText,
@@ -830,50 +857,52 @@ fun CreateHandoffScreen(
             shape = RoundedCornerShape(8.dp)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        if (showGenerateButton) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        isGenerating = true
 
-        Button(
-            onClick = {
-                coroutineScope.launch {
-                    isGenerating = true
-
-                    val sourceContent = if (aiSourceContent.isNotBlank()) {
-                        aiSourceContent
-                    } else {
-                        issueDetails.also {
-                            aiSourceContent = it
+                        val sourceContent = if (aiSourceContent.isNotBlank()) {
+                            aiSourceContent
+                        } else {
+                            issueDetails.also {
+                                aiSourceContent = it
+                            }
                         }
-                    }
 
-                    val draft = withContext(Dispatchers.IO) {
-                        viewModel.db.generateHandoffDraft(sourceContent)
-                    }
+                        val draft = withContext(Dispatchers.IO) {
+                            viewModel.db.generateHandoffDraft(sourceContent)
+                        }
 
-                    if (draft != null) {
-                        title = draft.title
-                        issueDetails = draft.issueDetails
-                        actionsTaken = draft.actionsTaken
-                        nextSteps = draft.nextSteps
-                    } else {
-                        showError(
-                            context,
-                            "Unable to generate AI draft. Please try again."
-                        )
-                    }
+                        if (draft != null) {
+                            title = draft.title
+                            issueDetails = draft.issueDetails
+                            actionsTaken = draft.actionsTaken
+                            nextSteps = draft.nextSteps
+                        } else {
+                            showError(
+                                context,
+                                "Unable to generate AI draft. Please try again."
+                            )
+                        }
 
-                    isGenerating = false
-                }
-            },
-            enabled = issueDetails.isNotBlank() && !isGenerating,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Text(
-                text = if (isGenerating) "Generating..." else "Generate AI Draft"
-            )
+                        isGenerating = false
+                    }
+                },
+                enabled = issueDetails.isNotBlank() && !isGenerating,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = if (isGenerating) "Generating..." else "Generate AI Draft"
+                )
+            }
         }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
@@ -1136,57 +1165,67 @@ fun CreateHandoffScreen(
             onClick = {
                 coroutineScope.launch {
                     withContext(Dispatchers.IO) {
-                        val structuredContent = """
-                            Issue Details:
-                            ${issueDetails.trim()}
-                        
-                            Actions Taken:
-                            ${actionsTaken.trim()}
-                        
-                            Next Steps:
-                            ${nextSteps.trim()}
-                        """.trimIndent()
+                        val structuredContent = viewModel.db.combineContent(issue = issueDetails, action = actionsTaken, next = nextSteps)
 
-                        val result = viewModel.db.newHandoff(
-                            title,
-                            structuredContent,
-                            statSelected!!.key,
-                            prioSelected!!.key
-                        )
+                        var result: Database.NewHandoffResult = Database.NewHandoffResult(null, "")
 
-                        if (result.error.isEmpty()) {
+                        if (editHandoff == null) {
+                            result = viewModel.db.newHandoff(
+                                title,
+                                structuredContent,
+                                statSelected!!.key,
+                                prioSelected!!.key
+                            )
+                        } else {
+                            result = viewModel.db.editHandoff(
+                                editHandoff.handoffID!!,
+                                title,
+                                structuredContent,
+                                statSelected!!.key,
+                                prioSelected!!.key
+                            )
+                        }
+
+
+
+                        if (result.error.isEmpty()) { // if there isnt an error
                             val handoffID = result.handoff?.handoffID
 
-                            if (selectedFileUri != null && handoffID != null) {
-                                val fileBytes = context.contentResolver
-                                    .openInputStream(selectedFileUri!!)
-                                    ?.use { it.readBytes() }
+                            if (editHandoff == null) { // TODO: this is a temp setup until file editing is handled
+                                if (selectedFileUri != null && handoffID != null) { // if there is a file attached
+                                    val fileBytes = context.contentResolver
+                                        .openInputStream(selectedFileUri!!)
+                                        ?.use { it.readBytes() }
 
-                                if (fileBytes == null) {
-                                    withContext(Dispatchers.Main) {
-                                        showError(context, "Unable to read the selected file.")
+                                    if (fileBytes == null) {
+                                        withContext(Dispatchers.Main) {
+                                            showError(
+                                                context,
+                                                "Unable to read the selected file."
+                                            )
+                                        }
+                                        return@withContext
                                     }
-                                    return@withContext
-                                }
 
-                                val uploadResult = viewModel.db.uploadFileAttachment(
-                                    handoffID = handoffID,
-                                    fileName = selectedFileName ?: "attachment",
-                                    fileBytes = fileBytes,
-                                    transcription = voiceTranscription.ifBlank { null },
-                                    extractedText = photoExtractedText.ifBlank { null }
-                                )
+                                    val uploadResult = viewModel.db.uploadFileAttachment(
+                                        handoffID = handoffID,
+                                        fileName = selectedFileName ?: "attachment",
+                                        fileBytes = fileBytes,
+                                        transcription = voiceTranscription.ifBlank { null },
+                                        extractedText = photoExtractedText.ifBlank { null }
+                                    )
 
-                                if (uploadResult.error.isNotEmpty()) {
-                                    withContext(Dispatchers.Main) {
-                                        showError(context, uploadResult.error)
+                                    if (uploadResult.error.isNotEmpty()) {
+                                        withContext(Dispatchers.Main) {
+                                            showError(context, uploadResult.error)
+                                        }
+                                        return@withContext
                                     }
-                                    return@withContext
                                 }
                             }
 
                             withContext(Dispatchers.Main) {
-                                onSubmitClick()
+                                onSubmitClick(result.handoff!!)
                             }
                         } else {
                             withContext(Dispatchers.Main) {
@@ -1195,6 +1234,7 @@ fun CreateHandoffScreen(
                         }
                     }
                 }
+
             },
             enabled = title.isNotBlank(),
             modifier = Modifier
@@ -1213,5 +1253,6 @@ fun CreateHandoffScreen(
                 fontWeight = FontWeight.SemiBold
             )
         }
+        Spacer(modifier = Modifier.height(30.dp))
     }
 }

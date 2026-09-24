@@ -15,6 +15,7 @@ import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import android.os.Parcelable
+import io.github.jan.supabase.postgrest.query.Order
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -54,6 +55,14 @@ class Database {
     var uid: String? = null
     var activeTeam: Int? = null
     var userRole: Long? = 0L
+
+    //Handoff Delimiters
+    val START_ISSUE = "<ISSUE_DETAILS_DELIM>"
+    val END_ISSUE = "</ISSUE_DETAILS_DELIM>"
+    val START_ACTION = "<ATTEMPTED_ACTION_DELIM>"
+    val END_ACTION = "</ATTEMPTED_ACTION_DELIM>"
+    val START_NEXT = "<NEXT_STEP_DELIM>"
+    val END_NEXT = "</NEXT_STEP_DELIM>"
 
     @Serializable @Parcelize
     data class Team (
@@ -112,10 +121,16 @@ class Database {
         val status: Short,
         val priority: Short,
         @SerialName("time_created")
-        val timestamp: Instant?,
+        val timestamp: Instant? = null,
         @SerialName("time_edited")
         val editTimestamp: Instant? = null,
     ) : Parcelable
+    data class ParsedContent(
+        val issue: String? = null,
+        val action: String? = null,
+        val next: String? = null
+    )
+
     data class RecurringIssueResult(
         val sourceHandoff: Handoff,
         val matchingHandoffs: List<Handoff>
@@ -545,36 +560,48 @@ class Database {
                 return "There must be at least 1 admin on a team at all times"
             }
         }
-        supabase.from("team_members").delete {
-            filter {
-                eq("user_id", uid as String)
-                eq("team_id", activeTeam as Int )
+        try {
+            supabase.from("team_members").delete {
+                filter {
+                    eq("user_id", uid as String)
+                    eq("team_id", activeTeam as Int)
+                }
             }
+            activeTeam = 0
+            return ""
+        } catch (e: Exception) {
+            return "Error leaving team. Please try again"
         }
-        activeTeam = 0
-        return ""
     }
     suspend fun leaveTeam(userID: String?): String {
         if (userRole == 1L && userID == uid) {
             return "ERROR: Cannot kick yourself"
         }
-        supabase.from("team_members").delete {
-            filter {
-                eq("user_id", userID as String)
-                eq("team_id", activeTeam as Int)
+        try {
+            supabase.from("team_members").delete {
+                filter {
+                    eq("user_id", userID as String)
+                    eq("team_id", activeTeam as Int)
+                }
             }
+            return ""
+        } catch (e: Exception) {
+            return "Error removing user. Please try again"
         }
-        return ""
     }
-    suspend fun deleteTeam() {
-        supabase.from("teams").delete {
-            filter {
-                eq("team_id", activeTeam as Int)
+    suspend fun deleteTeam(): String {
+        try { supabase.from("teams").delete {
+                filter {
+                    eq("team_id", activeTeam as Int)
+                }
             }
+            activeTeam = 0
+            return ""
+        } catch (e: Exception) {
+            return "Error deleting team. Please try again"
         }
-        activeTeam = 0
-    }
 
+    }
     suspend fun getUserTeams(): List<Team> {
 
         return try {
@@ -699,6 +726,7 @@ class Database {
                 filter {
                     eq("team_members.team_id", activeTeam as Int)
                 }
+                order("l_name", Order.ASCENDING)
             }.decodeList<TeamUserDisplay>()
             members
 
@@ -722,6 +750,29 @@ class Database {
         }
     }
 
+    fun combineContent(issue: String, action: String, next: String): String {
+        return """
+            Issue Details:
+            $START_ISSUE${issue.trim()}$END_ISSUE
+        
+            Actions Taken:
+            $START_ACTION${action.trim()}$END_ACTION
+        
+            Next Steps:
+            $START_NEXT${next.trim()}$END_NEXT
+        """.trimIndent()
+    }
+    fun separateContent(content: String): ParsedContent {
+        val issueRegex = Regex("$START_ISSUE(.*?[\\s\\S]*?)$END_ISSUE")
+        val actionRegex = Regex("$START_ACTION(.*?[\\s\\S]*?)$END_ACTION")
+        val nextRegex = Regex("$START_NEXT(.*?[\\s\\S]*?)$END_NEXT")
+
+        val issue = issueRegex.find(content)?.groups?.get(1)?.value?.trim().orEmpty()
+        val action = actionRegex.find(content)?.groups?.get(1)?.value?.trim().orEmpty()
+        val next = nextRegex.find(content)?.groups?.get(1)?.value?.trim().orEmpty()
+
+        return ParsedContent(issue = issue, action = action, next = next)
+    }
     suspend fun newHandoff(
         title: String,
         content: String?,
@@ -810,6 +861,54 @@ class Database {
             errorMsg = "Unable to update handoff status. Please try again."
         }
         return errorMsg
+    }
+
+    suspend fun editHandoff(handoffID: Long, title: String, content: String?, status: Short, priority: Short): NewHandoffResult {
+        return try {
+
+            val createdHandoff = supabase
+                .from("handoffs").update(
+                    {
+                        set("title", title)
+                        set("content", content)
+                        set("status", status)
+                        set("priority", priority)
+                        set("time_edited", Clock.System.now())
+                    }
+                ) {
+                    select()
+                    filter {
+                        eq("handoff_id", handoffID)
+                    }
+                }.decodeSingle<Handoff>()
+
+            NewHandoffResult(
+                handoff = createdHandoff
+            )
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+
+            NewHandoffResult(
+                error = "There was an issue editing this record. Please try again"
+            )
+        }
+    }
+
+    suspend fun deleteHandoff(handoffID: Long?): String {
+        if (handoffID == null) {
+            return "Error: handoffID must be provided"
+        }
+        return try {
+            supabase.from("handoffs").delete {
+                filter {
+                    eq("handoff_id", handoffID)
+                }
+            }
+            ""
+        } catch (e: Exception) {
+            "Error deleting handoff. Please try again"
+        }
     }
 
     suspend fun getNotes(): List<Note> {
@@ -951,6 +1050,8 @@ class Database {
                             eq("team_id", activeTeam!!)
                             neq("status", 4)
                         }
+                        order("time_edited", Order.DESCENDING)
+                        order("time_created", Order.DESCENDING)
                     }.decodeList<Handoff>()
             }
         } catch (e: Exception) {
@@ -1090,6 +1191,8 @@ class Database {
                                 }
                             }
                         }
+                        order("time_edited", Order.DESCENDING)
+                        order("time_created", Order.DESCENDING)
                         // look into compareBy for order. Wait to do that until grouping by date works, though
                     }.decodeList<Handoff>()
             }

@@ -895,9 +895,14 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                     Button(
                         onClick = {
                             coroutineScope.launch(Dispatchers.IO) {
-                                db.deleteTeam()
+                                var result = db.deleteTeam()
+                                if (result == "") {
+                                    onSuccessDelete()
+                                } else {
+                                    showError(context, result)
+                                }
                             }
-                            onSuccessDelete()
+
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xffff0000),

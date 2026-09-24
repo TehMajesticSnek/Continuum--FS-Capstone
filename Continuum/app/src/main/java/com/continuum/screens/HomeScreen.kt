@@ -463,7 +463,7 @@ fun SavedNotesDialog(
                             .weight(1f)
                             .verticalScroll(rememberScrollState())
                     ) {
-                        notes.reversed().forEach { note ->
+                        notes.forEach { note ->
 
                             Card(
                                 modifier = Modifier
@@ -670,6 +670,10 @@ fun HomeScreen(
     var teamLoading by remember { mutableStateOf(true) }
     var navToHandoffs by remember { mutableStateOf(false) }
     var navToTeams by remember { mutableStateOf(false) }
+    var navToNewHandoff by remember { mutableStateOf(false) }
+    var doOpenNotes by remember { mutableStateOf(false) }
+    var doOpenSavedNotes by remember { mutableStateOf(false) }
+
 
     suspend fun refreshTeams() { // TODO update create and join to auto-select new team
 
@@ -722,14 +726,32 @@ fun HomeScreen(
 
     LaunchedEffect(teamLoading, navToHandoffs) {
         if (!teamLoading && navToHandoffs) {
-            toHandoffList()
             navToHandoffs = false
+            toHandoffList()
         }
     }
     LaunchedEffect(teamLoading, navToTeams) {
         if (!teamLoading && navToTeams) {
-            toTeams()
             navToTeams = false
+            toTeams()
+        }
+    }
+    LaunchedEffect(teamLoading, navToNewHandoff) {
+        if (!teamLoading && navToNewHandoff) {
+            navToNewHandoff = false
+            toNewHandoff()
+        }
+    }
+    LaunchedEffect(teamLoading, doOpenNotes) {
+        if (!teamLoading && doOpenNotes) {
+            navToTeams = false
+            showQuickNoteDialog = true
+        }
+    }
+    LaunchedEffect(teamLoading, doOpenSavedNotes) {
+        if (!teamLoading && doOpenSavedNotes) {
+            navToTeams = false
+            showSavedNotesDialog = true
         }
     }
 
@@ -1111,7 +1133,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 OutlinedButton(
-                    onClick = { showQuickNoteDialog = true },
+                    onClick = { doOpenNotes = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -1139,7 +1161,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedButton(
-                    onClick = { showSavedNotesDialog = true },
+                    onClick = { doOpenSavedNotes = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -1159,7 +1181,8 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Button(
-                    onClick = toNewHandoff,
+                    enabled = (viewModel.db.activeTeam != 0),
+                    onClick = { navToNewHandoff = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
@@ -1198,7 +1221,7 @@ fun HomeScreen(
                         SummaryCard(
                             label = "Open\nIssues",
                             value = unresolvedHandoffs.size.toString(),
-                            indicatorColor = BluePrimary,
+                            indicatorColor = Color.Green,
                             modifier = Modifier.weight(1f)
                         )
 
@@ -1214,7 +1237,7 @@ fun HomeScreen(
                             value = unresolvedHandoffs.count {
                                 it.status.toInt() == 2
                             }.toString(),
-                            indicatorColor = Color.Green,
+                            indicatorColor = BluePrimary,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -1273,11 +1296,7 @@ fun HomeScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         Text(
-                                            text = handoff.content
-                                                ?.substringAfter("Issue Details:")
-                                                ?.substringBefore("Actions Taken:")
-                                                ?.trim()
-                                                ?: "",
+                                            text = viewModel.db.separateContent(handoff.content ?: "").issue ?: "",
                                             color = MutedText,
                                             style = MaterialTheme.typography.bodySmall,
                                             maxLines = 2,
@@ -1383,11 +1402,7 @@ fun HomeScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
 
                                     Text(
-                                        text = handoff.content
-                                            ?.substringAfter("Issue Details:")
-                                            ?.substringBefore("Actions Taken:")
-                                            ?.trim()
-                                            ?: "",
+                                        text = viewModel.db.separateContent(handoff.content ?: "").issue ?: "",
                                         color = MutedText,
                                         style = MaterialTheme.typography.bodySmall,
                                         maxLines = 2,
