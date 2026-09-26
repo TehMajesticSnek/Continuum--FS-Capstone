@@ -60,12 +60,16 @@ import android.media.MediaPlayer
 import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.ArrowDropUp
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.motionEventSpy
+import androidx.compose.ui.window.Dialog
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.BluePrimary
@@ -118,6 +122,7 @@ fun CreateHandoffScreen(
     var showGenerateButton by remember {
         mutableStateOf(true)
     }
+    var showConfirmLeaveDialog by remember { mutableStateOf(false) }
 
     var voiceTranscription by remember { mutableStateOf("") }
     var photoExtractedText by remember { mutableStateOf("") }
@@ -178,6 +183,9 @@ fun CreateHandoffScreen(
         mutableStateOf<File?>(null)
     }
 
+    BackHandler(enabled = !showConfirmLeaveDialog) {
+        showConfirmLeaveDialog = true
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -576,7 +584,7 @@ fun CreateHandoffScreen(
     ) {
 
         IconButton(
-            onClick = onBackClick
+            onClick = { showConfirmLeaveDialog = true }
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -1254,5 +1262,80 @@ fun CreateHandoffScreen(
             )
         }
         Spacer(modifier = Modifier.height(30.dp))
+    }
+    if (showConfirmLeaveDialog) {
+        ConfirmLeaveEditDialog(
+            handoff = editHandoff,
+            onDismissLeave = {
+                showConfirmLeaveDialog = false
+            },
+            onSuccessLeave = {
+                showConfirmLeaveDialog = false
+                onBackClick()
+            }
+        )
+    }
+}
+
+@Composable
+fun ConfirmLeaveEditDialog(handoff: Database.Handoff?, onDismissLeave: () -> Unit, onSuccessLeave: () -> Unit) {
+
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = onDismissLeave) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Confirm Leave",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (handoff == null) "Are you sure you want to leave this page? This handoff will not be saved" else "Are you sure you want to leave this page? Edits will not be saved"
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = {
+                            onDismissLeave()
+                        },
+                    ) {
+                        Text("Return")
+                    }
+                    TextButton(
+                        onClick = {
+                            onSuccessLeave()
+                        },
+                    ) {
+                        Text("Confirm")
+                    }
+                }
+            }
+        }
     }
 }

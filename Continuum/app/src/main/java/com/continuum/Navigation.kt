@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.continuum.data.Database
 import com.continuum.screens.CreateHandoffScreen
@@ -63,8 +64,6 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
     BackHandler(enabled = (navController.previousBackStackEntry == null)) {
         val currentTime = System.currentTimeMillis()
         val duration = 2000
-
-
 
         if (currentTime - lastBackPressTime < duration) {
             exitToast.cancel()
