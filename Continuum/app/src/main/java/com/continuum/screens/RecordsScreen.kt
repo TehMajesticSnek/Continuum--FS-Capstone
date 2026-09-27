@@ -93,11 +93,14 @@ import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 
@@ -164,9 +167,9 @@ fun RecordsScreen(
 
     val shiftOptions = mapOf(
         (-1).toShort() to "Any",
-        0.toShort() to "Day (7:00 AM to 3:00 PM)",
-        1.toShort() to "Evening (3:00 PM to 11:00 PM)",
-        2.toShort() to "Night (11:00 PM to 7:00 AM)",
+        0.toShort() to "Day",
+        1.toShort() to "Evening",
+        2.toShort() to "Night",
     )
     var shiftExpanded by remember { mutableStateOf(false) }
     var shiftSelection by remember { mutableStateOf(shiftOptions.entries.find { it.key == (-1).toShort() }) }
@@ -222,6 +225,12 @@ fun RecordsScreen(
                 }
             }
         }
+    }
+
+    fun formatTimestamp(dateTimeMillis: Long): String {
+        val time = Instant.fromEpochMilliseconds(dateTimeMillis)
+        val localTime = time.toLocalDateTime(timeZone = TimeZone.currentSystemDefault())
+        return "${localTime.month.number}/${localTime.day}/${localTime.year}"
     }
 
     @Composable
@@ -1013,40 +1022,58 @@ fun RecordsScreen(
                         }
                     }
                 } else {
-                    handoffs.forEach { handoff ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 10.dp)
-                                .clickable {
-                                    onHandoffClick(handoff)
-                                },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Surface
-                            ),
-                            border = BorderStroke(
-                                width = 1.dp,
-                                color = Border
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp)
-                            ) {
-                                Text(
-                                    text = handoff.title,
-                                    color = PrimaryText,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
+                    val groupedHandoffs: Map<String, List<Database.Handoff>> = remember(handoffs) {
+                        handoffs.groupBy { handoff ->
+                            formatTimestamp(handoff.sortedTimestamp!!.toEpochMilliseconds())
+                        }
+                    }
+                    groupedHandoffs.forEach { (date, dayHandoffs) ->
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = date,
+                            color = PrimaryText,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        dayHandoffs.forEach { handoff ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 10.dp)
+                                    .clickable {
+                                        onHandoffClick(handoff)
+                                    },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Surface
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = Border
                                 )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp)
+                                ) {
+                                    Text(
+                                        text = handoff.title,
+                                        color = PrimaryText,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
 
-                                Spacer(modifier = Modifier.height(6.dp))
+                                    Spacer(modifier = Modifier.height(6.dp))
 
-                                Text(
-                                    text = run {
-                                        val parsedContent =
-                                            viewModel.db.separateContent(handoff.content ?: "")
-                                        """
+                                    Text(
+                                        text = run {
+                                            val parsedContent =
+                                                viewModel.db.separateContent(handoff.content ?: "")
+                                            """
                                             |Issue Details: 
                                             |${parsedContent.issue}
                                             |
@@ -1056,76 +1083,61 @@ fun RecordsScreen(
                                             |Next Steps: 
                                             |${parsedContent.next}
                                         """.trimMargin()
-                                    },
-                                    color = MutedText,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-
-                                Spacer(modifier = Modifier.height(10.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            append("Status: ")
-                                            withStyle(
-                                                style = SpanStyle(
-                                                    color = when (handoff.status.toInt()) {
-                                                        0 -> Color(0xffFF5F15)
-                                                        1 -> Color.Yellow
-                                                        2 -> BluePrimary
-                                                        3 -> Color.Cyan
-                                                        4 -> Color.Green
-                                                        else -> BluePrimary
-                                                    }
-                                                )
-                                            ) {
-                                                append(viewModel.db.statOptions[handoff.status].toString())
-                                            }
-
-                                            append("  •  Priority: ")
-
-                                            withStyle(
-                                                style = SpanStyle(
-                                                    color = when (handoff.priority.toInt()) {
-                                                        0 -> Color.Red
-                                                        1 -> Color(0xffFF5F15)
-                                                        2 -> Color.Yellow
-                                                        3 -> BluePrimary
-                                                        4 -> Color.Green
-                                                        else -> BluePrimary
-                                                    }
-                                                )
-                                            ) {
-                                                append(viewModel.db.prioOptions[handoff.priority].toString())
-                                            }
                                         },
-                                        color = BluePrimary,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(10.dp))
-                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                    Text(
-                                        text = handoff.timestamp?.let { timestamp ->
-                                            timestamp
-                                                .toJavaInstant()
-                                                .atZone(ZoneId.systemDefault())
-                                                .format(
-                                                    DateTimeFormatter.ofPattern(
-                                                        "M/d/yyyy • h:mm a"
-                                                    )
-                                                )
-                                        } ?: "",
                                         color = MutedText,
                                         style = MaterialTheme.typography.bodySmall
                                     )
-                                    if (handoff.editTimestamp != null) {
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
                                         Text(
-                                            text = """(${handoff.editTimestamp?.let { timestamp ->
+                                            text = buildAnnotatedString {
+                                                append("Status: ")
+                                                withStyle(
+                                                    style = SpanStyle(
+                                                        color = when (handoff.status.toInt()) {
+                                                            0 -> Color(0xffFF5F15)
+                                                            1 -> Color.Yellow
+                                                            2 -> BluePrimary
+                                                            3 -> Color.Cyan
+                                                            4 -> Color.Green
+                                                            else -> BluePrimary
+                                                        }
+                                                    )
+                                                ) {
+                                                    append(viewModel.db.statOptions[handoff.status].toString())
+                                                }
+
+                                                append("  •  Priority: ")
+
+                                                withStyle(
+                                                    style = SpanStyle(
+                                                        color = when (handoff.priority.toInt()) {
+                                                            0 -> Color.Red
+                                                            1 -> Color(0xffFF5F15)
+                                                            2 -> Color.Yellow
+                                                            3 -> BluePrimary
+                                                            4 -> Color.Green
+                                                            else -> BluePrimary
+                                                        }
+                                                    )
+                                                ) {
+                                                    append(viewModel.db.prioOptions[handoff.priority].toString())
+                                                }
+                                            },
+                                            color = BluePrimary,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                        Text(
+                                            text = handoff.timestamp?.let { timestamp ->
                                                 timestamp
                                                     .toJavaInstant()
                                                     .atZone(ZoneId.systemDefault())
@@ -1134,10 +1146,26 @@ fun RecordsScreen(
                                                             "M/d/yyyy • h:mm a"
                                                         )
                                                     )
-                                            }})""",
+                                            } ?: "",
                                             color = MutedText,
                                             style = MaterialTheme.typography.bodySmall
                                         )
+                                        if (handoff.editTimestamp != null) {
+                                            Text(
+                                                text = """(${handoff.editTimestamp?.let { timestamp ->
+                                                    timestamp
+                                                        .toJavaInstant()
+                                                        .atZone(ZoneId.systemDefault())
+                                                        .format(
+                                                            DateTimeFormatter.ofPattern(
+                                                                "M/d/yyyy • h:mm a"
+                                                            )
+                                                        )
+                                                }})""",
+                                                color = MutedText,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
                                     }
                                 }
                             }

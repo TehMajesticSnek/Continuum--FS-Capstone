@@ -132,6 +132,8 @@ class Database {
         val timestamp: Instant? = null,
         @SerialName("time_edited")
         val editTimestamp: Instant? = null,
+        @SerialName("sorted_timestamp")
+        val sortedTimestamp: Instant? = null,
     ) : Parcelable
     data class ParsedContent(
         val issue: String? = null,
