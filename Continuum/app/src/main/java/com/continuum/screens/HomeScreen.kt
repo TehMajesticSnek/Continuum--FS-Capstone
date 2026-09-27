@@ -1308,7 +1308,7 @@ fun HomeScreen(
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                            verticalAlignment = Alignment.Bottom
                                         ) {
                                             Row {
                                                 Text(
@@ -1341,21 +1341,38 @@ fun HomeScreen(
                                                 )
 
                                             }
-
-                                            Text(
-                                                text = handoff.timestamp?.let { timestamp ->
-                                                    java.time.Instant
-                                                        .parse(timestamp.toString())
-                                                        .atZone(java.time.ZoneId.systemDefault())
-                                                        .format(
-                                                            java.time.format.DateTimeFormatter.ofPattern(
-                                                                "M/d/yyyy • h:mm a"
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text(
+                                                    text = handoff.timestamp?.let { timestamp ->
+                                                        java.time.Instant
+                                                            .parse(timestamp.toString())
+                                                            .atZone(java.time.ZoneId.systemDefault())
+                                                            .format(
+                                                                java.time.format.DateTimeFormatter.ofPattern(
+                                                                    "M/d/yyyy • h:mm a"
+                                                                )
                                                             )
-                                                        )
-                                                } ?: "",
-                                                color = MutedText,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
+                                                    } ?: "",
+                                                    color = MutedText,
+                                                    style = MaterialTheme.typography.bodySmall
+                                                )
+                                                if (handoff.editTimestamp != null) {
+                                                    Text(
+                                                        text = """(${handoff.editTimestamp?.let { timestamp ->
+                                                            java.time.Instant
+                                                                .parse(timestamp.toString())
+                                                                .atZone(java.time.ZoneId.systemDefault())
+                                                                .format(
+                                                                    java.time.format.DateTimeFormatter.ofPattern(
+                                                                        "M/d/yyyy • h:mm a"
+                                                                    )
+                                                                )
+                                                        }})""",
+                                                        color = MutedText,
+                                                        style = MaterialTheme.typography.bodySmall
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1373,81 +1390,82 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     recentHandoffs.forEach { handoff ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .clickable {
-                                        onHandoffClick(handoff)
-                                    },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Surface
-                                ),
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = Border
-                                )
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .clickable {
+                                    onHandoffClick(handoff)
+                                },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Surface
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Border
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(14.dp)
+                                Text(
+                                    text = handoff.title,
+                                    color = PrimaryText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = viewModel.db.separateContent(handoff.content ?: "").issue ?: "",
+                                    color = MutedText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = handoff.title,
-                                        color = PrimaryText,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                    Row {
+                                        Text(
+                                            text = "${viewModel.db.statOptions[handoff.status]}",
+                                            color = when (handoff.status.toInt()) {
+                                                0 -> Color(0xffFF5F15)
+                                                1 -> Color.Yellow
+                                                2 -> BluePrimary
+                                                3 -> Color.Cyan
+                                                4 -> Color.Green
+                                                else -> BluePrimary
+                                            },
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
 
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                        Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall) // TODO Maybe change color of this one
 
-                                    Text(
-                                        text = viewModel.db.separateContent(handoff.content ?: "").issue ?: "",
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 2,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                                    )
+                                        Text(
+                                            text = viewModel.db.prioOptions[handoff.priority] ?: "",
+                                            color = when (handoff.priority.toInt()) {
+                                                0 -> Color.Red
+                                                1 -> Color(0xffFF5F15)
+                                                2 -> Color.Yellow
+                                                3 -> BluePrimary
+                                                4 -> Color.Green
+                                                else -> BluePrimary
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
 
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                    }
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row {
-                                            Text(
-                                                text = "${viewModel.db.statOptions[handoff.status]}",
-                                                color = when (handoff.status.toInt()) {
-                                                    0 -> Color(0xffFF5F15)
-                                                    1 -> Color.Yellow
-                                                    2 -> BluePrimary
-                                                    3 -> Color.Cyan
-                                                    4 -> Color.Green
-                                                    else -> BluePrimary
-                                                },
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-
-                                            Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall) // TODO Maybe change color of this one
-
-                                            Text(
-                                                text = viewModel.db.prioOptions[handoff.priority] ?: "",
-                                                color = when (handoff.priority.toInt()) {
-                                                    0 -> Color.Red
-                                                    1 -> Color(0xffFF5F15)
-                                                    2 -> Color.Yellow
-                                                    3 -> BluePrimary
-                                                    4 -> Color.Green
-                                                    else -> BluePrimary
-                                                },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-
-                                        }
-
+                                    Column(horizontalAlignment = Alignment.End) {
                                         Text(
                                             text = handoff.timestamp?.let { timestamp ->
                                                 java.time.Instant
@@ -1462,10 +1480,27 @@ fun HomeScreen(
                                             color = MutedText,
                                             style = MaterialTheme.typography.bodySmall
                                         )
+                                        if (handoff.editTimestamp != null) {
+                                            Text(
+                                                text = """(${handoff.editTimestamp?.let { timestamp ->
+                                                    java.time.Instant
+                                                        .parse(timestamp.toString())
+                                                        .atZone(java.time.ZoneId.systemDefault())
+                                                        .format(
+                                                            java.time.format.DateTimeFormatter.ofPattern(
+                                                                "M/d/yyyy • h:mm a"
+                                                            )
+                                                        )
+                                                }})""",
+                                                color = MutedText,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
+                    }
 
                     Spacer(modifier = Modifier.height(80.dp))
                 }

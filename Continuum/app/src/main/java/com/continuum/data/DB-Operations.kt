@@ -16,14 +16,22 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import android.os.Parcelable
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.security.SecureRandom
+import java.security.Timestamp
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 import kotlin.Int
 import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
+import kotlin.time.toDuration
 
 
 class Database {
@@ -1044,14 +1052,13 @@ class Database {
                 emptyList()
             } else {
                 supabase
-                    .from("handoffs")
+                    .from("handoffs_most_recent")
                     .select {
                         filter {
                             eq("team_id", activeTeam!!)
                             neq("status", 4)
                         }
-                        order("time_edited", Order.DESCENDING)
-                        order("time_created", Order.DESCENDING)
+                        order("sorted_timestamp", Order.DESCENDING)
                     }.decodeList<Handoff>()
             }
         } catch (e: Exception) {
@@ -1163,13 +1170,20 @@ class Database {
         )
     }
 
-    suspend fun getHandoffsFilter(keyword: String = "", status : Short = -1, priority: Short = -1, includeCompleted: Boolean = false): List<Handoff> {
+    suspend fun getHandoffsFilter(
+        keyword: String = "",
+        status : Short = -1,
+        priority: Short = -1,
+        user: String = "",
+        age: Int = 0/*days*/,
+        includeCompleted: Boolean = false
+    ): List<Handoff> {
         return try {
             if (activeTeam == null) {
                 emptyList()
             } else {
                 supabase
-                    .from("handoffs")
+                    .from("handoffs_most_recent")
                     .select {
                         filter {
                             eq("team_id", activeTeam!!)
@@ -1180,9 +1194,32 @@ class Database {
                             else if (!includeCompleted) {
                                 neq("status", 4)
                             }
+
                             if (priority != (-1).toShort()) {
                                 eq("priority", priority)
                             }
+
+                            if (user != "") {
+                                eq("user_id", user)
+                            }
+
+                            if (age != 0) {
+                                val ageTime = LocalDate.now(ZoneId.systemDefault()).minusDays(age.toLong())
+                                val ageTimeDate = ageTime.atStartOfDay(ZoneId.systemDefault()) //set cutoff to midnight so it sticks to calendar days
+                                val ageTimeDateAsStamp = ageTimeDate.toInstant().toString()
+
+                                or {
+                                    and {
+                                        exact("time_edited", null)
+                                        lt("time_created", ageTimeDateAsStamp)
+                                    }
+                                    and {
+                                        filterNot("time_edited", FilterOperator.IS, "null")
+                                        lt("time_edited", ageTimeDateAsStamp)
+                                    }
+                                }
+                            }
+                            // handle shifts locally
 
                             or {
                                 if (keyword != "") {
@@ -1191,9 +1228,7 @@ class Database {
                                 }
                             }
                         }
-                        order("time_edited", Order.DESCENDING)
-                        order("time_created", Order.DESCENDING)
-                        // look into compareBy for order. Wait to do that until grouping by date works, though
+                        order("sorted_timestamp", Order.DESCENDING)
                     }.decodeList<Handoff>()
             }
         } catch (e: Exception) {

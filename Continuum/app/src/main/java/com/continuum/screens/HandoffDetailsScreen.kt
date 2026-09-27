@@ -291,19 +291,39 @@ fun HandoffDetailsScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = handoff.timestamp?.let { timestamp ->
-                        val localDateTime = timestamp
-                            .toJavaInstant()
-                            .atZone(ZoneId.systemDefault())
+                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = handoff.timestamp?.let { timestamp ->
+                            val localDateTime = timestamp
+                                .toJavaInstant()
+                                .atZone(ZoneId.systemDefault())
 
-                        DateTimeFormatter
-                            .ofPattern("M/d/yyyy • h:mm a")
-                            .format(localDateTime)
-                    } ?: "Unknown date",
-                    color = MutedText,
-                    style = MaterialTheme.typography.bodySmall
-                )
+                            DateTimeFormatter
+                                .ofPattern("M/d/yyyy • h:mm a")
+                                .format(localDateTime)
+                        } ?: "Unknown date",
+                        color = MutedText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (handoff.editTimestamp != null) {
+                        Text(
+                            text = """(${
+                                handoff.editTimestamp?.let { timestamp ->
+                                    timestamp
+                                        .toJavaInstant()
+                                        .atZone(ZoneId.systemDefault())
+                                        .format(
+                                            DateTimeFormatter.ofPattern(
+                                                "M/d/yyyy • h:mm a"
+                                            )
+                                        )
+                                }
+                            })""",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 

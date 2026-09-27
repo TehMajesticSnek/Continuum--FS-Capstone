@@ -26,11 +26,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
@@ -44,6 +46,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -59,6 +62,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,10 +73,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -86,6 +93,12 @@ import com.continuum.ui.theme.Surface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 
 @Composable
@@ -131,18 +144,101 @@ fun RecordsScreen(
     var prioSelected by remember { mutableStateOf(statOptions.entries.find { it.key == (-1).toShort() }) }
     val prioInteractionSource = remember { MutableInteractionSource() }
 
+    var teamList = remember { mutableStateListOf<Database.TeamUserDisplay>() }
+
+    var userExpanded by remember { mutableStateOf(false) }
+    var userSelected by remember { mutableStateOf(Database.TeamUserDisplay("", "Any", "", emptyList())) }
+    val userInteractionSource = remember { MutableInteractionSource() }
+
+    var age: Int? by remember { mutableStateOf<Int?>(0) }
+
+    val ageOptions = mapOf(
+        0.toShort() to "Days",
+        1.toShort() to "Weeks",
+        2.toShort() to "Months",
+        3.toShort() to "Years"
+    )
+    var ageExpanded by remember { mutableStateOf(false) }
+    var ageSelected by remember { mutableStateOf(ageOptions.entries.find { it.key == (0).toShort() }) }
+    val ageInteractionSource = remember { MutableInteractionSource() }
+
+    val shiftOptions = mapOf(
+        (-1).toShort() to "Any",
+        0.toShort() to "Day (7:00 AM to 3:00 PM)",
+        1.toShort() to "Evening (3:00 PM to 11:00 PM)",
+        2.toShort() to "Night (11:00 PM to 7:00 AM)",
+    )
+    var shiftExpanded by remember { mutableStateOf(false) }
+    var shiftSelection by remember { mutableStateOf(shiftOptions.entries.find { it.key == (-1).toShort() }) }
+    val shiftInteractionSource = remember { MutableInteractionSource() }
+
     var showComplete by remember { mutableStateOf(false) }
+    val showCompleteInteractionSource = remember { MutableInteractionSource() }
+
+    fun calculateAge(age: Int, timespan: Short): Int {
+        var age = age
+        when (timespan) {
+            1.toShort() -> age *= 7
+            2.toShort() -> age *= 30
+            3.toShort() -> age *= 365
+        }
+        return age
+    }
+
+    fun filterByShift(handoffs: List<Database.Handoff>, shift: Short): List<Database.Handoff> {
+        var startTime: Short = 0
+        var endTime: Short = 24
+
+        if (shift == (-1).toShort()) {
+            return handoffs
+        } else {
+            when (shift) {
+                0.toShort() -> {
+                    startTime = 7
+                    endTime = 15
+                }
+                1.toShort() -> {
+                    startTime = 15
+                    endTime = 23
+                }
+                2.toShort() -> {
+                    startTime = 23
+                    endTime = 7
+                }
+            }
+            return handoffs.filter { handoff ->
+                val handoffTimestamp = handoff.editTimestamp ?: handoff.timestamp
+                val handoffHour = handoffTimestamp?.toLocalDateTime(TimeZone.currentSystemDefault())?.hour
+                handoffHour in startTime..endTime
+
+                if (handoffHour == null) {
+                    false
+                } else {
+                    if (startTime < endTime) { // standard times
+                        handoffHour in startTime until endTime
+                    } else { // over-midnight
+                        handoffHour >= startTime || handoffHour < endTime
+                    }
+                }
+            }
+        }
+    }
 
     @Composable
     fun FilterDialog(
         db: Database,
         onDismiss: () -> Unit,
     ) {
+        LaunchedEffect(Unit) {
+            teamList.clear()
+            teamList.add(userSelected)
+            teamList += db.getTeamMembers()
+        }
 
         Dialog(onDismissRequest = onDismiss) {
             Box(
                 modifier = Modifier
-                    .size(width = 300.dp, height = 300.dp)
+                    .size(width = 300.dp, height = 450.dp)
                     .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
                     .padding(top = 12.dp)
             ) {
@@ -179,6 +275,27 @@ fun RecordsScreen(
                                 }
                             }
                         }
+                        LaunchedEffect(userInteractionSource) {
+                            userInteractionSource.interactions.collect { interaction ->
+                                if (interaction is PressInteraction.Release) {
+                                    userExpanded = true
+                                }
+                            }
+                        }
+                        LaunchedEffect(shiftInteractionSource) {
+                            shiftInteractionSource.interactions.collect { interaction ->
+                                if (interaction is PressInteraction.Release) {
+                                    shiftExpanded = true
+                                }
+                            }
+                        }
+                        LaunchedEffect(ageInteractionSource) {
+                            ageInteractionSource.interactions.collect { interaction ->
+                                if (interaction is PressInteraction.Release) {
+                                    ageExpanded = true
+                                }
+                            }
+                        }
 
                         Box(modifier = Modifier.weight(0.5f))
                         {
@@ -189,6 +306,21 @@ fun RecordsScreen(
                                 readOnly = true,
                                 singleLine = true,
                                 interactionSource = statInteractionSource,
+                                trailingIcon = {
+                                    if (!statExpanded) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = "Change Status",
+                                            tint = MutedText
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropUp,
+                                            contentDescription = "Change Status",
+                                            tint = MutedText
+                                        )
+                                    }
+                                },
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = Surface,
                                     unfocusedContainerColor = Surface,
@@ -236,16 +368,27 @@ fun RecordsScreen(
                                                 })
                                             },
                                             onClick = {
+                                                statSelected = option
+
+                                                if (statSelected!!.key == 4.toShort()) {
+                                                    showComplete = true
+                                                }
+                                                else if (statSelected!!.key != (-1).toShort()) {
+                                                    showComplete = false
+                                                }
+
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
                                                         keyword = searchText,
                                                         status = statSelected!!.key,
                                                         priority = prioSelected!!.key,
+                                                        user = userSelected.userID,
+                                                        age = calculateAge(age?: 0, ageSelected!!.key),
                                                         includeCompleted = showComplete
                                                     )
+                                                    handoffs = filterByShift(handoffs, shiftSelection!!.key)
                                                 }
 
-                                                statSelected = option
                                                 statExpanded = false
                                             }
                                         )
@@ -264,6 +407,21 @@ fun RecordsScreen(
                                 readOnly = true,
                                 singleLine = true,
                                 interactionSource = prioInteractionSource,
+                                trailingIcon = {
+                                    if (!prioExpanded) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = "Change Status",
+                                            tint = MutedText
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropUp,
+                                            contentDescription = "Change Status",
+                                            tint = MutedText
+                                        )
+                                    }
+                                },
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedContainerColor = Surface,
                                     unfocusedContainerColor = Surface,
@@ -312,17 +470,280 @@ fun RecordsScreen(
                                                 })
                                             },
                                             onClick = {
+                                                prioSelected = option
+
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
                                                         keyword = searchText,
                                                         status = statSelected!!.key,
                                                         priority = prioSelected!!.key,
+                                                        user = userSelected.userID,
+                                                        age = calculateAge(age?: 0, ageSelected!!.key),
                                                         includeCompleted = showComplete
                                                     )
+                                                    handoffs = filterByShift(handoffs, shiftSelection!!.key)
                                                 }
 
-                                                prioSelected = option
                                                 prioExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Box()
+                    {
+                        OutlinedTextField(
+                            value = userSelected.firstName + " " + userSelected.lastName,
+                            onValueChange = { },
+                            label = { Text("User") },
+                            readOnly = true,
+                            singleLine = true,
+                            interactionSource = userInteractionSource,
+                            trailingIcon = {
+                                if (!userExpanded) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Change Status",
+                                        tint = MutedText
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropUp,
+                                        contentDescription = "Change Status",
+                                        tint = MutedText
+                                    )
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Surface,
+                                unfocusedContainerColor = Surface,
+                                focusedBorderColor = Border,
+                                unfocusedBorderColor = Border,
+                                focusedTextColor = PrimaryText,
+                                unfocusedTextColor = PrimaryText,
+                                focusedLabelColor = MutedText,
+                                unfocusedLabelColor = MutedText,
+                                cursorColor = BluePrimary,
+                                focusedPlaceholderColor = MutedText,
+                                unfocusedPlaceholderColor = MutedText
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        Box(Modifier.align(Alignment.BottomEnd)) {
+                            DropdownMenu(
+                                expanded = userExpanded,
+                                onDismissRequest = { userExpanded = false }
+                            ) {
+                                teamList.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(
+                                            option.firstName + " " + option.lastName,
+                                            color = PrimaryText
+                                        )},
+                                        onClick = {
+                                            userSelected = option
+
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                handoffs = viewModel.db.getHandoffsFilter(
+                                                    keyword = searchText,
+                                                    status = statSelected!!.key,
+                                                    priority = prioSelected!!.key,
+                                                    user = userSelected.userID,
+                                                    age = calculateAge(age?: 0, ageSelected!!.key),
+                                                    includeCompleted = showComplete
+                                                )
+                                                handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                            }
+
+                                            userExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Box()
+                    {
+                        OutlinedTextField(
+                            value = shiftSelection!!.value,
+                            onValueChange = { },
+                            label = { Text("Shift") },
+                            readOnly = true,
+                            singleLine = true,
+                            interactionSource = shiftInteractionSource,
+                            trailingIcon = {
+                                if (!shiftExpanded) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Change Status",
+                                        tint = MutedText
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropUp,
+                                        contentDescription = "Change Status",
+                                        tint = MutedText
+                                    )
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Surface,
+                                unfocusedContainerColor = Surface,
+                                focusedBorderColor = Border,
+                                unfocusedBorderColor = Border,
+                                focusedTextColor = PrimaryText,
+                                unfocusedTextColor = PrimaryText,
+                                focusedLabelColor = MutedText,
+                                unfocusedLabelColor = MutedText,
+                                cursorColor = BluePrimary,
+                                focusedPlaceholderColor = MutedText,
+                                unfocusedPlaceholderColor = MutedText
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        )
+                        Box(Modifier.align(Alignment.BottomEnd)) {
+                            DropdownMenu(
+                                expanded = shiftExpanded,
+                                onDismissRequest = { shiftExpanded = false }
+                            ) {
+                                shiftOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(
+                                            option.value,
+                                            color = PrimaryText
+                                        )},
+                                        onClick = {
+                                            shiftSelection = option
+
+                                            coroutineScope.launch(Dispatchers.IO) {
+                                                handoffs = viewModel.db.getHandoffsFilter(
+                                                    keyword = searchText,
+                                                    status = statSelected!!.key,
+                                                    priority = prioSelected!!.key,
+                                                    user = userSelected.userID,
+                                                    age = calculateAge(age?: 0, ageSelected!!.key),
+                                                    includeCompleted = showComplete
+                                                )
+                                                handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                            }
+
+                                            userExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Row (horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(modifier = Modifier.weight(0.5f))
+                        {
+                            OutlinedTextField(
+                                value = age?.toString() ?: "",
+                                onValueChange = { digit ->
+                                    if (digit.all { it.isDigit() }) {
+                                        age = digit.toIntOrNull()
+                                    }
+
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        handoffs = viewModel.db.getHandoffsFilter(
+                                            keyword = searchText,
+                                            status = statSelected!!.key,
+                                            priority = prioSelected!!.key,
+                                            user = userSelected.userID,
+                                            age = calculateAge(age?: 0, ageSelected!!.key),
+                                            includeCompleted = showComplete
+                                        )
+                                        handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                    }
+                                },
+                                label = { Text("Age") },
+                                readOnly = false,
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Surface,
+                                    unfocusedContainerColor = Surface,
+                                    focusedBorderColor = Border,
+                                    unfocusedBorderColor = Border,
+                                    focusedTextColor = PrimaryText,
+                                    unfocusedTextColor = PrimaryText,
+                                    focusedLabelColor = MutedText,
+                                    unfocusedLabelColor = MutedText,
+                                    cursorColor = BluePrimary,
+                                    focusedPlaceholderColor = MutedText,
+                                    unfocusedPlaceholderColor = MutedText
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                        }
+
+                        Box(modifier = Modifier.weight(0.5f))
+                        {
+                            OutlinedTextField(
+                                value = ageSelected!!.value ,
+                                onValueChange = { },
+                                label = { Text("Timespan") },
+                                readOnly = true,
+                                singleLine = true,
+                                interactionSource = ageInteractionSource,
+                                trailingIcon = {
+                                    if (!ageExpanded) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = "Change Status",
+                                            tint = MutedText
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropUp,
+                                            contentDescription = "Change Status",
+                                            tint = MutedText
+                                        )
+                                    }
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = Surface,
+                                    unfocusedContainerColor = Surface,
+                                    focusedBorderColor = Border,
+                                    unfocusedBorderColor = Border,
+                                    focusedTextColor = PrimaryText,
+                                    unfocusedTextColor = PrimaryText,
+                                    focusedLabelColor = MutedText,
+                                    unfocusedLabelColor = MutedText,
+                                    cursorColor = BluePrimary,
+                                    focusedPlaceholderColor = MutedText,
+                                    unfocusedPlaceholderColor = MutedText
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            )
+                            Box(Modifier.align(Alignment.BottomEnd)) {
+                                DropdownMenu(
+                                    expanded = ageExpanded,
+                                    onDismissRequest = { ageExpanded = false }
+                                ) {
+                                    ageOptions.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option.value) },
+                                            onClick = {
+                                                ageSelected = option
+
+                                                coroutineScope.launch(Dispatchers.IO) {
+                                                    handoffs = viewModel.db.getHandoffsFilter(
+                                                        keyword = searchText,
+                                                        status = statSelected!!.key,
+                                                        priority = prioSelected!!.key,
+                                                        user = userSelected.userID,
+                                                        age = calculateAge(age?: 0, ageSelected!!.key),
+                                                        includeCompleted = showComplete
+                                                    )
+                                                    handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                                }
+
+                                                ageExpanded = false
                                             }
                                         )
                                     }
@@ -334,48 +755,55 @@ fun RecordsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.height(IntrinsicSize.Max),
-                    ) {
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Max)
+                            .clickable(
+                                enabled = statSelected!!.key == (-1).toShort(),
+                                indication = null,
+                                onClick = {
+                                    showComplete = !showComplete
+
+                                    coroutineScope.launch(Dispatchers.IO) {
+                                        handoffs = viewModel.db.getHandoffsFilter(
+                                            keyword = searchText,
+                                            status = statSelected!!.key,
+                                            priority = prioSelected!!.key,
+                                            user = userSelected.userID,
+                                            age = calculateAge(age?: 0, ageSelected!!.key),
+                                            includeCompleted = showComplete
+                                        )
+                                        handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                    }
+                                },
+                                role = Role.Checkbox,
+                                onClickLabel = "Toggle Completed Handoffs",
+                                interactionSource = showCompleteInteractionSource
+
+                            ),
+                        )
+                    {
                         Checkbox(
                             checked = showComplete,
-                            onCheckedChange = {
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    handoffs = viewModel.db.getHandoffsFilter(
-                                        keyword = searchText,
-                                        status = statSelected!!.key,
-                                        priority = prioSelected!!.key,
-                                        includeCompleted = showComplete
-                                    )
-                                }
-                                showComplete = it
-                            }
+                            enabled = ( false ),
+                            onCheckedChange = null,
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = BluePrimary,
+                                checkmarkColor = PrimaryText,
+                                uncheckedColor = MutedText,
+                                disabledCheckedColor = BluePrimary,
+                                disabledUncheckedColor = MutedText,
+                            )
                         )
 
-                        TextButton(
-                            onClick = {
-                                coroutineScope.launch(Dispatchers.IO) {
-                                    handoffs = viewModel.db.getHandoffsFilter(
-                                        keyword = searchText,
-                                        status = statSelected!!.key,
-                                        priority = prioSelected!!.key,
-                                        includeCompleted = showComplete
-                                    )
-                                }
-                                showComplete = !showComplete
-                            },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = PrimaryText
-                            ),
-                        ) {
-                            Text(
-                                "Show Completed Handoffs",
-                                fontSize = 14.sp,
-                                modifier = Modifier
-
-                            )
-                        }
+                        Text(
+                            "Show Completed Handoffs",
+                            fontSize = 14.sp,
+                            modifier = Modifier,
+                            color = PrimaryText
+                        )
                     }
 
                     Spacer(modifier = Modifier.weight(1f))
@@ -476,7 +904,15 @@ fun RecordsScreen(
                     onValueChange = {
                         searchText = it
                         coroutineScope.launch(Dispatchers.IO) {
-                            handoffs = viewModel.db.getHandoffsFilter(keyword = searchText, status = statSelected!!.key, priority = prioSelected!!.key, includeCompleted = showComplete)
+                            handoffs = viewModel.db.getHandoffsFilter(
+                                keyword = searchText,
+                                status = statSelected!!.key,
+                                priority = prioSelected!!.key,
+                                user = userSelected.userID,
+                                age = calculateAge(age?: 0, ageSelected!!.key),
+                                includeCompleted = showComplete
+                            )
+                            handoffs = filterByShift(handoffs, shiftSelection!!.key)
                         }
                     },
                     placeholder = {
@@ -672,20 +1108,38 @@ fun RecordsScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(10.dp))
-                                Text(
-                                    text = handoff.timestamp?.let { timestamp ->
-                                        timestamp
-                                            .toJavaInstant()
-                                            .atZone(java.time.ZoneId.systemDefault())
-                                            .format(
-                                                java.time.format.DateTimeFormatter.ofPattern(
-                                                    "M/d/yyyy • h:mm a"
+                                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = handoff.timestamp?.let { timestamp ->
+                                            timestamp
+                                                .toJavaInstant()
+                                                .atZone(ZoneId.systemDefault())
+                                                .format(
+                                                    DateTimeFormatter.ofPattern(
+                                                        "M/d/yyyy • h:mm a"
+                                                    )
                                                 )
-                                            )
-                                    } ?: "",
-                                    color = MutedText,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                                        } ?: "",
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    if (handoff.editTimestamp != null) {
+                                        Text(
+                                            text = """(${handoff.editTimestamp?.let { timestamp ->
+                                                timestamp
+                                                    .toJavaInstant()
+                                                    .atZone(ZoneId.systemDefault())
+                                                    .format(
+                                                        DateTimeFormatter.ofPattern(
+                                                            "M/d/yyyy • h:mm a"
+                                                        )
+                                                    )
+                                            }})""",
+                                            color = MutedText,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
