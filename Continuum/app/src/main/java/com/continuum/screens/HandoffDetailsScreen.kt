@@ -443,6 +443,52 @@ fun HandoffDetailsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                recurringIssueResult?.let { result ->
+                    if (result.matchingHandoffs.isNotEmpty()) {
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = NavyBackground
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Color(0xffFF5F15)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+                                Text(
+                                    text = "Repeat Issue Detected",
+                                    color = Color(0xffFF5F15),
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Text(
+                                    text = "This issue has occurred ${result.occurrenceCount} times.",
+                                    color = PrimaryText
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                result.matchingHandoffs.forEach { matchingHandoff ->
+                                    Text(
+                                        text = "• ${matchingHandoff.title}",
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
+
                 Text(
                     text = "Handoff Notes",
                     color = BluePrimary,
