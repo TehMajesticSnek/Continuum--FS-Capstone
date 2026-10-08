@@ -115,9 +115,11 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
             HomeScreen(
                 modifier = Modifier.onSwipeNavigation(
                     onSwipeLeft = {
-                        navController.navigate(route = Records) {
-                            popUpTo(Home) {
-                                inclusive = false
+                        if (viewModel.db.activeTeam != 0) {
+                            navController.navigate(route = Records) {
+                                popUpTo(Home) {
+                                    inclusive = false
+                                }
                             }
                         }
                     },
