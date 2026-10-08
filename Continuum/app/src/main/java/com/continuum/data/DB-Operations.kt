@@ -61,7 +61,7 @@ class Database {
     )
 
     var uid: String? = null
-    var activeTeam: Int? = null
+    var activeTeam: Int? = 0
     var userRole: Long? = 0L
 
     //Handoff Delimiters

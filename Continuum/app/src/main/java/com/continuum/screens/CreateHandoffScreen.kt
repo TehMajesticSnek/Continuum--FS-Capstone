@@ -1196,7 +1196,7 @@ fun CreateHandoffScreen(
 
 
 
-                        if (result.error.isEmpty()) { // if there isnt an error
+                        if (result.error.isEmpty()) { // if there isn't an error
                             val handoffID = result.handoff?.handoffID
 
                             if (editHandoff == null) { // TODO: this is a temp setup until file editing is handled

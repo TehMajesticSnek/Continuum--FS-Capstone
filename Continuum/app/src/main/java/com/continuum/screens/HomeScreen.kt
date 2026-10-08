@@ -767,10 +767,10 @@ fun HomeScreen(
     val filteredTeams = teams
         .filter { team ->
             team.teamID != selectedTeam?.teamID &&
-                    team.teamName?.contains(
-                        teamSearchQuery,
-                        ignoreCase = true
-                    ) == true
+                team.teamName?.contains(
+                    teamSearchQuery,
+                    ignoreCase = true
+                ) == true
         }
         .sortedBy { it.teamName?.lowercase() }
 

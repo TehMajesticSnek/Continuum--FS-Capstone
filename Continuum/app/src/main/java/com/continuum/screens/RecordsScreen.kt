@@ -669,7 +669,7 @@ fun RecordsScreen(
                                         handoffs = filterByShift(handoffs, shiftSelection!!.key)
                                     }
                                 },
-                                label = { Text("Age") },
+                                label = { Text("Older than") },
                                 readOnly = false,
                                 singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
