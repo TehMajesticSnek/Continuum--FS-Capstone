@@ -2,6 +2,7 @@ package com.continuum.screens
 
 import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Paint
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -640,9 +641,11 @@ fun HomeScreen(
     val context = LocalContext.current
 
     var showQuickNoteDialog by remember { mutableStateOf(false) }
-
     var showSavedNotesDialog by remember { mutableStateOf(false) }
     var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
+
+    var showJoinDialog by remember { mutableStateOf(false) }
+    var showCreateDialog by remember { mutableStateOf(false) }
 
     val firstName = viewModel.db.getFirstName()
     val currentHour = java.util.Calendar
@@ -706,8 +709,8 @@ fun HomeScreen(
         }
 
         if (viewModel.db.activeTeam == 0) {
-            refreshTeams()
-            return@LaunchedEffect
+
+            //showJoinDialog = true // TODO Prompt user to join if not on any teams. Just needs this line, but idk if I should wait until after testing
         }
         else if (savedTeam != 0) {
             for (team in teams) {
@@ -745,20 +748,21 @@ fun HomeScreen(
     LaunchedEffect(teamLoading, doOpenNotes) {
         if (!teamLoading && doOpenNotes) {
             navToTeams = false
+            doOpenNotes = false
             showQuickNoteDialog = true
         }
     }
     LaunchedEffect(teamLoading, doOpenSavedNotes) {
         if (!teamLoading && doOpenSavedNotes) {
             navToTeams = false
+            doOpenSavedNotes = false
             showSavedNotesDialog = true
         }
     }
 
 
 
-    var showJoinDialog by remember { mutableStateOf(false) }
-    var showCreateDialog by remember { mutableStateOf(false) }
+
 
     var teamSearchQuery by rememberSaveable {
         mutableStateOf("")
