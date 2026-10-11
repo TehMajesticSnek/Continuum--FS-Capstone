@@ -683,7 +683,7 @@ fun HomeScreen(
         teams = viewModel.db.getUserTeams()
 
         if (teams.isEmpty()) {
-            // prompt join team
+            showJoinDialog = true
         } else if (savedTeam != 0) {
             for (team in teams) {
                 if (savedTeam == team.teamID) {
@@ -709,7 +709,7 @@ fun HomeScreen(
         }
 
         if (viewModel.db.activeTeam == 0) {
-            showJoinDialog = true
+            refreshTeams()
         }
         else if (savedTeam != 0) {
             for (team in teams) {
@@ -758,10 +758,6 @@ fun HomeScreen(
             showSavedNotesDialog = true
         }
     }
-
-
-
-
 
     var teamSearchQuery by rememberSaveable {
         mutableStateOf("")
@@ -1091,7 +1087,7 @@ fun HomeScreen(
                     IconButton(
                         onClick = {
                             scope.launch {
-                                viewModel.selectTeam(null)
+                                viewModel.selectTeam(0)
                                 viewModel.db.logout()
                                 logout()
                             }
@@ -1137,26 +1133,30 @@ fun HomeScreen(
 
                 OutlinedButton(
                     onClick = { doOpenNotes = true },
+                    enabled = (viewModel.db.activeTeam != 0),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
                     shape = RoundedCornerShape(6.dp),
                     border = BorderStroke(
                         width = 1.dp,
-                        color = BluePrimary
+                        color = if (viewModel.db.activeTeam != 0) BluePrimary else Border
+                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = BluePrimary,
+                        disabledContentColor = MutedText
                     )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Quick Note",
-                        tint = BluePrimary
+
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
                         text = "Quick Note",
-                        color = BluePrimary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -1165,18 +1165,22 @@ fun HomeScreen(
 
                 OutlinedButton(
                     onClick = { doOpenSavedNotes = true },
+                    enabled = (viewModel.db.activeTeam != 0),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
                     shape = RoundedCornerShape(6.dp),
                     border = BorderStroke(
                         width = 1.dp,
-                        color = BluePrimary
+                        color = if (viewModel.db.activeTeam != 0) BluePrimary else Border
+                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = BluePrimary,
+                        disabledContentColor = MutedText
                     )
                 ) {
                     Text(
                         text = "Saved Notes",
-                        color = BluePrimary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
