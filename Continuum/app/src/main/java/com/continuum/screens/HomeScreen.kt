@@ -709,8 +709,7 @@ fun HomeScreen(
         }
 
         if (viewModel.db.activeTeam == 0) {
-
-            //showJoinDialog = true // TODO Prompt user to join if not on any teams. Just needs this line, but idk if I should wait until after testing
+            showJoinDialog = true
         }
         else if (savedTeam != 0) {
             for (team in teams) {
