@@ -684,6 +684,7 @@ fun HomeScreen(
 
         if (teams.isEmpty()) {
             showJoinDialog = true
+            drawerState.open()
         } else if (savedTeam != 0) {
             for (team in teams) {
                 if (savedTeam == team.teamID) {
