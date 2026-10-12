@@ -412,8 +412,10 @@ class Database {
     }
 
     suspend fun logout() {
-
         supabase.auth.signOut()
+        uid = null
+        activeTeam = 0
+        userRole = 0L
     }
 
     fun getFirstName(): String {
