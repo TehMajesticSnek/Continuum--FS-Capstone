@@ -180,7 +180,6 @@ fun HandoffDetailsScreen(
             .background(NavyBackground)
             .statusBarsPadding()
             .imePadding()
-            .verticalScroll(rememberScrollState())
             .padding(
                 start = 20.dp,
                 end = 20.dp,
@@ -256,252 +255,256 @@ fun HandoffDetailsScreen(
             }
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Surface
-            ),
-            border = BorderStroke(
-                width = 1.dp,
-                color = Border
-            )
+        Column(modifier = Modifier
+            .verticalScroll(rememberScrollState())
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Surface
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = Border
+                )
             ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
 
-                Text(
-                    text = handoff.title,
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = owner?.firstName + " " + owner?.lastName,
-                    color = MutedText,
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = handoff.timestamp?.let { timestamp ->
-                            val localDateTime = timestamp
-                                .toJavaInstant()
-                                .atZone(ZoneId.systemDefault())
+                        text = handoff.title,
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                            DateTimeFormatter
-                                .ofPattern("M/d/yyyy • h:mm a")
-                                .format(localDateTime)
-                        } ?: "Unknown date",
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = owner?.firstName + " " + owner?.lastName,
                         color = MutedText,
                         style = MaterialTheme.typography.bodySmall
                     )
-                    if (handoff.editTimestamp != null) {
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                         Text(
-                            text = """(${
-                                handoff.editTimestamp?.let { timestamp ->
-                                    timestamp
-                                        .toJavaInstant()
-                                        .atZone(ZoneId.systemDefault())
-                                        .format(
-                                            DateTimeFormatter.ofPattern(
-                                                "M/d/yyyy • h:mm a"
-                                            )
-                                        )
-                                }
-                            })""",
+                            text = handoff.timestamp?.let { timestamp ->
+                                val localDateTime = timestamp
+                                    .toJavaInstant()
+                                    .atZone(ZoneId.systemDefault())
+
+                                DateTimeFormatter
+                                    .ofPattern("M/d/yyyy • h:mm a")
+                                    .format(localDateTime)
+                            } ?: "Unknown date",
                             color = MutedText,
                             style = MaterialTheme.typography.bodySmall
                         )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            text = "Status",
-                            color = MutedText,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable {
-                                statusMenuExpanded = true
-                            }
-                        ) {
+                        if (handoff.editTimestamp != null) {
                             Text(
-                                text = viewModel.db.statOptions[currentStatus].toString(),
-                                color = when (currentStatus.toInt()) {
-                                    0 -> Color(0xffFF5F15)
-                                    1 -> Color.Yellow
-                                    2 -> BluePrimary
-                                    3 -> Color.Cyan
+                                text = """(${
+                                    handoff.editTimestamp?.let { timestamp ->
+                                        timestamp
+                                            .toJavaInstant()
+                                            .atZone(ZoneId.systemDefault())
+                                            .format(
+                                                DateTimeFormatter.ofPattern(
+                                                    "M/d/yyyy • h:mm a"
+                                                )
+                                            )
+                                    }
+                                })""",
+                                color = MutedText,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Status",
+                                color = MutedText,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable {
+                                    statusMenuExpanded = true
+                                }
+                            ) {
+                                Text(
+                                    text = viewModel.db.statOptions[currentStatus].toString(),
+                                    color = when (currentStatus.toInt()) {
+                                        0 -> Color(0xffFF5F15)
+                                        1 -> Color.Yellow
+                                        2 -> BluePrimary
+                                        3 -> Color.Cyan
+                                        4 -> Color.Green
+                                        else -> BluePrimary
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                if (!statusMenuExpanded) {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Change Status",
+                                        tint = MutedText
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropUp,
+                                        contentDescription = "Change Status",
+                                        tint = MutedText
+                                    )
+                                }
+
+                                DropdownMenu(
+                                    expanded = statusMenuExpanded,
+                                    onDismissRequest = {
+                                        statusMenuExpanded = false
+                                    }
+                                ) {
+                                    viewModel.db.statOptions
+                                        .forEach { (statusValue, statusName) -> DropdownMenuItem(
+                                            text = {
+                                                Text(statusName, color = when (statusValue.toInt()) {
+                                                    0 -> Color(0xffFF5F15)
+                                                    1 -> Color.Yellow
+                                                    2 -> BluePrimary
+                                                    3 -> Color.Cyan
+                                                    4 -> Color.Green
+                                                    else -> BluePrimary
+                                                })
+                                            },
+                                            onClick = {
+                                                val id = handoff.handoffID
+
+                                                if (id != null) {
+                                                    coroutineScope.launch {
+                                                        val result = viewModel.db.updateHandoffStatus(
+                                                            handoffID = id,
+                                                            status = statusValue
+                                                        )
+
+                                                        if (result.isEmpty()) {
+                                                            currentStatus = statusValue
+                                                        }
+                                                    }
+                                                }
+                                                statusMenuExpanded = false
+                                            }
+                                        )
+                                        }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        Column {
+                            Text(
+                                text = "Priority",
+                                color = MutedText,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Text(
+                                text = viewModel.db.prioOptions[handoff.priority].toString(),
+                                color = when (handoff.priority.toInt()) {
+                                    0 -> Color.Red
+                                    1 -> Color(0xffFF5F15)
+                                    2 -> Color.Yellow
+                                    3 -> BluePrimary
                                     4 -> Color.Green
                                     else -> BluePrimary
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
-
-                            if (!statusMenuExpanded) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Change Status",
-                                    tint = MutedText
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropUp,
-                                    contentDescription = "Change Status",
-                                    tint = MutedText
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = statusMenuExpanded,
-                                onDismissRequest = {
-                                    statusMenuExpanded = false
-                                }
-                            ) {
-                                viewModel.db.statOptions
-                                    .forEach { (statusValue, statusName) -> DropdownMenuItem(
-                                        text = {
-                                            Text(statusName, color = when (statusValue.toInt()) {
-                                                0 -> Color(0xffFF5F15)
-                                                1 -> Color.Yellow
-                                                2 -> BluePrimary
-                                                3 -> Color.Cyan
-                                                4 -> Color.Green
-                                                else -> BluePrimary
-                                            })
-                                        },
-                                        onClick = {
-                                            val id = handoff.handoffID
-
-                                            if (id != null) {
-                                                coroutineScope.launch {
-                                                    val result = viewModel.db.updateHandoffStatus(
-                                                        handoffID = id,
-                                                        status = statusValue
-                                                    )
-
-                                                    if (result.isEmpty()) {
-                                                        currentStatus = statusValue
-                                                    }
-                                                }
-                                            }
-                                            statusMenuExpanded = false
-                                        }
-                                    )
-                                }
-                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                    Column {
-                        Text(
-                            text = "Priority",
-                            color = MutedText,
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                    recurringIssueResult?.let { result ->
+                        if (result.matchingHandoffs.isNotEmpty()) {
 
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = viewModel.db.prioOptions[handoff.priority].toString(),
-                            color = when (handoff.priority.toInt()) {
-                                0 -> Color.Red
-                                1 -> Color(0xffFF5F15)
-                                2 -> Color.Yellow
-                                3 -> BluePrimary
-                                4 -> Color.Green
-                                else -> BluePrimary
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                recurringIssueResult?.let { result ->
-                    if (result.matchingHandoffs.isNotEmpty()) {
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = NavyBackground
-                            ),
-                            border = BorderStroke(
-                                width = 1.dp,
-                                color = Color(0xffFF5F15)
-                            ),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp)
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = NavyBackground
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = Color(0xffFF5F15)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
                             ) {
-                                Text(
-                                    text = "Repeat Issue Detected",
-                                    color = Color(0xffFF5F15),
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = "This issue has occurred ${result.occurrenceCount} times.",
-                                    color = PrimaryText
-                                )
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                result.matchingHandoffs.forEach { matchingHandoff ->
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
                                     Text(
-                                        text = "• ${matchingHandoff.title}",
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall
+                                        text = "Repeat Issue Detected",
+                                        color = Color(0xffFF5F15),
+                                        fontWeight = FontWeight.Bold
                                     )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text = "This issue has occurred ${result.occurrenceCount} times.",
+                                        color = PrimaryText
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    result.matchingHandoffs.forEach { matchingHandoff ->
+                                        Text(
+                                            text = "• ${matchingHandoff.title}",
+                                            color = MutedText,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
                                 }
                             }
+
+                            Spacer(modifier = Modifier.height(24.dp))
                         }
-
-                        Spacer(modifier = Modifier.height(24.dp))
                     }
-                }
 
-                Text(
-                    text = "Handoff Notes",
-                    color = BluePrimary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
-                )
+                    Text(
+                        text = "Handoff Notes",
+                        color = BluePrimary,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = run {
-                        val parsedContent = viewModel.db.separateContent(handoff.content ?: "")
-                        """
+                    Text(
+                        text = run {
+                            val parsedContent = viewModel.db.separateContent(handoff.content ?: "")
+                            """
                             |Issue Details: 
                             |${parsedContent.issue}
                             |
@@ -511,338 +514,340 @@ fun HandoffDetailsScreen(
                             |Next Steps: 
                             |${parsedContent.next}
                         """.trimMargin()
-                    },
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                        },
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
 
-                if (attachments.isNotEmpty()) {
+                    if (attachments.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Text(
+                            text = "Attachments",
+                            color = BluePrimary,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        attachments.forEach { attachment ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .clickable {
+                                        coroutineScope.launch {
+                                            val signedUrl = viewModel.db.getAttachmentSignedUrl(
+                                                attachment.fileURL
+                                            )
+
+                                            if (signedUrl != null) {
+                                                val intent = Intent(
+                                                    Intent.ACTION_VIEW,
+                                                    Uri.parse(signedUrl)
+                                                )
+                                                context.startActivity(intent)
+                                            }
+                                        }
+                                    },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = NavyBackground
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = Border
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+
+                                    val fileName = attachment.fileURL
+                                        .substringAfterLast("/")
+                                        .substringAfter("_")
+
+                                    val isAudio = fileName.lowercase().let {
+                                        it.endsWith(".m4a") ||
+                                                it.endsWith(".mp3") ||
+                                                it.endsWith(".wav") ||
+                                                it.endsWith(".aac")
+                                    }
+
+                                    val imageUrl = attachmentImageUrls[attachment.fileURL]
+
+                                    if (imageUrl != null) {
+                                        AsyncImage(
+                                            model = imageUrl,
+                                            contentDescription = "Handoff photo",
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(180.dp),
+                                            contentScale = ContentScale.Crop
+                                        )
+
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                    }
+
+                                    Text(
+                                        text = when {
+                                            isAudio -> "Voice Note"
+                                            imageUrl != null -> "Photo"
+                                            else -> attachment.fileURL
+                                                .substringAfterLast("/")
+                                                .substringAfter("_")
+                                        },
+                                        color = PrimaryText,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text = when {
+                                            isAudio -> "Voice note • Tap to play"
+                                            imageUrl != null -> "Photo attachment"
+                                            else -> "File attachment"
+                                        },
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+
+                                    if (isAudio && !attachment.transcription.isNullOrBlank()) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        Text(
+                                            text = "Transcription",
+                                            color = PrimaryText,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        Text(
+                                            text = attachment.transcription!!,
+                                            color = MutedText,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                    if (imageUrl != null && !attachment.extractedText.isNullOrBlank()) {
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        Text(
+                                            text = "Extracted Text",
+                                            color = PrimaryText,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        Text(
+                                            text = attachment.extractedText!!,
+                                            color = MutedText,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    Button(
+                        onClick = {
+                            val id = handoff.handoffID
+
+                            if (id != null && !acknowledged) {
+                                coroutineScope.launch {
+                                    val result = viewModel.db.acknowledgeHandoff(id)
+
+                                    if (result.isEmpty()) {
+                                        acknowledged = true
+
+                                        if (currentStatus.toInt() == 0) {
+                                            val statusResult = viewModel.db.updateHandoffStatus(
+                                                handoffID = id,
+                                                status = 1.toShort()
+                                            )
+
+                                            if (statusResult.isEmpty()) {
+                                                currentStatus = 1.toShort()
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !acknowledged,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (acknowledged) {
+                                "Acknowledged"
+                            } else {
+                                "Acknowledge Handoff"
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
                     Text(
-                        text = "Attachments",
+                        text = "Updates",
                         color = BluePrimary,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    attachments.forEach { attachment ->
+                    comments.forEach { comment ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .clickable {
-                                    coroutineScope.launch {
-                                        val signedUrl = viewModel.db.getAttachmentSignedUrl(
-                                            attachment.fileURL
-                                        )
-
-                                        if (signedUrl != null) {
-                                            val intent = Intent(
-                                                Intent.ACTION_VIEW,
-                                                Uri.parse(signedUrl)
-                                            )
-                                            context.startActivity(intent)
-                                        }
-                                    }
-                                },
+                                .padding(bottom = 10.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = NavyBackground
                             ),
                             border = BorderStroke(
                                 width = 1.dp,
                                 color = Border
-                            ),
-                            shape = RoundedCornerShape(8.dp)
+                            )
                         ) {
                             Column(
                                 modifier = Modifier.padding(12.dp)
                             ) {
-
-                                val fileName = attachment.fileURL
-                                    .substringAfterLast("/")
-                                    .substringAfter("_")
-
-                                val isAudio = fileName.lowercase().let {
-                                    it.endsWith(".m4a") ||
-                                            it.endsWith(".mp3") ||
-                                            it.endsWith(".wav") ||
-                                            it.endsWith(".aac")
-                                }
-
-                                val imageUrl = attachmentImageUrls[attachment.fileURL]
-
-                                if (imageUrl != null) {
-                                    AsyncImage(
-                                        model = imageUrl,
-                                        contentDescription = "Handoff photo",
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(180.dp),
-                                        contentScale = ContentScale.Crop
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-
                                 Text(
-                                    text = when {
-                                        isAudio -> "Voice Note"
-                                        imageUrl != null -> "Photo"
-                                        else -> attachment.fileURL
-                                            .substringAfterLast("/")
-                                            .substringAfter("_")
+                                    text = if (comment.isAction) {
+                                        "Attempted Action"
+                                    } else {
+                                        "Comment"
                                     },
-                                    color = PrimaryText,
+                                    color = BluePrimary,
                                     fontWeight = FontWeight.SemiBold
                                 )
 
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 Text(
-                                    text = when {
-                                        isAudio -> "Voice note • Tap to play"
-                                        imageUrl != null -> "Photo attachment"
-                                        else -> "File attachment"
-                                    },
+                                    text = comment.content,
+                                    color = PrimaryText
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Text(
+                                    text = "${commentAuthors[comment.userID] ?: "User"} • ${
+                                        comment.timeCreated
+                                            .toJavaInstant()
+                                            .atZone(ZoneId.systemDefault())
+                                            .format(
+                                                DateTimeFormatter.ofPattern(
+                                                    "M/d/yyyy • h:mm a"
+                                                )
+                                            )
+                                    }",
                                     color = MutedText,
                                     style = MaterialTheme.typography.bodySmall
                                 )
-
-                                if (isAudio && !attachment.transcription.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    Text(
-                                        text = "Transcription",
-                                        color = PrimaryText,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                    Text(
-                                        text = attachment.transcription!!,
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
-                                if (imageUrl != null && !attachment.extractedText.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    Text(
-                                        text = "Extracted Text",
-                                        color = PrimaryText,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                    Text(
-                                        text = attachment.extractedText!!,
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                }
                             }
                         }
                     }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = {
-                        val id = handoff.handoffID
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                        if (id != null && !acknowledged) {
-                            coroutineScope.launch {
-                                val result = viewModel.db.acknowledgeHandoff(id)
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                isAction = false
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Comment")
+                        }
 
-                                if (result.isEmpty()) {
-                                    acknowledged = true
+                        Spacer(modifier = Modifier.padding(horizontal = 4.dp))
 
-                                    if (currentStatus.toInt() == 0) {
-                                        val statusResult = viewModel.db.updateHandoffStatus(
-                                            handoffID = id,
-                                            status = 1.toShort()
-                                        )
+                        OutlinedButton(
+                            onClick = {
+                                isAction = true
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Attempted Action")
+                        }
+                    }
 
-                                        if (statusResult.isEmpty()) {
-                                            currentStatus = 1.toShort()
-                                        }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = newEntry,
+                        onValueChange = {
+                            newEntry = it
+                        },
+                        placeholder = {
+                            Text(
+                                if (isAction) {
+                                    "Describe the attempted action..."
+                                } else {
+                                    "Enter a comment..."
+                                }
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Surface,
+                            unfocusedContainerColor = Surface,
+                            focusedBorderColor = BluePrimary,
+                            unfocusedBorderColor = Border,
+                            focusedTextColor = PrimaryText,
+                            unfocusedTextColor = PrimaryText,
+                            focusedPlaceholderColor = MutedText,
+                            unfocusedPlaceholderColor = MutedText,
+                            cursorColor = BluePrimary
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = {
+                            val id = handoff.handoffID
+
+                            if (id != null && newEntry.isNotBlank()) {
+                                coroutineScope.launch {
+                                    val result = viewModel.db.addComment(
+                                        handoffID = id,
+                                        content = newEntry,
+                                        isAction = isAction
+                                    )
+
+                                    if (result.isEmpty()) {
+                                        newEntry = ""
+                                        comments = viewModel.db.getComments(id)
                                     }
                                 }
                             }
-                        }
-                    },
-                    enabled = !acknowledged,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = if (acknowledged) {
-                            "Acknowledged"
-                        } else {
-                            "Acknowledge Handoff"
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                Text(
-                    text = "Updates",
-                    color = BluePrimary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                comments.forEach { comment ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 10.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = NavyBackground
-                        ),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = Border
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(12.dp)
-                        ) {
-                            Text(
-                                text = if (comment.isAction) {
-                                    "Attempted Action"
-                                } else {
-                                    "Comment"
-                                },
-                                color = BluePrimary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Text(
-                                text = comment.content,
-                                color = PrimaryText
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = "${commentAuthors[comment.userID] ?: "User"} • ${
-                                    comment.timeCreated
-                                        .toJavaInstant()
-                                        .atZone(ZoneId.systemDefault())
-                                        .format(
-                                            DateTimeFormatter.ofPattern(
-                                                "M/d/yyyy • h:mm a"
-                                            )
-                                        )
-                                }",
-                                color = MutedText,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            isAction = false
                         },
-                        modifier = Modifier.weight(1f)
+                        enabled = newEntry.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Comment")
-                    }
-
-                    Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-
-                    OutlinedButton(
-                        onClick = {
-                            isAction = true
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Attempted Action")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                OutlinedTextField(
-                    value = newEntry,
-                    onValueChange = {
-                        newEntry = it
-                    },
-                    placeholder = {
                         Text(
-                            if (isAction) {
-                                "Describe the attempted action..."
+                            text = if (isAction) {
+                                "Add Attempted Action"
                             } else {
-                                "Enter a comment..."
+                                "Add Comment"
                             }
                         )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Surface,
-                        unfocusedContainerColor = Surface,
-                        focusedBorderColor = BluePrimary,
-                        unfocusedBorderColor = Border,
-                        focusedTextColor = PrimaryText,
-                        unfocusedTextColor = PrimaryText,
-                        focusedPlaceholderColor = MutedText,
-                        unfocusedPlaceholderColor = MutedText,
-                        cursorColor = BluePrimary
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = {
-                        val id = handoff.handoffID
-
-                        if (id != null && newEntry.isNotBlank()) {
-                            coroutineScope.launch {
-                                val result = viewModel.db.addComment(
-                                    handoffID = id,
-                                    content = newEntry,
-                                    isAction = isAction
-                                )
-
-                                if (result.isEmpty()) {
-                                    newEntry = ""
-                                    comments = viewModel.db.getComments(id)
-                                }
-                            }
-                        }
-                    },
-                    enabled = newEntry.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = if (isAction) {
-                            "Add Attempted Action"
-                        } else {
-                            "Add Comment"
-                        }
-                    )
+                    }
                 }
             }
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
     if (showOwnerDialog) {
