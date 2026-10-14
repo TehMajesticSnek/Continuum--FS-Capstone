@@ -76,4 +76,6 @@ dependencies {
     implementation(files("libs/sherpa-onnx-1.13.8.aar"))
     implementation("com.google.mlkit:text-recognition:16.0.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-common:1.8.0")
 }

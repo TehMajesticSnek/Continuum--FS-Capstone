@@ -68,6 +68,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
+import androidx.compose.runtime.key
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.Dispatchers
@@ -111,6 +112,23 @@ fun HandoffDetailsScreen(
     var attachments by remember {
         mutableStateOf<List<Database.FileAttachment>>(emptyList())
     }
+
+    var selectedAudioFile by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var selectedAudioUrl by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    var audioLoading by remember {
+        mutableStateOf(false)
+    }
+
+    var audioError by remember {
+        mutableStateOf(false)
+    }
+
     var attachmentImageUrls by remember {
         mutableStateOf<Map<String, String>>(emptyMap())
     }
@@ -532,22 +550,66 @@ fun HandoffDetailsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
 
                         attachments.forEach { attachment ->
+                            val isAudioAttachment = attachment.fileURL
+                                .substringBefore("?")
+                                .lowercase()
+                                .let { file ->
+                                    file.endsWith(".m4a") ||
+                                            file.endsWith(".mp3") ||
+                                            file.endsWith(".wav") ||
+                                            file.endsWith(".aac")
+                                }
+
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 8.dp)
                                     .clickable {
-                                        coroutineScope.launch {
-                                            val signedUrl = viewModel.db.getAttachmentSignedUrl(
-                                                attachment.fileURL
-                                            )
+                                        if (isAudioAttachment) {
+                                            if (selectedAudioFile == attachment.fileURL) {
+                                                selectedAudioFile = null
+                                                selectedAudioUrl = null
+                                                audioLoading = false
+                                            } else {
+                                                selectedAudioFile = attachment.fileURL
+                                                selectedAudioUrl = null
+                                                audioLoading = true
+                                                audioError = false
 
-                                            if (signedUrl != null) {
-                                                val intent = Intent(
-                                                    Intent.ACTION_VIEW,
-                                                    Uri.parse(signedUrl)
-                                                )
-                                                context.startActivity(intent)
+                                                coroutineScope.launch {
+                                                    try {
+                                                        val signedUrl =
+                                                            viewModel.db.getAttachmentSignedUrl(
+                                                                attachment.fileURL
+                                                            )
+
+                                                        if (selectedAudioFile == attachment.fileURL) {
+                                                            selectedAudioUrl = signedUrl
+                                                            audioError = signedUrl == null
+                                                            audioLoading = false
+                                                        }
+                                                    } catch (e: Exception) {
+                                                        if (selectedAudioFile == attachment.fileURL) {
+                                                            audioError = true
+                                                            audioLoading = false
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            coroutineScope.launch {
+                                                val signedUrl =
+                                                    viewModel.db.getAttachmentSignedUrl(
+                                                        attachment.fileURL
+                                                    )
+
+                                                if (signedUrl != null) {
+                                                    val intent = Intent(
+                                                        Intent.ACTION_VIEW,
+                                                        Uri.parse(signedUrl)
+                                                    )
+                                                    context.startActivity(intent)
+                                                }
                                             }
                                         }
                                     },
@@ -606,14 +668,48 @@ fun HandoffDetailsScreen(
 
                                     Text(
                                         text = when {
-                                            isAudio -> "Voice note • Tap to play"
+                                            isAudio -> if (selectedAudioFile == attachment.fileURL) {
+                                                "Voice note • Tap to close player"
+                                            } else {
+                                                "Voice note • Tap to play"
+                                            }
+
                                             imageUrl != null -> "Photo attachment"
                                             else -> "File attachment"
                                         },
                                         color = MutedText,
                                         style = MaterialTheme.typography.bodySmall
                                     )
+                                    if (
+                                        isAudioAttachment &&
+                                        selectedAudioFile == attachment.fileURL
+                                    ) {
+                                        Spacer(modifier = Modifier.height(12.dp))
 
+                                        when {
+                                            audioLoading -> {
+                                                Text(
+                                                    text = "Loading voice note...",
+                                                    color = MutedText
+                                                )
+                                            }
+
+                                            audioError -> {
+                                                Text(
+                                                    text = "Unable to load voice note.",
+                                                    color = Color.Red
+                                                )
+                                            }
+
+                                            selectedAudioUrl != null -> {
+                                                key(selectedAudioUrl) {
+                                                    VoiceNotePlayer(
+                                                        audioUrl = selectedAudioUrl!!
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                     if (isAudio && !attachment.transcription.isNullOrBlank()) {
                                         Spacer(modifier = Modifier.height(12.dp))
 
