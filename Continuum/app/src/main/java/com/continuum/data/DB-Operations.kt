@@ -104,6 +104,12 @@ class Database {
         val teamData: List<TeamUser> = emptyList(),
         //val pfp: String
     ) : Parcelable
+    @Serializable
+    data class NewTeamOutput(
+        @SerialName("team_id")
+        var teamID: Int? = null,
+        var errorCode: String = ""
+    )
 
     @Serializable
     data class User(
@@ -113,7 +119,7 @@ class Database {
         val firstName: String,
         @SerialName("l_name")
         val lastName: String?,
-        //@SerialName("pfp_url") // Need to figure out specifics with the storage API first
+        //@SerialName("pfp_url") // TODO profile pics
         //val pfp: String
     )
     @Serializable @Parcelize
@@ -502,12 +508,12 @@ class Database {
         }
         return error
     }
-    suspend fun createTeam(teamName: String): String {
+    suspend fun createTeam(teamName: String): NewTeamOutput {
         val maxAttempts = 8
 
         var attempts = 0
 
-        var errorMsg = "There was an issue creating the team. Please try again"
+        val output = NewTeamOutput(errorCode = "There was an issue creating the team. Please try again")
 
         // create team object
         val newTeam = Team(teamName = teamName)
@@ -517,18 +523,21 @@ class Database {
 
             try {
                 //  add team to table, and add user handled by SQL trigger
-                supabase.from("teams").insert(newTeam)
-                errorMsg = ""
+                val result = supabase.from("teams").insert(newTeam) {
+                    select()
+                }.decodeSingle<NewTeamOutput>()
+                output.teamID = result.teamID
+                output.errorCode = ""
                 break
             } catch (e: Exception) {
                 attempts++
             }
         }
 
-        return errorMsg
+        return output
     }
-    suspend fun joinTeam(teamCode: String, roleID: Long = 0): String {
-        var errorMsg = ""
+    suspend fun joinTeam(teamCode: String, roleID: Long = 0): NewTeamOutput {
+        val output = NewTeamOutput()
 
         try {
             // get teamID from teamCode
@@ -538,7 +547,8 @@ class Database {
                 }
             }.decodeSingleOrNull<Team>()
             if (teamIDResult == null) {
-                return "Invalid team code"
+                output.errorCode = "Invalid team code"
+                return output
             }
 
             val newUser = TeamUser(
@@ -546,19 +556,23 @@ class Database {
                 uid,
                 roleID
             )
-            supabase.from("team_members").insert(newUser)
+            val result = supabase.from("team_members").insert(newUser) {
+                select()
+            }.decodeSingle<NewTeamOutput>()
+
+            output.teamID = result.teamID
 
         } catch (e: io.github.jan.supabase.postgrest.exception.PostgrestRestException) {
 
             if (e.code == "23505" || e.message?.contains("duplicate key") == true) {
-                errorMsg = "You are already a member of this team"
+                output.errorCode = "You are already a member of this team"
             } else {
-                errorMsg = "An unexpected error occurred: ${e.message}"
+                output.errorCode = "An unexpected error occurred: ${e.message}"
             }
         } catch (e: Exception) {
-            errorMsg = "There was an issue creating the team. Please try again"
+            output.errorCode = "There was an issue creating the team. Please try again"
         }
-        return errorMsg
+        return output
     }
     suspend fun leaveTeam(): String {
         if (userRole == 1L) {

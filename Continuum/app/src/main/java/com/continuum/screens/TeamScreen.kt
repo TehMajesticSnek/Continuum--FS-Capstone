@@ -897,7 +897,9 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                             coroutineScope.launch(Dispatchers.IO) {
                                 var result = db.deleteTeam()
                                 if (result == "") {
-                                    onSuccessDelete()
+                                    withContext(Dispatchers.Main) {
+                                        onSuccessDelete()
+                                    }
                                 } else {
                                     showError(context, result)
                                 }

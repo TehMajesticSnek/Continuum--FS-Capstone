@@ -167,11 +167,12 @@ fun JoinTeamDialog(
 
                         coroutineScope.launch(Dispatchers.IO) {
                             val response = db.joinTeam(teamCode)
-                            if (response == "") {
+                            if (response.errorCode == "") {
+                                db.activeTeam = response.teamID
                                 onSuccessJoin()
                             }
                             else {
-                                showError(context, response)
+                                showError(context, response.errorCode)
                             }
                         }
                     },
@@ -280,12 +281,13 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
                         coroutineScope.launch(Dispatchers.IO) {
                             val response = db.createTeam(teamName)
 
-                            if (response == "") {
+                            if (response.errorCode == "") {
                                 // TODO set active team to new one
+                                db.activeTeam = response.teamID
                                 onSuccessCreate()
                             }
                             else {
-                                showError(context, response)
+                                showError(context, response.errorCode)
                             }
                         }
                     },
@@ -1558,6 +1560,7 @@ fun HomeScreen(
             onDismissJoin = { showJoinDialog = false },
             onShowCreate = { showCreateDialog = true },
             onSuccessJoin = {
+                viewModel.selectTeam(viewModel.db.activeTeam ?: 0)
                 showJoinDialog = false
                 scope.launch(Dispatchers.IO) {
                     teamLoading = true
@@ -1572,6 +1575,7 @@ fun HomeScreen(
             db = viewModel.db,
             onDismissCreate = { showCreateDialog = false },
             onSuccessCreate = {
+                viewModel.selectTeam(viewModel.db.activeTeam ?: 0)
                 showCreateDialog = false
                 showJoinDialog = false
                 scope.launch(Dispatchers.IO) {

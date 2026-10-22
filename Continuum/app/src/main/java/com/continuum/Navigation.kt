@@ -235,6 +235,7 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                 ),
             )
         }
+
         composable<Teams> {
             TeamScreen(
                 viewModel = viewModel,
