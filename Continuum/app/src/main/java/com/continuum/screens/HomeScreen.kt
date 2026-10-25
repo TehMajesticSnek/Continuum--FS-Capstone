@@ -643,6 +643,7 @@ fun HomeScreen(
     val context = LocalContext.current
 
     var showQuickNoteDialog by remember { mutableStateOf(false) }
+    var showNotifications by remember { mutableStateOf(false) }
     var showSavedNotesDialog by remember { mutableStateOf(false) }
     var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
 
@@ -787,6 +788,93 @@ fun HomeScreen(
     val recentHandoffs = handoffs
         .sortedByDescending { it.timestamp }
         .take(3)
+
+
+    if (showNotifications) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                showNotifications = false
+            },
+            title = {
+                Text("Priority Alerts")
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    if (highPriorityHandoffs.isEmpty()) {
+                        Text(
+                            text = "No active priority alerts.",
+                            color = MutedText
+                        )
+                    } else {
+                        highPriorityHandoffs
+                            .sortedBy { it.priority }
+                            .forEach { handoff ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 8.dp)
+                                        .clickable {
+                                            showNotifications = false
+                                            onHandoffClick(handoff)
+                                        },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Surface
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        Border
+                                    )
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp)
+                                    ) {
+                                        Text(
+                                            text = handoff.title,
+                                            color = PrimaryText,
+                                            fontWeight = FontWeight.Bold
+                                        )
+
+                                        Spacer(Modifier.height(4.dp))
+
+                                        Text(
+                                            text = if (handoff.priority.toInt() == 0)
+                                                "URGENT"
+                                            else
+                                                "HIGH PRIORITY",
+                                            color = if (handoff.priority.toInt() == 0)
+                                                Color.Red
+                                            else
+                                                Color(0xFFFF9800)
+                                        )
+
+                                        Text(
+                                            text = viewModel.db.statOptions[handoff.status]
+                                                ?: "Unknown",
+                                            color = MutedText
+                                        )
+                                    }
+                                }
+                            }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNotifications = false
+                    }
+                ) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -1078,14 +1166,47 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = PrimaryText,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .padding(7.dp)
-                    )
+
+                    Box(
+                        modifier = Modifier.size(40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(
+                            onClick = {
+                                showNotifications = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Notifications,
+                                contentDescription = "Notifications",
+                                tint = PrimaryText,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        if (highPriorityHandoffs.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(18.dp)
+                                    .background(
+                                        Color.Red,
+                                        RoundedCornerShape(50)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (highPriorityHandoffs.size > 9)
+                                        "9+"
+                                    else
+                                        highPriorityHandoffs.size.toString(),
+                                    color = Color.White,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+
 
                     IconButton(
                         onClick = {
