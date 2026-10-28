@@ -3,6 +3,15 @@ package com.continuum.screens
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Paint
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.InfiniteRepeatableSpec
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -64,6 +73,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -625,6 +635,75 @@ fun EditNoteDialog(
 }
 
 @Composable
+fun ConfirmSignOut(
+    db: Database,
+    onDismissSignOut: () -> Unit,
+    onSuccessSignOut: () -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = onDismissSignOut) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Confirm Sign Out",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Are you sure you want to sign out of your account?")
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        onClick = { onDismissSignOut() }
+
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    TextButton(
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                db.logout()
+
+                                withContext(Dispatchers.Main) { onSuccessSignOut() }
+                            }
+                        }
+
+                    ) {
+                        Text("Confirm")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: ViewModel,
@@ -679,15 +758,18 @@ fun HomeScreen(
     var navToNewHandoff by remember { mutableStateOf(false) }
     var doOpenNotes by remember { mutableStateOf(false) }
     var doOpenSavedNotes by remember { mutableStateOf(false) }
+    var showConfirmSignOut by remember { mutableStateOf(false) }
+
+    var pulseMenuButton by remember { mutableStateOf(false) }
 
 
-    suspend fun refreshTeams() { // TODO update create and join to auto-select new team
+    suspend fun refreshTeams() {
 
         teams = viewModel.db.getUserTeams()
+        pulseMenuButton = false
 
         if (teams.isEmpty()) {
-            showJoinDialog = true
-            drawerState.open()
+            pulseMenuButton = true
         } else if (savedTeam != 0) {
             for (team in teams) {
                 if (savedTeam == team.teamID) {
@@ -795,6 +877,7 @@ fun HomeScreen(
             onDismissRequest = {
                 showNotifications = false
             },
+            containerColor = MaterialTheme.colorScheme.surface,
             title = {
                 Text("Priority Alerts")
             },
@@ -849,7 +932,7 @@ fun HomeScreen(
                                             color = if (handoff.priority.toInt() == 0)
                                                 Color.Red
                                             else
-                                                Color(0xFFFF9800)
+                                                Color(0xffFF5F15)
                                         )
 
                                         Text(
@@ -1139,6 +1222,34 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
+
+                    val (pulseScale, pulseColor) = if (pulseMenuButton) {
+                        val duration = 1000
+                        val transition = rememberInfiniteTransition(label = "PulseTransition")
+                        val animScale by transition.animateFloat(
+                            initialValue = 1.0f,
+                            targetValue = 1.25f,
+                            animationSpec = InfiniteRepeatableSpec(
+                                animation = tween(durationMillis = duration, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "PulseIcon"
+                        )
+
+                        val animColor by transition.animateColor(
+                            initialValue = PrimaryText,
+                            targetValue = BluePrimary,
+                            animationSpec = InfiniteRepeatableSpec(
+                                animation = tween(durationMillis = duration, easing = LinearEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "PulseHue"
+                        )
+                        Pair(animScale, animColor)
+                    } else {
+                        Pair(1.0f, PrimaryText)
+                    }
+
                     IconButton(
                         onClick = {
                             scope.launch {
@@ -1150,8 +1261,8 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Menu,
                             contentDescription = "Open Teams Menu",
-                            tint = PrimaryText,
-                            modifier = Modifier.size(30.dp)
+                            tint = pulseColor,
+                            modifier = Modifier.size(30.dp).scale(pulseScale)
                         )
                     }
 
@@ -1210,11 +1321,7 @@ fun HomeScreen(
 
                     IconButton(
                         onClick = {
-                            scope.launch {
-                                viewModel.selectTeam(0)
-                                viewModel.db.logout()
-                                logout()
-                            }
+                            showConfirmSignOut = true
                         },
                         modifier = Modifier.size(40.dp)
                     ) {
@@ -1455,7 +1562,7 @@ fun HomeScreen(
                                                     style = MaterialTheme.typography.bodySmall
                                                 )
 
-                                                Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall) // TODO Maybe change color of this one
+                                                Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall)
 
                                                 Text(
                                                     text = viewModel.db.prioOptions[handoff.priority] ?: "",
@@ -1703,6 +1810,17 @@ fun HomeScreen(
                     teamLoading = true
                     refreshTeams()
                 }
+            }
+        )
+    }
+    if (showConfirmSignOut) {
+        ConfirmSignOut (
+            db = viewModel.db,
+            onDismissSignOut = { showConfirmSignOut = false },
+            onSuccessSignOut = {
+                viewModel.selectTeam(0)
+                showConfirmSignOut = false
+                logout()
             }
         )
     }

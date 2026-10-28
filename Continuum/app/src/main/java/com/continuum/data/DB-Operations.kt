@@ -417,11 +417,21 @@ class Database {
         }
     }
 
-    suspend fun logout() {
-        supabase.auth.signOut()
-        uid = null
-        activeTeam = 0
-        userRole = 0L
+    suspend fun logout() : String {
+        var errorMsg = ""
+        try {
+            supabase.auth.signOut()
+        } catch (e: AuthRestException) {
+            errorMsg = "There was an error signing out. Please try again"
+        }
+
+        if (errorMsg.isEmpty()) {
+            uid = null
+            activeTeam = 0
+            userRole = 0L
+        }
+
+        return errorMsg
     }
 
     fun getFirstName(): String {
