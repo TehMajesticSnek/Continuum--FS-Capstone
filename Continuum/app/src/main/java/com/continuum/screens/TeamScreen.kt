@@ -38,6 +38,7 @@ import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -111,10 +112,13 @@ fun TeamScreen(
     var showConfirmLeaveDialog by remember { mutableStateOf(false) }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
 
+    var teamLoadState by remember { mutableStateOf(true) }
+
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         if (members.isEmpty()) {
+            teamLoadState = true
             members = viewModel.db.getTeamMembers()
         }
         if (team == null) {
@@ -123,6 +127,7 @@ fun TeamScreen(
             teamCode = team?.teamCode
         }
         viewModel.db.getTeamRole() // TODO consider looking into Realtime stuff for live role updates. Same with handoff ownership and such
+        teamLoadState = false
     }
 
     Scaffold (
@@ -394,6 +399,26 @@ fun TeamScreen(
                             }
                         }
                     }
+                }
+                if (teamLoadState) {
+                    Spacer(Modifier.height(10.dp))
+
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+
+                        ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            strokeWidth = 4.dp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
                 Spacer(modifier = Modifier.height(80.dp))
             }
@@ -1021,7 +1046,7 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                     Button(
                         onClick = {
                             coroutineScope.launch(Dispatchers.IO) {
-                                var result = db.deleteTeam()
+                                val result = db.deleteTeam()
                                 if (result == "") {
                                     withContext(Dispatchers.Main) {
                                         onSuccessDelete()

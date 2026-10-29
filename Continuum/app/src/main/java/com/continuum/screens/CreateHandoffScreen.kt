@@ -91,7 +91,7 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 @Composable
-fun CreateHandoffScreen(
+fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forever to load
     viewModel: ViewModel,
     initialContent: String = "",
     onBackClick: () -> Unit = {},

@@ -14,6 +14,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -760,10 +762,11 @@ fun HomeScreen(
     var showConfirmSignOut by remember { mutableStateOf(false) }
 
     var pulseMenuButton by remember { mutableStateOf(false) }
+    var handoffLoadState by remember { mutableStateOf(true) } // TODO Handoff load indicator, team load indicator, maybe something for text elements too. (dash in place of summary numbers for example)
+    var teamLoadState by remember { mutableStateOf(true) }
 
 
     suspend fun refreshTeams() {
-
         teams = viewModel.db.getUserTeams()
         pulseMenuButton = false
 
@@ -781,16 +784,24 @@ fun HomeScreen(
         } else {
             selectedTeam = null
         }
+        handoffLoadState = true
         handoffs = viewModel.db.getHandoffs()
+        handoffLoadState = false
         teamLoading = false
     }
 
     LaunchedEffect(Unit) {
 
-        handoffs = viewModel.db.getHandoffs()
+        if (handoffs.isEmpty()) {
+            handoffLoadState = true
+            handoffs = viewModel.db.getHandoffs()
+            handoffLoadState = false
+        }
 
         if (teams.isEmpty()) {
+            teamLoadState = true
             teams = viewModel.db.getUserTeams()
+            teamLoadState = false
         }
 
         if (viewModel.db.activeTeam == 0) {
@@ -986,136 +997,155 @@ fun HomeScreen(
                         fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    if (teamLoadState) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
 
-                    // CURRENT TEAM
-                    Text(
-                        text = "CURRENT TEAM",
-                        color = MutedText,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    if (selectedTeam != null) {
-                        TeamMenuItem(
-                            teamName = selectedTeam?.teamName ?: "No Team Selected",
-                            selected = true,
-                            onClick = {}
-                        )
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .align(Alignment.Center),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                strokeWidth = 4.dp
+                            )
+                        }
                     } else {
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // CURRENT TEAM
                         Text(
-                            text = "No Team Selected",
+                            text = "CURRENT TEAM",
                             color = MutedText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(
-                                horizontal = 12.dp,
-                                vertical = 14.dp
-                            )
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-// SEARCH TEAMS
-                    OutlinedTextField(
-                        value = teamSearchQuery,
-                        onValueChange = { teamSearchQuery = it },
-                        placeholder = {
-                            Text("Search teams...")
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search Teams",
-                                tint = MutedText
+                        if (selectedTeam != null) {
+                            TeamMenuItem(
+                                teamName = selectedTeam?.teamName ?: "No Team Selected",
+                                selected = true,
+                                onClick = {}
                             )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Surface,
-                            unfocusedContainerColor = Surface,
-                            focusedBorderColor = BluePrimary,
-                            unfocusedBorderColor = Border,
-                            focusedTextColor = PrimaryText,
-                            unfocusedTextColor = PrimaryText,
-                            cursorColor = BluePrimary,
-                            focusedPlaceholderColor = MutedText,
-                            unfocusedPlaceholderColor = MutedText
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-// TEAM LIST LABEL
-                    Text(
-                        text = if (teamSearchQuery.isBlank()) {
-                            "YOUR TEAMS"
                         } else {
-                            "SEARCH RESULTS"
-                        },
-                        color = MutedText,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-// SCROLLABLE TEAM LIST
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                    ) {
-
-                        if (filteredTeams.isEmpty()) {
-
                             Text(
-                                text = if (teamSearchQuery.isBlank()) {
-                                    "No other teams"
-                                } else {
-                                    "No teams found"
-                                },
+                                text = "No Team Selected",
                                 color = MutedText,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(
                                     horizontal = 12.dp,
-                                    vertical = 16.dp
+                                    vertical = 14.dp
                                 )
                             )
+                        }
 
-                        } else {
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                            filteredTeams.forEach { team ->
+    // SEARCH TEAMS
+                        OutlinedTextField(
+                            value = teamSearchQuery,
+                            onValueChange = { teamSearchQuery = it },
+                            placeholder = {
+                                Text("Search teams...")
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search Teams",
+                                    tint = MutedText
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Surface,
+                                unfocusedContainerColor = Surface,
+                                focusedBorderColor = BluePrimary,
+                                unfocusedBorderColor = Border,
+                                focusedTextColor = PrimaryText,
+                                unfocusedTextColor = PrimaryText,
+                                cursorColor = BluePrimary,
+                                focusedPlaceholderColor = MutedText,
+                                unfocusedPlaceholderColor = MutedText
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        )
 
-                                TeamMenuItem(
-                                    teamName = team.teamName.toString(),
-                                    selected = false,
-                                    onClick = {
-                                        teamLoading = true
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                                        selectedTeam = team
-                                        viewModel.selectTeam(team.teamID ?: 0)
+    // TEAM LIST LABEL
+                        Text(
+                            text = if (teamSearchQuery.isBlank()) {
+                                "YOUR TEAMS"
+                            } else {
+                                "SEARCH RESULTS"
+                            },
+                            color = MutedText,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
-                                        scope.launch {
-                                            refreshTeams()
-                                            teamSearchQuery = ""
-                                            drawerState.close()
-                                        }
-                                    }
+                        Spacer(modifier = Modifier.height(8.dp))
+
+    // SCROLLABLE TEAM LIST
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                        ) {
+
+                            if (filteredTeams.isEmpty()) {
+
+                                Text(
+                                    text = if (teamSearchQuery.isBlank()) {
+                                        "No other teams"
+                                    } else {
+                                        "No teams found"
+                                    },
+                                    color = MutedText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(
+                                        horizontal = 12.dp,
+                                        vertical = 16.dp
+                                    )
                                 )
 
-                                Spacer(modifier = Modifier.height(6.dp))
+                            } else {
+
+                                filteredTeams.forEach { team ->
+
+                                    TeamMenuItem(
+                                        teamName = team.teamName.toString(),
+                                        selected = false,
+                                        onClick = {
+                                            teamLoading = true
+
+                                            selectedTeam = team
+                                            viewModel.selectTeam(team.teamID ?: 0)
+
+                                            scope.launch {
+                                                handoffLoadState = true
+                                                handoffs = emptyList()
+                                                drawerState.close()
+                                                refreshTeams()
+                                                teamSearchQuery = ""
+                                            }
+                                        }
+                                    )
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
                             }
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
 
 // JOIN TEAM
                     OutlinedButton(
@@ -1261,7 +1291,9 @@ fun HomeScreen(
                             imageVector = Icons.Default.Menu,
                             contentDescription = "Open Teams Menu",
                             tint = pulseColor,
-                            modifier = Modifier.size(30.dp).scale(pulseScale)
+                            modifier = Modifier
+                                .size(30.dp)
+                                .scale(pulseScale)
                         )
                     }
 
@@ -1458,21 +1490,21 @@ fun HomeScreen(
 
                         SummaryCard(
                             label = "Open\nIssues",
-                            value = unresolvedHandoffs.size.toString(),
+                            value = if (handoffLoadState) "-" else unresolvedHandoffs.size.toString(),
                             indicatorColor = Color.Green,
                             modifier = Modifier.weight(1f)
                         )
 
                         SummaryCard(
                             label = "High\nPriority",
-                            value = highPriorityHandoffs.size.toString(),
+                            value = if (handoffLoadState) "-" else highPriorityHandoffs.size.toString(),
                             indicatorColor = Color.Red,
                             modifier = Modifier.weight(1f)
                         )
 
                         SummaryCard(
                             label = "In\nProgress",
-                            value = unresolvedHandoffs.count {
+                            value = if (handoffLoadState) "-" else unresolvedHandoffs.count {
                                 it.status.toInt() == 2
                             }.toString(),
                             indicatorColor = BluePrimary,
@@ -1737,6 +1769,26 @@ fun HomeScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    if (handoffLoadState) {
+                        Spacer(Modifier.height(6.dp))
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+
+                            ) {
+
+                                CircularProgressIndicator(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .align(Alignment.Center),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    strokeWidth = 4.dp
+                                )
+
                         }
                     }
 

@@ -47,6 +47,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -177,6 +178,8 @@ fun RecordsScreen(
 
     var showComplete by remember { mutableStateOf(false) }
     val showCompleteInteractionSource = remember { MutableInteractionSource() }
+
+    var handoffLoadState by remember { mutableStateOf(true) }
 
     fun calculateAge(age: Int, timespan: Short): Int {
         var age = age
@@ -386,6 +389,8 @@ fun RecordsScreen(
                                                     showComplete = false
                                                 }
 
+                                                handoffLoadState = true
+                                                handoffs = emptyList()
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
                                                         keyword = searchText,
@@ -396,6 +401,7 @@ fun RecordsScreen(
                                                         includeCompleted = showComplete
                                                     )
                                                     handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                                    handoffLoadState = false
                                                 }
 
                                                 statExpanded = false
@@ -481,6 +487,8 @@ fun RecordsScreen(
                                             onClick = {
                                                 prioSelected = option
 
+                                                handoffLoadState = true
+                                                handoffs = emptyList()
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
                                                         keyword = searchText,
@@ -491,6 +499,7 @@ fun RecordsScreen(
                                                         includeCompleted = showComplete
                                                     )
                                                     handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                                    handoffLoadState = false
                                                 }
 
                                                 prioExpanded = false
@@ -554,6 +563,8 @@ fun RecordsScreen(
                                         onClick = {
                                             userSelected = option
 
+                                            handoffLoadState = true
+                                            handoffs = emptyList()
                                             coroutineScope.launch(Dispatchers.IO) {
                                                 handoffs = viewModel.db.getHandoffsFilter(
                                                     keyword = searchText,
@@ -564,6 +575,7 @@ fun RecordsScreen(
                                                     includeCompleted = showComplete
                                                 )
                                                 handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                                handoffLoadState = false
                                             }
 
                                             userExpanded = false
@@ -627,6 +639,8 @@ fun RecordsScreen(
                                         onClick = {
                                             shiftSelection = option
 
+                                            handoffLoadState = true
+                                            handoffs = emptyList()
                                             coroutineScope.launch(Dispatchers.IO) {
                                                 handoffs = viewModel.db.getHandoffsFilter(
                                                     keyword = searchText,
@@ -637,6 +651,7 @@ fun RecordsScreen(
                                                     includeCompleted = showComplete
                                                 )
                                                 handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                                handoffLoadState = false
                                             }
 
                                             userExpanded = false
@@ -657,6 +672,8 @@ fun RecordsScreen(
                                         age = digit.toIntOrNull()
                                     }
 
+                                    handoffLoadState = true
+                                    handoffs = emptyList()
                                     coroutineScope.launch(Dispatchers.IO) {
                                         handoffs = viewModel.db.getHandoffsFilter(
                                             keyword = searchText,
@@ -667,6 +684,7 @@ fun RecordsScreen(
                                             includeCompleted = showComplete
                                         )
                                         handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                        handoffLoadState = false
                                     }
                                 },
                                 label = { Text("Older than") },
@@ -740,6 +758,8 @@ fun RecordsScreen(
                                             onClick = {
                                                 ageSelected = option
 
+                                                handoffLoadState = true
+                                                handoffs = emptyList()
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
                                                         keyword = searchText,
@@ -750,6 +770,7 @@ fun RecordsScreen(
                                                         includeCompleted = showComplete
                                                     )
                                                     handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                                    handoffLoadState = false
                                                 }
 
                                                 ageExpanded = false
@@ -775,6 +796,8 @@ fun RecordsScreen(
                                 onClick = {
                                     showComplete = !showComplete
 
+                                    handoffLoadState = true
+                                    handoffs = emptyList()
                                     coroutineScope.launch(Dispatchers.IO) {
                                         handoffs = viewModel.db.getHandoffsFilter(
                                             keyword = searchText,
@@ -785,6 +808,7 @@ fun RecordsScreen(
                                             includeCompleted = showComplete
                                         )
                                         handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                        handoffLoadState = false
                                     }
                                 },
                                 role = Role.Checkbox,
@@ -832,7 +856,9 @@ fun RecordsScreen(
 
 
     LaunchedEffect(Unit) {
-       handoffs = viewModel.db.getHandoffs()
+        handoffLoadState = true
+        handoffs = viewModel.db.getHandoffs()
+        handoffLoadState = false
     }
 
     Scaffold (
@@ -912,6 +938,8 @@ fun RecordsScreen(
                     value = searchText,
                     onValueChange = {
                         searchText = it
+                        handoffLoadState = true
+                        handoffs = emptyList()
                         coroutineScope.launch(Dispatchers.IO) {
                             handoffs = viewModel.db.getHandoffsFilter(
                                 keyword = searchText,
@@ -922,7 +950,9 @@ fun RecordsScreen(
                                 includeCompleted = showComplete
                             )
                             handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                            handoffLoadState = false
                         }
+
                     },
                     placeholder = {
                         Text("Search handoffs")
@@ -984,7 +1014,7 @@ fun RecordsScreen(
             Column(
                 modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
             ) {
-                if (handoffs.isEmpty()) {
+                if (handoffs.isEmpty() && !handoffLoadState) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1172,6 +1202,27 @@ fun RecordsScreen(
                         }
                     }
                 }
+                if (handoffLoadState) {
+                    Spacer(Modifier.height(10.dp))
+
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            strokeWidth = 4.dp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
                 Spacer(modifier = Modifier.height(80.dp))
             }
         }
