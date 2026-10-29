@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Assignment
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PersonAddAlt1
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -59,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.continuum.data.Database
@@ -88,6 +91,7 @@ fun TeamScreen(
     var members by rememberSaveable {
         mutableStateOf<List<Database.TeamUserDisplay>>(emptyList())
     }
+
     var selectedMember by remember { mutableStateOf<Database.TeamUserDisplay?>(null) }
 
     var teamOptionsExpanded by remember { mutableStateOf(false) }
@@ -99,6 +103,8 @@ fun TeamScreen(
 
     var showCodeDialog by remember { mutableStateOf(false) }
     var teamCode: String? by remember { mutableStateOf("") }
+
+    var showAddUser by remember { mutableStateOf(false) }
 
     var showConfirmKickDialog by remember { mutableStateOf(false) }
 
@@ -206,6 +212,13 @@ fun TeamScreen(
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
+                if (viewModel.db.userRole == 1L) {
+                    IconButton(onClick = { showAddUser = true }) {
+                        Icon(
+                            Icons.Default.PersonAddAlt1,
+                            contentDescription = "Add User")
+                    }
+                }
 
                 Box() {
                     IconButton(onClick = { teamOptionsExpanded = !teamOptionsExpanded }) {
@@ -407,6 +420,18 @@ fun TeamScreen(
             }
         )
     }
+    if (showAddUser) { // TODO
+        AddUserDialog(
+            db = viewModel.db,
+            onDismissAdd = { showAddUser = false },
+            onSuccessAdd = {
+                showAddUser = false
+                coroutineScope.launch {
+                    members = viewModel.db.getTeamMembers()
+                }}
+        )
+    }
+
     if (showConfirmLeaveDialog) {
         ConfirmLeaveDialog(
             teamName = teamName,
@@ -661,6 +686,107 @@ fun CodeDialog(teamCode: String?, db: Database, onDismissCode: () -> Unit, onSuc
                         onClick = onDismissCode
                     ) {
                         Text("Confirm")
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun AddUserDialog(db: Database, onDismissAdd: () -> Unit, onSuccessAdd: () -> Unit) {
+    //TODO("Not yet implemented")
+    var userEmail by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = onDismissAdd) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Add User to Team",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Enter the email of the user you want to add")
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = userEmail ?: "...",
+                    onValueChange = {
+                        userEmail = it
+                    },
+                    label = { Text("Email") },
+                    placeholder = { Text("") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Surface,
+                        unfocusedContainerColor = Surface,
+                        focusedBorderColor = BluePrimary,
+                        unfocusedBorderColor = Border,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText,
+                        focusedLabelColor = BluePrimary,
+                        unfocusedLabelColor = MutedText,
+                        cursorColor = BluePrimary,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    TextButton(
+                        onClick = {
+                            onDismissAdd()
+                        },
+                    ) {
+                        Text("Cancel")
+                    }
+                    TextButton(
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                val result = db.addUserToTeam(userEmail)
+
+                                if (result == "") {
+                                    onSuccessAdd()
+                                } else {
+                                    showError(context, result)
+                                }
+                            }
+
+                        },
+                    ) {
+                        Text("Add User")
                     }
                 }
             }

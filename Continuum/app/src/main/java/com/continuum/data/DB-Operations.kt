@@ -15,8 +15,10 @@ import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import android.os.Parcelable
+import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
+import io.github.jan.supabase.postgrest.rpc
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -583,6 +585,69 @@ class Database {
             output.errorCode = "There was an issue creating the team. Please try again"
         }
         return output
+    }
+
+    suspend fun addUserToTeam(email: String): String { // TODO Invite system or something to prevent advertising/spam/etc
+        @Serializable
+        data class Parameters(
+            val target_email: String,
+            val target_team: Int
+        )
+        @Serializable
+        data class userID (
+            val id: String
+        )
+
+        var result = ""
+
+        //search for user with email, get uid
+        var user = ""
+        try {
+            val emailResult = supabase.postgrest.rpc(
+                    function = "get_uid_by_email",
+                    parameters = Parameters(email.lowercase(), activeTeam ?: 0)
+                ).decodeSingleOrNull<userID>()
+
+            if (emailResult == null) {
+                return "User not found"
+            }
+            else {
+                user = emailResult.id
+            }
+
+        } catch (e: Exception) {
+            return "Error finding user. Please try again"
+        }
+
+        //check if user is already team member
+        val userInTeam = supabase.from("team_members").select(columns = Columns.list("user_id")) {
+            filter {
+                eq("user_id", user)
+                eq("team_id", activeTeam?: 0)
+            }
+        }.decodeSingleOrNull<TeamUser>()
+
+        if (userInTeam != null) {
+            return "This user is already a member of this team"
+        }
+
+        //add user to team
+        val newUser = TeamUser(
+            activeTeam,
+            user,
+            0
+        )
+
+        result = try {
+            supabase.from("team_members").insert(newUser) {
+                select()
+            }.decodeSingleOrNull<NewTeamOutput>()
+            ""
+        } catch (e: Exception) {
+            "Error adding user to team. Please try again"
+        }
+
+        return result
     }
     suspend fun leaveTeam(): String {
         if (userRole == 1L) {

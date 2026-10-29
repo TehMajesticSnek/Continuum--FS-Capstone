@@ -292,7 +292,6 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
                             val response = db.createTeam(teamName)
 
                             if (response.errorCode == "") {
-                                // TODO set active team to new one
                                 db.activeTeam = response.teamID
                                 onSuccessCreate()
                             }
@@ -695,7 +694,7 @@ fun ConfirmSignOut(
                         }
 
                     ) {
-                        Text("Confirm")
+                        Text("Confirm", color = Color.Red)
                     }
                 }
             }
@@ -1266,26 +1265,27 @@ fun HomeScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.width(40.dp))
                     Spacer(modifier = Modifier.weight(1f))
 
-                    Text( // TODO Center title
+                    Text(
                         text = "CONTINUUM",
                         color = PrimaryText,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
 
 
                     Box(
-                        modifier = Modifier.size(40.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         IconButton(
                             onClick = {
                                 showNotifications = true
-                            }
+                            },
+                            modifier = Modifier.size(40.dp),
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Notifications,
@@ -1685,7 +1685,7 @@ fun HomeScreen(
                                             style = MaterialTheme.typography.bodySmall
                                         )
 
-                                        Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall) // TODO Maybe change color of this one
+                                        Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall)
 
                                         Text(
                                             text = viewModel.db.prioOptions[handoff.priority] ?: "",
