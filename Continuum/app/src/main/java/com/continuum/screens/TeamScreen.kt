@@ -49,6 +49,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -84,6 +85,7 @@ fun TeamScreen(
     viewModel: ViewModel,
     toHome: () -> Unit = {},
     toHandoffList: () -> Unit = {},
+    toSupervisorDashboard: () -> Unit = {}
 ) {
 
     var team: Database.Team? by rememberSaveable {
@@ -274,6 +276,19 @@ fun TeamScreen(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+
+            if (viewModel.db.userRole == 1L) {
+                Button(
+                    onClick = toSupervisorDashboard,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("View Supervisor Dashboard")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
 
             Text(
                 text = "Members",

@@ -26,6 +26,7 @@ import com.continuum.screens.RecordsScreen
 import com.continuum.screens.RegisterScreen
 import com.continuum.screens.TeamScreen
 import com.continuum.screens.onSwipeNavigation
+import com.continuum.screens.SupervisorDashboardScreen
 import com.continuum.ui.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -46,6 +47,8 @@ object Records
 @Serializable
 object Teams
 
+@Serializable
+object SupervisorDashboard
 @Composable
 fun Navigate(viewModel: ViewModel, startPage: Any) {
     val navController = rememberNavController()
@@ -239,6 +242,11 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
         composable<Teams> {
             TeamScreen(
                 viewModel = viewModel,
+
+                toSupervisorDashboard = {
+                    navController.navigate(SupervisorDashboard)
+                },
+
                 toHome = {
                     navController.navigate(route = Home) {
                         popUpTo(Home) {
@@ -263,7 +271,23 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                         }
                     }
                 ),
+
+                )
+        }
+
+        // Supervisor Dashboard screen
+        composable<SupervisorDashboard> {
+            SupervisorDashboardScreen(
+                viewModel = viewModel,
+                onBackClick = {
+                    navController.popBackStack()
+                },
+                onHandoffClick = { handoff ->
+                    selectedHandoff = handoff
+                    navController.navigate(HandoffDetails)
+                }
             )
         }
+
     }
 }
