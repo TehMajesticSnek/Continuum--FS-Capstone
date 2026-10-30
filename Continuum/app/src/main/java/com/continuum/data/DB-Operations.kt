@@ -1179,6 +1179,45 @@ class Database {
         }
     }
 
+
+
+    data class HandoffTrends(
+        val totalHandoffs: Int,
+        val priorityCounts: Map<Short, Int>,
+        val statusCounts: Map<Short, Int>,
+        val dailyActivity: Map<LocalDate, Int>
+    )
+
+
+    data class RepeatedIssueTrend(
+        val title: String,
+        val occurrences: Int
+    )
+
+
+    suspend fun getHandoffTrends(): HandoffTrends {
+        val handoffs = getAllTeamHandoffs()
+
+        val dailyActivity = handoffs
+            .mapNotNull { handoff ->
+                handoff.timestamp?.let { timestamp ->
+                    java.time.Instant.parse(timestamp.toString())
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                }
+            }
+            .groupingBy { it }
+            .eachCount()
+
+        return HandoffTrends(
+            totalHandoffs = handoffs.size,
+            priorityCounts = handoffs.groupingBy { it.priority }.eachCount(),
+            statusCounts = handoffs.groupingBy { it.status }.eachCount(),
+            dailyActivity = dailyActivity
+        )
+    }
+
+
     private fun normalizeIssueText(handoff: Handoff): Set<String> {
         val stopWords = setOf(
             "the", "a", "an", "and", "or", "but",
@@ -1262,6 +1301,40 @@ class Database {
             matchingHandoffs = matches
         )
     }
+
+    suspend fun getRepeatedIssueTrends(): List<RepeatedIssueTrend> {
+        val handoffs = getAllTeamHandoffs()
+        val visited = mutableSetOf<Long>()
+        val results = mutableListOf<RepeatedIssueTrend>()
+
+        for (handoff in handoffs) {
+            val id = handoff.handoffID ?: continue
+            if (id in visited) continue
+
+            val matches = handoffs.filter { other ->
+                other.handoffID != id &&
+                        other.handoffID !in visited &&
+                        calculateIssueSimilarity(handoff, other) >= 0.30
+            }
+
+            if (matches.isNotEmpty()) {
+                visited.add(id)
+
+                matches.mapNotNull { it.handoffID }
+                    .forEach { visited.add(it) }
+
+                results.add(
+                    RepeatedIssueTrend(
+                        title = handoff.title,
+                        occurrences = matches.size + 1
+                    )
+                )
+            }
+        }
+
+        return results.sortedByDescending { it.occurrences }
+    }
+
 
     suspend fun getHandoffsFilter(
         keyword: String = "",

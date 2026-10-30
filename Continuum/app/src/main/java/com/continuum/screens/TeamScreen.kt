@@ -85,7 +85,8 @@ fun TeamScreen(
     viewModel: ViewModel,
     toHome: () -> Unit = {},
     toHandoffList: () -> Unit = {},
-    toSupervisorDashboard: () -> Unit = {}
+    toSupervisorDashboard: () -> Unit = {},
+    toTrends: () -> Unit,
 ) {
 
     var team: Database.Team? by rememberSaveable {
@@ -278,6 +279,18 @@ fun TeamScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
 
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = toTrends,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("View Trends & Analytics")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             if (viewModel.db.userRole == 1L) {
                 Button(
                     onClick = toSupervisorDashboard,
@@ -289,13 +302,13 @@ fun TeamScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-
             Text(
                 text = "Members",
                 color = PrimaryText,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
