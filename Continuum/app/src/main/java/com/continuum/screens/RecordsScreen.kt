@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -118,9 +120,6 @@ fun RecordsScreen(
     var searchText by rememberSaveable {
         mutableStateOf("")
     }
-    var handoffs by rememberSaveable {
-        mutableStateOf<List<Database.Handoff>>(emptyList())
-    }
 
     var showFilterDialog by remember { mutableStateOf(false) }
 
@@ -148,11 +147,15 @@ fun RecordsScreen(
     var prioSelected by remember { mutableStateOf(statOptions.entries.find { it.key == (-1).toShort() }) }
     val prioInteractionSource = remember { MutableInteractionSource() }
 
-    var teamList = remember { mutableStateListOf<Database.TeamUserDisplay>() }
-
     var userExpanded by remember { mutableStateOf(false) }
     var userSelected by remember { mutableStateOf(Database.TeamUserDisplay("", "Any", "", emptyList())) }
     val userInteractionSource = remember { MutableInteractionSource() }
+
+    var handoffs by remember { mutableStateOf(viewModel.handoffs) }  // TODO Currently set up to reassign. Didn't make a huge amount of sense to move filter code to viewModel, since it is only used here
+    var teamMembers = listOf(Database.TeamUserDisplay("", "Any", "", emptyList())) + viewModel.teamMembers
+
+    var handoffLoad = viewModel.handoffLoadState
+    val teamMemberLoad = viewModel.teamMemberLoadState
 
     var age: Int? by remember { mutableStateOf<Int?>(0) }
 
@@ -178,8 +181,6 @@ fun RecordsScreen(
 
     var showComplete by remember { mutableStateOf(false) }
     val showCompleteInteractionSource = remember { MutableInteractionSource() }
-
-    var handoffLoadState by remember { mutableStateOf(true) }
 
     fun calculateAge(age: Int, timespan: Short): Int {
         var age = age
@@ -242,9 +243,11 @@ fun RecordsScreen(
         onDismiss: () -> Unit,
     ) {
         LaunchedEffect(Unit) {
-            teamList.clear()
-            teamList.add(userSelected)
-            teamList += db.getTeamMembers()
+//todo
+            //viewModel.getTeamMembers()
+//            teamMembers.clear()
+//            teamMembers.add(userSelected)
+//            teamMembers += db.getTeamMembers()
         }
 
         Dialog(onDismissRequest = onDismiss) {
@@ -315,9 +318,9 @@ fun RecordsScreen(
                                 value = statSelected!!.value,
                                 onValueChange = { },
                                 label = { Text("Status") },
+                                modifier = Modifier.clickable { statExpanded = true },
                                 readOnly = true,
                                 singleLine = true,
-                                interactionSource = statInteractionSource,
                                 trailingIcon = {
                                     if (!statExpanded) {
                                         Icon(
@@ -389,7 +392,7 @@ fun RecordsScreen(
                                                     showComplete = false
                                                 }
 
-                                                handoffLoadState = true
+                                                handoffLoad = true
                                                 handoffs = emptyList()
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
@@ -401,7 +404,7 @@ fun RecordsScreen(
                                                         includeCompleted = showComplete
                                                     )
                                                     handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                                                    handoffLoadState = false
+                                                    handoffLoad = false
                                                 }
 
                                                 statExpanded = false
@@ -419,6 +422,7 @@ fun RecordsScreen(
                                 value = prioSelected!!.value,
                                 onValueChange = { },
                                 label = { Text("Priority") },
+                                modifier = Modifier.clickable { prioExpanded = true },
                                 readOnly = true,
                                 singleLine = true,
                                 interactionSource = prioInteractionSource,
@@ -487,7 +491,7 @@ fun RecordsScreen(
                                             onClick = {
                                                 prioSelected = option
 
-                                                handoffLoadState = true
+                                                handoffLoad = true
                                                 handoffs = emptyList()
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
@@ -499,7 +503,7 @@ fun RecordsScreen(
                                                         includeCompleted = showComplete
                                                     )
                                                     handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                                                    handoffLoadState = false
+                                                    handoffLoad = false
                                                 }
 
                                                 prioExpanded = false
@@ -516,6 +520,7 @@ fun RecordsScreen(
                             value = userSelected.firstName + " " + userSelected.lastName,
                             onValueChange = { },
                             label = { Text("User") },
+                            modifier = Modifier.clickable { userExpanded = true },
                             readOnly = true,
                             singleLine = true,
                             interactionSource = userInteractionSource,
@@ -554,33 +559,35 @@ fun RecordsScreen(
                                 expanded = userExpanded,
                                 onDismissRequest = { userExpanded = false }
                             ) {
-                                teamList.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(
-                                            option.firstName + " " + option.lastName,
-                                            color = PrimaryText
-                                        )},
-                                        onClick = {
-                                            userSelected = option
+                                Column() {
+                                    teamMembers.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(
+                                                option.firstName + " " + option.lastName,
+                                                color = PrimaryText
+                                            )},
+                                            onClick = {
+                                                userSelected = option
 
-                                            handoffLoadState = true
-                                            handoffs = emptyList()
-                                            coroutineScope.launch(Dispatchers.IO) {
-                                                handoffs = viewModel.db.getHandoffsFilter(
-                                                    keyword = searchText,
-                                                    status = statSelected!!.key,
-                                                    priority = prioSelected!!.key,
-                                                    user = userSelected.userID,
-                                                    age = calculateAge(age?: 0, ageSelected!!.key),
-                                                    includeCompleted = showComplete
-                                                )
-                                                handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                                                handoffLoadState = false
+                                                handoffLoad = true
+                                                handoffs = emptyList()
+                                                coroutineScope.launch(Dispatchers.IO) {
+                                                    handoffs = viewModel.db.getHandoffsFilter(
+                                                        keyword = searchText,
+                                                        status = statSelected!!.key,
+                                                        priority = prioSelected!!.key,
+                                                        user = userSelected.userID,
+                                                        age = calculateAge(age?: 0, ageSelected!!.key),
+                                                        includeCompleted = showComplete
+                                                    )
+                                                    handoffs = filterByShift(handoffs, shiftSelection!!.key)
+                                                    handoffLoad = false
+                                                }
+
+                                                userExpanded = false
                                             }
-
-                                            userExpanded = false
-                                        }
-                                    )
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -592,6 +599,7 @@ fun RecordsScreen(
                             value = shiftSelection!!.value,
                             onValueChange = { },
                             label = { Text("Shift") },
+                            modifier = Modifier.clickable { shiftExpanded = true },
                             readOnly = true,
                             singleLine = true,
                             interactionSource = shiftInteractionSource,
@@ -639,7 +647,7 @@ fun RecordsScreen(
                                         onClick = {
                                             shiftSelection = option
 
-                                            handoffLoadState = true
+                                            handoffLoad = true
                                             handoffs = emptyList()
                                             coroutineScope.launch(Dispatchers.IO) {
                                                 handoffs = viewModel.db.getHandoffsFilter(
@@ -651,7 +659,7 @@ fun RecordsScreen(
                                                     includeCompleted = showComplete
                                                 )
                                                 handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                                                handoffLoadState = false
+                                                handoffLoad = false
                                             }
 
                                             userExpanded = false
@@ -672,7 +680,7 @@ fun RecordsScreen(
                                         age = digit.toIntOrNull()
                                     }
 
-                                    handoffLoadState = true
+                                    handoffLoad = true
                                     handoffs = emptyList()
                                     coroutineScope.launch(Dispatchers.IO) {
                                         handoffs = viewModel.db.getHandoffsFilter(
@@ -684,7 +692,7 @@ fun RecordsScreen(
                                             includeCompleted = showComplete
                                         )
                                         handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                                        handoffLoadState = false
+                                        handoffLoad = false
                                     }
                                 },
                                 label = { Text("Older than") },
@@ -714,6 +722,7 @@ fun RecordsScreen(
                                 value = ageSelected!!.value ,
                                 onValueChange = { },
                                 label = { Text("Timespan") },
+                                modifier = Modifier.clickable { ageExpanded = true },
                                 readOnly = true,
                                 singleLine = true,
                                 interactionSource = ageInteractionSource,
@@ -758,7 +767,7 @@ fun RecordsScreen(
                                             onClick = {
                                                 ageSelected = option
 
-                                                handoffLoadState = true
+                                                handoffLoad = true
                                                 handoffs = emptyList()
                                                 coroutineScope.launch(Dispatchers.IO) {
                                                     handoffs = viewModel.db.getHandoffsFilter(
@@ -770,7 +779,7 @@ fun RecordsScreen(
                                                         includeCompleted = showComplete
                                                     )
                                                     handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                                                    handoffLoadState = false
+                                                    handoffLoad = false
                                                 }
 
                                                 ageExpanded = false
@@ -796,7 +805,7 @@ fun RecordsScreen(
                                 onClick = {
                                     showComplete = !showComplete
 
-                                    handoffLoadState = true
+                                    handoffLoad = true
                                     handoffs = emptyList()
                                     coroutineScope.launch(Dispatchers.IO) {
                                         handoffs = viewModel.db.getHandoffsFilter(
@@ -808,7 +817,7 @@ fun RecordsScreen(
                                             includeCompleted = showComplete
                                         )
                                         handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                                        handoffLoadState = false
+                                        handoffLoad = false
                                     }
                                 },
                                 role = Role.Checkbox,
@@ -856,13 +865,12 @@ fun RecordsScreen(
 
 
     LaunchedEffect(Unit) {
-        handoffLoadState = true
-        handoffs = viewModel.db.getHandoffs()
-        handoffLoadState = false
+        viewModel.getHandoffs()
+        viewModel.getTeamMembers()
     }
 
     Scaffold (
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().background(NavyBackground),
         bottomBar = {
             BottomAppBar(
                 containerColor = NavyBackground,
@@ -902,7 +910,6 @@ fun RecordsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(NavyBackground)
                 .statusBarsPadding()
                 .padding(
                     start = 20.dp,
@@ -938,7 +945,7 @@ fun RecordsScreen(
                     value = searchText,
                     onValueChange = {
                         searchText = it
-                        handoffLoadState = true
+                        handoffLoad = true
                         handoffs = emptyList()
                         coroutineScope.launch(Dispatchers.IO) {
                             handoffs = viewModel.db.getHandoffsFilter(
@@ -950,7 +957,7 @@ fun RecordsScreen(
                                 includeCompleted = showComplete
                             )
                             handoffs = filterByShift(handoffs, shiftSelection!!.key)
-                            handoffLoadState = false
+                            handoffLoad = false
                         }
 
                     },
@@ -1011,219 +1018,103 @@ fun RecordsScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Column(
-                modifier = Modifier.imePadding().verticalScroll(rememberScrollState()),
+            LazyColumn(
+                //modifier = Modifier.imePadding().verticalScroll(rememberScrollState()), todo check this
+                modifier = Modifier.fillMaxSize()
             ) {
-                if (handoffs.isEmpty() && !handoffLoadState) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Surface
-                        ),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = Border
-                        )
-                    ) {
-                        Column(
+                if (handoffs.isEmpty() && !handoffLoad) {
+                    item {
+                        Card(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                                .fillMaxWidth()
+                                .height(180.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Surface
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Border
+                            )
                         ) {
-                            Text(
-                                text = "No handoff records found",
-                                color = PrimaryText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = "Handoffs for the selected team will appear here.",
-                                color = MutedText,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-                    }
-                } else {
-                    val groupedHandoffs: Map<String, List<Database.Handoff>> = remember(handoffs) {
-                        handoffs.groupBy { handoff ->
-                            formatTimestamp(handoff.sortedTimestamp!!.toEpochMilliseconds())
-                        }
-                    }
-                    groupedHandoffs.forEach { (date, dayHandoffs) ->
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Text(
-                            text = date,
-                            color = PrimaryText,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        dayHandoffs.forEach { handoff ->
-                            Card(
+                            Column(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 10.dp)
-                                    .clickable {
-                                        onHandoffClick(handoff)
-                                    },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Surface
-                                ),
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = Border
-                                )
+                                    .fillMaxSize()
+                                    .padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = handoff.title,
-                                        color = PrimaryText,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                Text(
+                                    text = "No handoff records found",
+                                    color = PrimaryText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
 
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
 
-                                    Text(
-                                        text = run {
-                                            val parsedContent =
-                                                viewModel.db.separateContent(handoff.content ?: "")
-                                            """
-                                            |Issue Details: 
-                                            |${parsedContent.issue}
-                                            |
-                                            |Attempted Actions: 
-                                            |${parsedContent.action}
-                                            |
-                                            |Next Steps: 
-                                            |${parsedContent.next}
-                                        """.trimMargin()
-                                        },
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = buildAnnotatedString {
-                                                append("Status: ")
-                                                withStyle(
-                                                    style = SpanStyle(
-                                                        color = when (handoff.status.toInt()) {
-                                                            0 -> Color(0xffFF5F15)
-                                                            1 -> Color.Yellow
-                                                            2 -> BluePrimary
-                                                            3 -> Color.Cyan
-                                                            4 -> Color.Green
-                                                            else -> BluePrimary
-                                                        }
-                                                    )
-                                                ) {
-                                                    append(viewModel.db.statOptions[handoff.status].toString())
-                                                }
-
-                                                append("  •  Priority: ")
-
-                                                withStyle(
-                                                    style = SpanStyle(
-                                                        color = when (handoff.priority.toInt()) {
-                                                            0 -> Color.Red
-                                                            1 -> Color(0xffFF5F15)
-                                                            2 -> Color.Yellow
-                                                            3 -> BluePrimary
-                                                            4 -> Color.Green
-                                                            else -> BluePrimary
-                                                        }
-                                                    )
-                                                ) {
-                                                    append(viewModel.db.prioOptions[handoff.priority].toString())
-                                                }
-                                            },
-                                            color = BluePrimary,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                        Text(
-                                            text = handoff.timestamp?.let { timestamp ->
-                                                timestamp
-                                                    .toJavaInstant()
-                                                    .atZone(ZoneId.systemDefault())
-                                                    .format(
-                                                        DateTimeFormatter.ofPattern(
-                                                            "M/d/yyyy • h:mm a"
-                                                        )
-                                                    )
-                                            } ?: "",
-                                            color = MutedText,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        if (handoff.editTimestamp != null) {
-                                            Text(
-                                                text = """(${handoff.editTimestamp?.let { timestamp ->
-                                                    timestamp
-                                                        .toJavaInstant()
-                                                        .atZone(ZoneId.systemDefault())
-                                                        .format(
-                                                            DateTimeFormatter.ofPattern(
-                                                                "M/d/yyyy • h:mm a"
-                                                            )
-                                                        )
-                                                }})""",
-                                                color = MutedText,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                    }
-                                }
+                                Text(
+                                    text = "Handoffs for the selected team will appear here.",
+                                    color = MutedText,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
                         }
                     }
+
+                } else {
+                    val groupedHandoffs: Map<String, List<Database.Handoff>> =
+                        handoffs.groupBy { handoff ->
+                            formatTimestamp(handoff.sortedTimestamp!!.toEpochMilliseconds())
+                        }
+
+
+                    groupedHandoffs.forEach { (date, dayHandoffs) ->
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = date,
+                                color = PrimaryText,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        items(dayHandoffs, key = { it.handoffID!! }) { handoff ->
+                            HandoffCardFull(viewModel.db, handoff, onHandoffClick)
+                        }
+                    }
                 }
-                if (handoffLoadState) {
-                    Spacer(Modifier.height(10.dp))
+                if (handoffLoad) {
+                    item {
+                        Spacer(Modifier.height(10.dp))
 
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
 
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .align(Alignment.Center),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            strokeWidth = 4.dp
-                        )
+                            ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .align(Alignment.Center),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                strokeWidth = 4.dp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                }
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
 
-                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
