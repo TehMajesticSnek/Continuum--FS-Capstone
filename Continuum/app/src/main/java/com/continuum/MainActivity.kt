@@ -15,18 +15,27 @@ import com.continuum.data.UserPreferences
 import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.ContinuumTheme
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
+    class UserSession {
+        var userID by mutableStateOf<String?>(null)
+        var activeTeam by mutableStateOf<Database.Team?>(null)
+        var teamRole by mutableLongStateOf(0)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val splashScreen = installSplashScreen()
-        val db = Database()
+        val session = UserSession()
+        val db = Database(session)
         val userData = UserPreferences(applicationContext) // Selected team mostly. Settings are separate
         var startPage: Any = Login
 
@@ -34,7 +43,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            val viewModel: ViewModel = viewModel(factory = ViewModel.Factory(userData, db))
+            val viewModel: ViewModel = viewModel(factory = ViewModel.Factory(userData, db, session))
 
             var isCheckingAuth by remember { mutableStateOf(true) }
 
@@ -50,7 +59,7 @@ class MainActivity : ComponentActivity() {
                         delay(5.milliseconds)
                     }
                 }
-                viewModel.db.activeTeam = viewModel.selectedTeam.value
+                session.activeTeam = viewModel.selectedTeam.value
                 isCheckingAuth = false
             }
 

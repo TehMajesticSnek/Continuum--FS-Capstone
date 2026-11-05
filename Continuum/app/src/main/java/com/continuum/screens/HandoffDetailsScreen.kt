@@ -226,7 +226,7 @@ fun HandoffDetailsScreen(
                 fontWeight = FontWeight.Bold
             )
 
-            if (viewModel.db.userRole == 1L || owner?.userID == viewModel.db.uid) {
+            if (viewModel.session.teamRole == 1L || owner?.userID == viewModel.session.userID) {
                 Spacer(modifier = Modifier.weight(1f))
 
                 Box(Modifier.align(Alignment.CenterVertically)) {

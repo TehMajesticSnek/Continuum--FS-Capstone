@@ -32,7 +32,7 @@ fun SupervisorDashboardScreen(
     var refreshCount by remember { mutableIntStateOf(0) }
     var selectedFilter by remember { mutableStateOf("All Open") }
 
-    LaunchedEffect(refreshCount, viewModel.db.activeTeam) {
+    LaunchedEffect(refreshCount, viewModel.session.activeTeam?.teamID) {
         isLoading = true
         errorMessage = null
         handoffs = emptyList()

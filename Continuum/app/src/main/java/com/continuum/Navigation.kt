@@ -120,7 +120,7 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
             HomeScreen(
                 modifier = Modifier.onSwipeNavigation(
                     onSwipeLeft = {
-                        if (viewModel.db.activeTeam != 0) {
+                        if (viewModel.session.activeTeam != null) {
                             navController.navigate(route = Records) {
                                 popUpTo(Home) {
                                     inclusive = false
@@ -134,7 +134,9 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                 toNewHandoff = {
                     selectedHandoff = null
                     handoffDraftContent = ""
-                    navController.navigate(NewHandoff)
+                    viewModel.waitSelectingTeams {
+                        navController.navigate(NewHandoff)
+                    }
                 },
                 toHandoffFromNote = { noteContent ->
                     handoffDraftContent = noteContent
@@ -145,20 +147,25 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                     navController.navigate(HandoffDetails)
                 },
                 toHandoffList = {
-                    navController.navigate(route = Records) {
-                        popUpTo(Home) {
-                            inclusive = false
+                    viewModel.waitSelectingTeams {
+                        navController.navigate(route = Records) {
+                            popUpTo(Home) {
+                                inclusive = false
+                            }
                         }
                     }
                 },
                 toTeams = {
-                    navController.navigate(route = Teams) {
-                        popUpTo(Home) {
-                            inclusive = false
+                    viewModel.waitSelectingTeams {
+                        navController.navigate(route = Teams) {
+                            popUpTo(Home) {
+                                inclusive = false
+                            }
                         }
                     }
                 },
                 logout = {
+                    viewModel.selectTeam(null)
                     navController.navigate(route = Login) {
                         popUpTo(Home) {
                             inclusive = true
