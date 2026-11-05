@@ -165,6 +165,7 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                     }
                 },
                 logout = {
+                    viewModel.selectTeam(null)
                     navController.navigate(route = Login) {
                         popUpTo(Home) {
                             inclusive = true

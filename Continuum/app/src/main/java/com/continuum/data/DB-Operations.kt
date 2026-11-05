@@ -48,7 +48,7 @@ class Database (val session: MainActivity.UserSession) {
         install(Storage)
     }
 
-    val statOptions = mapOf(
+    val statOptions = mapOf( // TODO Consider using enums
         0.toShort() to "New",
         1.toShort() to "Acknowledged",
         2.toShort() to "In Progress",

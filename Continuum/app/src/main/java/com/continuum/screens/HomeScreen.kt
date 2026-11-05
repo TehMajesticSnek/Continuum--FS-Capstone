@@ -2,6 +2,7 @@ package com.continuum.screens
 
 import android.app.AlertDialog
 import android.content.Context
+import android.provider.ContactsContract
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.InfiniteRepeatableSpec
 import androidx.compose.animation.core.LinearEasing
@@ -79,8 +80,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -102,6 +106,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import kotlin.math.abs
+import kotlin.time.toJavaInstant
 
 suspend fun showError(context: Context, error: String) {
     withContext(Dispatchers.Main) {
@@ -131,11 +136,6 @@ fun HomeScreen(
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
-    var showQuickNoteDialog by remember { mutableStateOf(false) }
-    //var showNotifications by remember { mutableStateOf(false) }
-    var showSavedNotesDialog by remember { mutableStateOf(false) }
-    var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
 
     var showJoinDialog by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -180,16 +180,8 @@ fun HomeScreen(
         }
         .sortedBy { it.teamName?.lowercase() }
 
-    val unresolvedHandoffs = handoffs.filter {
-        it.status.toInt() != 4
-    }
-
-    val highPriorityHandoffs = unresolvedHandoffs.filter {
-        it.priority.toInt() <= 1
-    }
-
     val recentHandoffs = handoffs
-        .sortedByDescending { it.timestamp }
+        //.sortedByDescending { it.timestamp }
         .take(3)
 
     ModalNavigationDrawer(
@@ -343,12 +335,11 @@ fun HomeScreen(
             ) {
 
                 TopBar(
-                    viewModel = viewModel,
+                    db = viewModel.db,
                     pulseMenuButton = pulseMenuButton,
                     scope = scope,
                     drawerState = drawerState,
-                    //showNotifications = showNotifications,
-                    highPriorityHandoffs = highPriorityHandoffs,
+                    highPriorityHandoffs = viewModel.highPriorityHandoffs,
                     logout = logout,
                     onClick = { handoff: Database.Handoff ->
                         onHandoffClick(handoff)
@@ -357,501 +348,33 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(28.dp))
 
-                Text(
-                    text = "$greeting, $firstName!",
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Here's what's happening across your shifts.",
-                    color = MutedText,
-                    style = MaterialTheme.typography.bodySmall
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Team: ${selectedTeam?.teamName ?: "No Team Selected"}",
-                    color = BluePrimary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Medium
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        viewModel.waitSelectingTeams {
-                            showQuickNoteDialog = true
-                        }
+                UpperBlock(
+                    db = viewModel.db,
+                    greeting = greeting,
+                    firstName = firstName,
+                    selectedTeam = selectedTeam!!,
+                    awaitNoteNavigate = viewModel::waitSelectingTeams,
+                    toHandoff = {
+                        toNewHandoff()
                     },
-                    enabled = (viewModel.session.activeTeam != null),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (viewModel.session.activeTeam != null) BluePrimary else Border
-                    ),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = BluePrimary,
-                        disabledContentColor = MutedText
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Quick Note",
-
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        text = "Quick Note",
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedButton(
-                    onClick = {
-                        viewModel.waitSelectingTeams {
-                            showSavedNotesDialog = true
-                        }
-                    },
-                    enabled = (viewModel.session.activeTeam != null),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (viewModel.session.activeTeam != null) BluePrimary else Border
-                    ),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = BluePrimary,
-                        disabledContentColor = MutedText
-                    )
-                ) {
-                    Text(
-                        text = "Saved Notes",
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Button(
-                    enabled = (viewModel.session.activeTeam != null),
-                    onClick = { toNewHandoff() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BluePrimary,
-                        contentColor = PrimaryText
-                    )
-                ) {
-                    Text(
-                        text = "New Handoff",
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                    toHandoffFromNote = { note: String ->
+                        toHandoffFromNote(note)
+                    }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    item {
-                        Text(
-                            text = "Summary",
-                            color = PrimaryText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(10.dp))
-                    }
-
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-
-                            SummaryCard(
-                                label = "Open\nIssues",
-                                value = if (handoffLoad) "-" else unresolvedHandoffs.size.toString(),
-                                indicatorColor = Color.Green,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            SummaryCard(
-                                label = "High\nPriority",
-                                value = if (handoffLoad) "-" else highPriorityHandoffs.size.toString(),
-                                indicatorColor = Color.Red,
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            SummaryCard(
-                                label = "In\nProgress",
-                                value = if (handoffLoad) "-" else unresolvedHandoffs.count {
-                                    it.status.toInt() == 2
-                                }.toString(),
-                                indicatorColor = BluePrimary,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(18.dp))
-                    }
-
-                    item {
-                        Text(
-                            text = "Needs Attention",
-                            color = PrimaryText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(10.dp))
-                    }
-
-
-                    if (highPriorityHandoffs.isEmpty()) {
-                        item {
-                            Text(
-                                text = "No high-priority items need attention.",
-                                color = MutedText,
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
-
-                    } else {
-                        items(highPriorityHandoffs.sortedWith(
-                            compareBy<Database.Handoff> { it.priority }
-                                .thenByDescending { it.timestamp }
-                        ).take(3), key = { it.handoffID!! }) { handoff ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .clickable {
-                                        onHandoffClick(handoff)
-                                    },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Surface
-                                ),
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = Border
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(14.dp)
-                                ) {
-
-                                    Text(
-                                        text = handoff.title,
-                                        color = PrimaryText,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                    Text(
-                                        text = viewModel.db.separateContent(handoff.content ?: "").issue ?: "",
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-
-                                    Spacer(modifier = Modifier.height(6.dp))
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.Bottom
-                                    ) {
-                                        Row {
-                                            Text(
-                                                text = "${viewModel.db.statOptions[handoff.status]}",
-                                                color = when (handoff.status.toInt()) {
-                                                    0 -> Color(0xffFF5F15)
-                                                    1 -> Color.Yellow
-                                                    2 -> BluePrimary
-                                                    3 -> Color.Cyan
-                                                    4 -> Color.Green
-                                                    else -> BluePrimary
-                                                },
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-
-                                            Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall)
-
-                                            Text(
-                                                text = viewModel.db.prioOptions[handoff.priority] ?: "",
-                                                color = when (handoff.priority.toInt()) {
-                                                    0 -> Color.Red
-                                                    1 -> Color(0xffFF5F15)
-                                                    2 -> Color.Yellow
-                                                    3 -> BluePrimary
-                                                    4 -> Color.Green
-                                                    else -> BluePrimary
-                                                },
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-
-                                        }
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            Text(
-                                                text = handoff.timestamp?.let { timestamp ->
-                                                    Instant
-                                                        .parse(timestamp.toString())
-                                                        .atZone(ZoneId.systemDefault())
-                                                        .format(
-                                                            DateTimeFormatter.ofPattern(
-                                                                "M/d/yyyy • h:mm a"
-                                                            )
-                                                        )
-                                                } ?: "",
-                                                color = MutedText,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                            if (handoff.editTimestamp != null) {
-                                                Text(
-                                                    text = """(${handoff.editTimestamp?.let { timestamp ->
-                                                        Instant
-                                                            .parse(timestamp.toString())
-                                                            .atZone(ZoneId.systemDefault())
-                                                            .format(
-                                                                DateTimeFormatter.ofPattern(
-                                                                    "M/d/yyyy • h:mm a"
-                                                                )
-                                                            )
-                                                    }})""",
-                                                    color = MutedText,
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(18.dp))
-                    }
-
-                    item {
-                        Text(
-                            text = "Recent Handoffs",
-                            color = PrimaryText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(10.dp))
-                    }
-
-                    items(recentHandoffs, key = { it.handoffID!! }) { handoff ->
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .clickable {
-                                    onHandoffClick(handoff)
-                                },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Surface
-                            ),
-                            border = BorderStroke(
-                                width = 1.dp,
-                                color = Border
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(14.dp)
-                            ) {
-                                Text(
-                                    text = handoff.title,
-                                    color = PrimaryText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                Text(
-                                    text = viewModel.db.separateContent(handoff.content ?: "").issue ?: "",
-                                    color = MutedText,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row {
-                                        Text(
-                                            text = "${viewModel.db.statOptions[handoff.status]}",
-                                            color = when (handoff.status.toInt()) {
-                                                0 -> Color(0xffFF5F15)
-                                                1 -> Color.Yellow
-                                                2 -> BluePrimary
-                                                3 -> Color.Cyan
-                                                4 -> Color.Green
-                                                else -> BluePrimary
-                                            },
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-
-                                        Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall)
-
-                                        Text(
-                                            text = viewModel.db.prioOptions[handoff.priority] ?: "",
-                                            color = when (handoff.priority.toInt()) {
-                                                0 -> Color.Red
-                                                1 -> Color(0xffFF5F15)
-                                                2 -> Color.Yellow
-                                                3 -> BluePrimary
-                                                4 -> Color.Green
-                                                else -> BluePrimary
-                                            },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-
-                                    }
-
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = handoff.timestamp?.let { timestamp ->
-                                                Instant
-                                                    .parse(timestamp.toString())
-                                                    .atZone(ZoneId.systemDefault())
-                                                    .format(
-                                                        DateTimeFormatter.ofPattern(
-                                                            "M/d/yyyy • h:mm a"
-                                                        )
-                                                    )
-                                            } ?: "",
-                                            color = MutedText,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        if (handoff.editTimestamp != null) {
-                                            Text(
-                                                text = """(${handoff.editTimestamp?.let { timestamp ->
-                                                    Instant
-                                                        .parse(timestamp.toString())
-                                                        .atZone(ZoneId.systemDefault())
-                                                        .format(
-                                                            DateTimeFormatter.ofPattern(
-                                                                "M/d/yyyy • h:mm a"
-                                                            )
-                                                        )
-                                                }})""",
-                                                color = MutedText,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-
-                    if (handoffLoad) {
-                        item {
-                            Spacer(Modifier.height(6.dp))
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                                ) {
-
-                                CircularProgressIndicator(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .align(Alignment.Center),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    strokeWidth = 4.dp
-                                )
-                            }
-                        }
-                    }
-
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
-                }
+                BodyColumn(
+                    db = viewModel.db,
+                    handoffLoad = handoffLoad,
+                    unresolved = viewModel.incompleteHandoffs,
+                    highPriority = viewModel.highPriorityHandoffs,
+                    inProgressCount = viewModel.inProgressHandoffs.size,
+                    recent = recentHandoffs,
+                    onHandoffClick = onHandoffClick
+                )
             }
         }
-
-    }
-    if (showQuickNoteDialog) {
-        QuickNoteDialog(
-            db = viewModel.db,
-            onDismiss = { showQuickNoteDialog = false },
-            onSuccess = { showQuickNoteDialog = false }
-        )
-    }
-    if (showSavedNotesDialog) {
-        SavedNotesDialog(
-            db = viewModel.db,
-            onDismiss = {
-                showSavedNotesDialog = false
-            },
-            onSelectNote = { note ->
-                selectedNote = note
-                showSavedNotesDialog = false
-            }
-        )
-    }
-    selectedNote?.let { note ->
-        EditNoteDialog(
-            db = viewModel.db,
-            note = note,
-            onDismiss = {
-                selectedNote = null
-            },
-            onSuccess = {
-                selectedNote = null
-            },
-            onCreateHandoff = {
-                toHandoffFromNote(note.content)
-                selectedNote = null
-            }
-        )
     }
 
     if (showJoinDialog) {
@@ -885,14 +408,14 @@ fun HomeScreen(
 
 @Composable
 private fun TopBar(
-    viewModel: ViewModel,
+    db: Database,
     pulseMenuButton: Boolean,
     scope: CoroutineScope,
     drawerState: DrawerState,
     highPriorityHandoffs: List<Database.Handoff>,
     onClick: (Database.Handoff) -> Unit,
     logout: () -> Unit
-    ) {
+) {
     var showConfirmSignOut by remember { mutableStateOf(false) }
 
     Row(
@@ -959,7 +482,7 @@ private fun TopBar(
         Spacer(modifier = Modifier.weight(1f))
 
 
-        Notifications(viewModel, highPriorityHandoffs, onClick)
+        Notifications(db, highPriorityHandoffs, onClick)
 
         IconButton(
             onClick = {
@@ -977,10 +500,9 @@ private fun TopBar(
     }
     if (showConfirmSignOut) {
         ConfirmSignOut (
-            db = viewModel.db,
+            db = db,
             onDismissSignOut = { showConfirmSignOut = false },
             onSuccessSignOut = {
-                viewModel.selectTeam(null)
                 showConfirmSignOut = false
                 logout()
             }
@@ -1064,7 +586,6 @@ private fun TeamDrawerBodyContent(
         }
     }
 }
-
 
 @Composable
 private fun TeamSearchField(teamSearchQuery: String, onChange: (String) -> Unit) {
@@ -1208,152 +729,6 @@ private fun TeamMenuItem(
             )
         }
     }
-}
-
-@Composable
-private fun Notifications(
-    viewModel: ViewModel,
-    highPriorityHandoffs: List<Database.Handoff>,
-    onHandoffClick: (Database.Handoff) -> Unit
-) {
-    var showNotifications by remember { mutableStateOf(false) }
-    Box(
-        contentAlignment = Alignment.Center
-    ) {
-        IconButton(
-            onClick = {
-                showNotifications = true
-            },
-            modifier = Modifier.size(40.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "Notifications",
-                tint = PrimaryText,
-                modifier = Modifier.size(26.dp)
-            )
-        }
-
-        if (highPriorityHandoffs.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .size(18.dp)
-                    .background(
-                        Color.Red,
-                        RoundedCornerShape(50)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = if (highPriorityHandoffs.size > 9)
-                        "9+"
-                    else
-                        highPriorityHandoffs.size.toString(),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            }
-        }
-        if (showNotifications) {
-            NotificationsDialog(
-                viewModel = viewModel,
-                highPriorityHandoffs = highPriorityHandoffs,
-                onHandoffClick = onHandoffClick,
-                onDismiss = { showNotifications = false }
-            )
-        }
-    }
-}
-@Composable
-private fun NotificationsDialog(
-    viewModel: ViewModel,
-    highPriorityHandoffs: List<Database.Handoff>,
-    onHandoffClick: (Database.Handoff) -> Unit,
-    onDismiss: () -> Unit
-) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = {
-            onDismiss()
-        },
-        containerColor = MaterialTheme.colorScheme.surface,
-        title = {
-            Text("Priority Alerts")
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(350.dp)
-            ) {
-                if (highPriorityHandoffs.isEmpty()) {
-                    Text(
-                        text = "No active priority alerts.",
-                        color = MutedText
-                    )
-                } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        items(highPriorityHandoffs.sortedBy { it.priority }, key = { it.handoffID!! }) { handoff ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .clickable {
-                                        onDismiss()
-                                        onHandoffClick(handoff)
-                                    },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Surface
-                                ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    Border
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(12.dp)
-                                ) {
-                                    Text(
-                                        text = handoff.title,
-                                        color = PrimaryText,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Spacer(Modifier.height(4.dp))
-
-                                    Text(
-                                        text = if (handoff.priority.toInt() == 0)
-                                            "URGENT"
-                                        else
-                                            "HIGH PRIORITY",
-                                        color = if (handoff.priority.toInt() == 0)
-                                            Color.Red
-                                        else
-                                            Color(0xffFF5F15)
-                                    )
-
-                                    Text(
-                                        text = viewModel.db.statOptions[handoff.status]
-                                            ?: "Unknown",
-                                        color = MutedText
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onDismiss()
-                }
-            ) {
-                Text("Close")
-            }
-        }
-    )
 }
 
 @Composable
@@ -1579,6 +954,379 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Notifications(
+    db: Database,
+    highPriorityHandoffs: List<Database.Handoff>,
+    onHandoffClick: (Database.Handoff) -> Unit
+) {
+    var showNotifications by remember { mutableStateOf(false) }
+    Box(
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(
+            onClick = {
+                showNotifications = true
+            },
+            modifier = Modifier.size(40.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = "Notifications",
+                tint = PrimaryText,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+
+        if (highPriorityHandoffs.isNotEmpty()) {
+            val highPriorityCount = highPriorityHandoffs.size
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(18.dp)
+                    .background(
+                        Color.Red,
+                        RoundedCornerShape(50)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (highPriorityCount > 9)
+                        "9+"
+                    else
+                        "$highPriorityCount",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+        if (showNotifications) {
+            NotificationsDialog(
+                db = db,
+                highPriorityHandoffs = highPriorityHandoffs,
+                onHandoffClick = onHandoffClick,
+                onDismiss = { showNotifications = false }
+            )
+        }
+    }
+}
+@Composable
+private fun NotificationsDialog(
+    db: Database,
+    highPriorityHandoffs: List<Database.Handoff>,
+    onHandoffClick: (Database.Handoff) -> Unit,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = {
+            onDismiss()
+        },
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = {
+            Text("Priority Alerts")
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(350.dp)
+            ) {
+                if (highPriorityHandoffs.isEmpty()) {
+                    Text(
+                        text = "No active priority alerts.",
+                        color = MutedText
+                    )
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(highPriorityHandoffs.sortedBy { it.priority }, key = { it.handoffID!! }) { handoff ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp)
+                                    .clickable {
+                                        onDismiss()
+                                        onHandoffClick(handoff)
+                                    },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Surface
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    Border
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    Text(
+                                        text = handoff.title,
+                                        color = PrimaryText,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(Modifier.height(4.dp))
+
+                                    Text(
+                                        text = if (handoff.priority.toInt() == 0)
+                                            "URGENT"
+                                        else
+                                            "HIGH PRIORITY",
+                                        color = if (handoff.priority.toInt() == 0)
+                                            Color.Red
+                                        else
+                                            Color(0xffFF5F15)
+                                    )
+
+                                    Text(
+                                        text = db.statOptions[handoff.status]
+                                            ?: "Unknown",
+                                        color = MutedText
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                }
+            ) {
+                Text("Close")
+            }
+        }
+    )
+}
+@Composable
+fun ConfirmSignOut(
+    db: Database,
+    onDismissSignOut: () -> Unit,
+    onSuccessSignOut: () -> Unit
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = onDismissSignOut) {
+        Box(
+            modifier = Modifier
+                .size(width = 300.dp, height = 300.dp)
+                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .padding(top = 12.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    )
+            ) {
+                Text(
+                    text = "Confirm Sign Out",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Are you sure you want to sign out of your account?")
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(
+
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        onClick = { onDismissSignOut() }
+
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    TextButton(
+                        onClick = {
+                            coroutineScope.launch(Dispatchers.IO) {
+                                db.logout()
+
+                                withContext(Dispatchers.Main) { onSuccessSignOut() }
+                            }
+                        }
+
+                    ) {
+                        Text("Confirm", color = Color.Red)
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+private fun UpperBlock(
+    db: Database,
+    greeting: String,
+    firstName: String,
+    selectedTeam: Database.Team,
+    awaitNoteNavigate: (() -> Unit) -> Unit,
+    toHandoff: () -> Unit,
+    toHandoffFromNote: (String) -> Unit
+) {
+    var showQuickNoteDialog by remember { mutableStateOf(false) }
+    var showSavedNotesDialog by remember { mutableStateOf(false) }
+    var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
+    val activeTeam = db.session.activeTeam
+
+    Text(
+        text = "$greeting, $firstName!",
+        color = PrimaryText,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold
+    )
+
+    Spacer(modifier = Modifier.height(4.dp))
+
+    Text(
+        text = "Here's what's happening across your shifts.",
+        color = MutedText,
+        style = MaterialTheme.typography.bodySmall
+    )
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Text(
+        text = "Team: ${selectedTeam.teamName ?: "No Team Selected"}",
+        color = BluePrimary,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = FontWeight.Medium
+    )
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    OutlinedButton(
+        onClick = {
+            awaitNoteNavigate {
+                showQuickNoteDialog = true
+            }
+        },
+        enabled = (activeTeam != null),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(6.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (activeTeam != null) BluePrimary else Border
+        ),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = BluePrimary,
+            disabledContentColor = MutedText
+        )
+    ) {
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = "Quick Note",
+
+            )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Text(
+            text = "Quick Note",
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    OutlinedButton(
+        onClick = {
+            awaitNoteNavigate {
+                showSavedNotesDialog = true
+            }
+        },
+        enabled = (activeTeam != null),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(6.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (activeTeam != null) BluePrimary else Border
+        ),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = BluePrimary,
+            disabledContentColor = MutedText
+        )
+    ) {
+        Text(
+            text = "Saved Notes",
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Button(
+        enabled = (db.session.activeTeam != null),
+        onClick = { toHandoff() },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(6.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = BluePrimary,
+            contentColor = PrimaryText
+        )
+    ) {
+        Text(
+            text = "New Handoff",
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+    if (showQuickNoteDialog) {
+        QuickNoteDialog(
+            db = db,
+            onDismiss = { showQuickNoteDialog = false },
+            onSuccess = { showQuickNoteDialog = false }
+        )
+    }
+    if (showSavedNotesDialog) {
+        SavedNotesDialog(
+            db = db,
+            onDismiss = {
+                showSavedNotesDialog = false
+            },
+            onSelectNote = { note ->
+                selectedNote = note
+                showSavedNotesDialog = false
+            }
+        )
+    }
+    selectedNote?.let { note: Database.Note ->
+        EditNoteDialog(
+            db = db,
+            note = note,
+            onDismiss = {
+                selectedNote = null
+            },
+            onSuccess = {
+                selectedNote = null
+            },
+            onCreateHandoff = {
+                toHandoffFromNote(note.content)
+                selectedNote = null
+            }
+        )
     }
 }
 
@@ -1884,68 +1632,405 @@ fun EditNoteDialog(
 }
 
 @Composable
-fun ConfirmSignOut(
+private fun BodyColumn(
     db: Database,
-    onDismissSignOut: () -> Unit,
-    onSuccessSignOut: () -> Unit
+    handoffLoad: Boolean,
+    unresolved: List<Database.Handoff>,
+    highPriority: List<Database.Handoff>,
+    inProgressCount: Int,
+    recent: List<Database.Handoff>,
+    onHandoffClick: (Database.Handoff) -> Unit,
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item {
+            SummaryCardSection(
+                handoffLoad = handoffLoad,
+                unresolvedCount = unresolved.size,
+                highPriorityCount = highPriority.size,
+                inProgressCount = inProgressCount
+            )
+        }
 
-    Dialog(onDismissRequest = onDismissSignOut) {
+        item {
+            CardLists(
+                db = db,
+                headerText = "Needs Attention",
+                blankText = "No high-priority items need attention",
+                handoffLoad = handoffLoad,
+                cards = highPriority,
+                onClick = onHandoffClick
+            )
+        }
+
+        item {
+            CardLists(
+                db = db,
+                headerText = "Recent Handoffs",
+                blankText = "No recent items",
+                handoffLoad = handoffLoad,
+                cards = recent,
+                onClick = onHandoffClick
+            )
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(62.dp))
+        }
+    }
+}
+@Composable
+private fun SummaryCardSection(
+    handoffLoad: Boolean,
+    unresolvedCount: Int,
+    highPriorityCount: Int,
+    inProgressCount: Int,
+) {
+
+    Text(
+        text = "Summary",
+        color = PrimaryText,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold
+    )
+
+
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+
+        SummaryCard(
+            label = "Open\nIssues",
+            value = if (handoffLoad) "-" else "$unresolvedCount",
+            indicatorColor = Color.Green,
+            modifier = Modifier.weight(1f)
+        )
+
+        SummaryCard(
+            label = "High\nPriority",
+            value = if (handoffLoad) "-" else "$highPriorityCount",
+            indicatorColor = Color.Red,
+            modifier = Modifier.weight(1f)
+        )
+
+        SummaryCard(
+            label = "In\nProgress",
+            value = if (handoffLoad) "-" else "$inProgressCount",
+            indicatorColor = BluePrimary,
+            modifier = Modifier.weight(1f)
+        )
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+}
+
+@Composable
+private fun CardLists(
+    db: Database,
+    headerText: String,
+    blankText: String,
+    handoffLoad: Boolean,
+    cards: List<Database.Handoff>,
+    onClick: (Database.Handoff) -> Unit
+) {
+    Text(
+        text = headerText,
+        color = PrimaryText,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.SemiBold
+    )
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    if (cards.isEmpty()) {
+        Text(
+            text = blankText,
+            color = MutedText,
+            style = MaterialTheme.typography.bodySmall
+        )
+
+    } else {
+        cards.take(3).forEach { handoff ->
+            HandoffCardSimple(db, handoff, onClick)
+        }
+    }
+
+    if (handoffLoad) {
+        Spacer(Modifier.height(6.dp))
         Box(
-            modifier = Modifier
-                .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
-                .padding(top = 12.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
         ) {
-            Column(
+
+            CircularProgressIndicator(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .padding(
-                        horizontal = 20.dp,
-                        vertical = 20.dp
+                    .size(48.dp)
+                    .align(Alignment.Center),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeWidth = 4.dp
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+}
+
+@Composable
+fun HandoffCardSimple(
+    db: Database,
+    handoff: Database.Handoff,
+    onClick: (Database.Handoff) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .clickable {
+                onClick(handoff)
+            },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = Border
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp)
+        ) {
+            // title
+            Text(
+                text = handoff.title,
+                color = PrimaryText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            //Content
+            Text(
+                text = db.separateContent(handoff.content ?: "").issue ?: "",
+                color = MutedText,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                //Status + Priority
+                Row {
+                    Text(
+                        text = "${db.statOptions[handoff.status]}",
+                        color = when (handoff.status.toInt()) {
+                            0 -> Color(0xffFF5F15)
+                            1 -> Color.Yellow
+                            2 -> BluePrimary
+                            3 -> Color.Cyan
+                            4 -> Color.Green
+                            else -> BluePrimary
+                        },
+                        style = MaterialTheme.typography.bodySmall
                     )
+
+                    Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall)
+
+                    Text(
+                        text = db.prioOptions[handoff.priority] ?: "",
+                        color = when (handoff.priority.toInt()) {
+                            0 -> Color.Red
+                            1 -> Color(0xffFF5F15)
+                            2 -> Color.Yellow
+                            3 -> BluePrimary
+                            4 -> Color.Green
+                            else -> BluePrimary
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                }
+                //Timestamps
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = handoff.timestamp?.let { timestamp ->
+                            Instant
+                                .parse(timestamp.toString())
+                                .atZone(ZoneId.systemDefault())
+                                .format(
+                                    DateTimeFormatter.ofPattern(
+                                        "M/d/yyyy • h:mm a"
+                                    )
+                                )
+                        } ?: "",
+                        color = MutedText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    if (handoff.editTimestamp != null) {
+                        Text(
+                            text = """(${handoff.editTimestamp.let { timestamp ->
+                                Instant
+                                    .parse(timestamp.toString())
+                                    .atZone(ZoneId.systemDefault())
+                                    .format(
+                                        DateTimeFormatter.ofPattern(
+                                            "M/d/yyyy • h:mm a"
+                                        )
+                                    )
+                            }})""",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun HandoffCardFull(
+    db: Database,
+    handoff: Database.Handoff,
+    onClick: (Database.Handoff) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 10.dp)
+            .clickable {
+                onClick(handoff)
+            },
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Surface
+        ),
+        border = BorderStroke(
+            width = 1.dp,
+            color = Border
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = handoff.title,
+                color = PrimaryText,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = run {
+                    val parsedContent =
+                        db.separateContent(handoff.content ?: "")
+                    """
+                        |Issue Details: 
+                        |${parsedContent.issue}
+                        |
+                        |Attempted Actions: 
+                        |${parsedContent.action}
+                        |
+                        |Next Steps: 
+                        |${parsedContent.next}
+                    """.trimMargin()
+                },
+                color = MutedText,
+                style = MaterialTheme.typography.bodySmall
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Confirm Sign Out",
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Are you sure you want to sign out of your account?")
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                Row(
-
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(0.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(
-                        onClick = { onDismissSignOut() }
-
-                    ) {
-                        Text("Cancel")
-                    }
-
-                    TextButton(
-                        onClick = {
-                            coroutineScope.launch(Dispatchers.IO) {
-                                db.logout()
-
-                                withContext(Dispatchers.Main) { onSuccessSignOut() }
-                            }
+                    text = buildAnnotatedString {
+                        append("Status: ")
+                        withStyle(
+                            style = SpanStyle(
+                                color = when (handoff.status.toInt()) {
+                                    0 -> Color(0xffFF5F15)
+                                    1 -> Color.Yellow
+                                    2 -> BluePrimary
+                                    3 -> Color.Cyan
+                                    4 -> Color.Green
+                                    else -> BluePrimary
+                                }
+                            )
+                        ) {
+                            append("$db.statOptions[handoff.status]")
                         }
 
-                    ) {
-                        Text("Confirm", color = Color.Red)
-                    }
+                        append("  •  Priority: ")
+
+                        withStyle(
+                            style = SpanStyle(
+                                color = when (handoff.priority.toInt()) {
+                                    0 -> Color.Red
+                                    1 -> Color(0xffFF5F15)
+                                    2 -> Color.Yellow
+                                    3 -> BluePrimary
+                                    4 -> Color.Green
+                                    else -> BluePrimary
+                                }
+                            )
+                        ) {
+                            append("$db.prioOptions[handoff.priority]")
+                        }
+                    },
+                    color = BluePrimary,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = handoff.timestamp?.toJavaInstant()?.atZone(ZoneId.systemDefault())
+                        ?.format(
+                            DateTimeFormatter.ofPattern(
+                                "M/d/yyyy • h:mm a"
+                            )
+                        ) ?: "",
+                    color = MutedText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (handoff.editTimestamp != null) {
+                    Text(
+                        text = """(${
+                            handoff.editTimestamp.toJavaInstant().atZone(ZoneId.systemDefault())
+                                ?.format(
+                                    DateTimeFormatter.ofPattern(
+                                        "M/d/yyyy • h:mm a"
+                                    )
+                                )
+                        })""",
+                        color = MutedText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }

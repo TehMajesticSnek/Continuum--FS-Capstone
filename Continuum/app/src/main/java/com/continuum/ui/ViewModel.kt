@@ -1,15 +1,13 @@
 package com.continuum.ui
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.compose.ComposeNavigator
 import com.continuum.MainActivity
 import com.continuum.data.Database
 import com.continuum.data.UserPreferences
@@ -32,7 +30,6 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
     private var selectTeamJob: Job? = null
     var teamRole by mutableIntStateOf(0)
 
-
     fun selectTeam(team: Database.Team?) {
         selectTeamJob = viewModelScope.launch {
             selectingTeam = true
@@ -48,8 +45,19 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
 
     var handoffs by mutableStateOf<List<Database.Handoff>>(emptyList())
         private set
-    var filteredHandoffs by mutableStateOf<List<Database.Handoff>>(emptyList())
-        private set
+    val incompleteHandoffs by derivedStateOf {
+        handoffs.filter { it.status != 4.toShort() }
+        }
+    val highPriorityHandoffs by derivedStateOf {
+        incompleteHandoffs.filter { it.priority <= 1 }.sortedWith(
+            compareBy<Database.Handoff> { it.priority }
+                .thenByDescending { it.timestamp }
+        )
+    }
+    val inProgressHandoffs by derivedStateOf {
+        incompleteHandoffs.filter { it.status == 2.toShort() }
+    }
+
 
     var teams by mutableStateOf<List<Database.Team>>(emptyList())
         private set

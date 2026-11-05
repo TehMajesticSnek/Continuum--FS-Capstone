@@ -151,8 +151,8 @@ fun RecordsScreen(
     var userSelected by remember { mutableStateOf(Database.TeamUserDisplay("", "Any", "", emptyList())) }
     val userInteractionSource = remember { MutableInteractionSource() }
 
-    var handoffs = viewModel.handoffs // TODO Currently set up to reassign. Didn't make a huge amount of sense to move filter code to viewModel, since it is only used here
-    val teamMembers = viewModel.teamMembers
+    var handoffs by remember { mutableStateOf(viewModel.handoffs) }  // TODO Currently set up to reassign. Didn't make a huge amount of sense to move filter code to viewModel, since it is only used here
+    var teamMembers = listOf(Database.TeamUserDisplay("", "Any", "", emptyList())) + viewModel.teamMembers
 
     var handoffLoad = viewModel.handoffLoadState
     val teamMemberLoad = viewModel.teamMemberLoadState
@@ -244,10 +244,10 @@ fun RecordsScreen(
     ) {
         LaunchedEffect(Unit) {
 //todo
-//viewModel.getTeamMembers()
-//            teamList.clear()
-//            teamList.add(userSelected)
-//            teamList += db.getTeamMembers()
+            //viewModel.getTeamMembers()
+//            teamMembers.clear()
+//            teamMembers.add(userSelected)
+//            teamMembers += db.getTeamMembers()
         }
 
         Dialog(onDismissRequest = onDismiss) {
@@ -559,8 +559,8 @@ fun RecordsScreen(
                                 expanded = userExpanded,
                                 onDismissRequest = { userExpanded = false }
                             ) {
-                                LazyColumn(modifier = Modifier.fillMaxSize()) {
-                                    items(teamMembers, key = { it.userID }) { option ->
+                                Column() {
+                                    teamMembers.forEach { option ->
                                         DropdownMenuItem(
                                             text = { Text(
                                                 option.firstName + " " + option.lastName,
@@ -1084,139 +1084,7 @@ fun RecordsScreen(
                         }
 
                         items(dayHandoffs, key = { it.handoffID!! }) { handoff ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 10.dp)
-                                    .clickable {
-                                        onHandoffClick(handoff)
-                                    },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Surface
-                                ),
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = Border
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp)
-                                ) {
-                                    Text(
-                                        text = handoff.title,
-                                        color = PrimaryText,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    Spacer(modifier = Modifier.height(6.dp))
-
-                                    Text(
-                                        text = run {
-                                            val parsedContent =
-                                                viewModel.db.separateContent(handoff.content ?: "")
-                                            """
-                                            |Issue Details: 
-                                            |${parsedContent.issue}
-                                            |
-                                            |Attempted Actions: 
-                                            |${parsedContent.action}
-                                            |
-                                            |Next Steps: 
-                                            |${parsedContent.next}
-                                        """.trimMargin()
-                                        },
-                                        color = MutedText,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = buildAnnotatedString {
-                                                append("Status: ")
-                                                withStyle(
-                                                    style = SpanStyle(
-                                                        color = when (handoff.status.toInt()) {
-                                                            0 -> Color(0xffFF5F15)
-                                                            1 -> Color.Yellow
-                                                            2 -> BluePrimary
-                                                            3 -> Color.Cyan
-                                                            4 -> Color.Green
-                                                            else -> BluePrimary
-                                                        }
-                                                    )
-                                                ) {
-                                                    append(viewModel.db.statOptions[handoff.status].toString())
-                                                }
-
-                                                append("  •  Priority: ")
-
-                                                withStyle(
-                                                    style = SpanStyle(
-                                                        color = when (handoff.priority.toInt()) {
-                                                            0 -> Color.Red
-                                                            1 -> Color(0xffFF5F15)
-                                                            2 -> Color.Yellow
-                                                            3 -> BluePrimary
-                                                            4 -> Color.Green
-                                                            else -> BluePrimary
-                                                        }
-                                                    )
-                                                ) {
-                                                    append(viewModel.db.prioOptions[handoff.priority].toString())
-                                                }
-                                            },
-                                            color = BluePrimary,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Row(
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text(
-                                            text = handoff.timestamp?.let { timestamp ->
-                                                timestamp
-                                                    .toJavaInstant()
-                                                    .atZone(ZoneId.systemDefault())
-                                                    .format(
-                                                        DateTimeFormatter.ofPattern(
-                                                            "M/d/yyyy • h:mm a"
-                                                        )
-                                                    )
-                                            } ?: "",
-                                            color = MutedText,
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        if (handoff.editTimestamp != null) {
-                                            Text(
-                                                text = """(${
-                                                    handoff.editTimestamp?.let { timestamp ->
-                                                        timestamp
-                                                            .toJavaInstant()
-                                                            .atZone(ZoneId.systemDefault())
-                                                            .format(
-                                                                DateTimeFormatter.ofPattern(
-                                                                    "M/d/yyyy • h:mm a"
-                                                                )
-                                                            )
-                                                    }
-                                                })""",
-                                                color = MutedText,
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                            HandoffCardFull(viewModel.db, handoff, onHandoffClick)
                         }
                     }
                 }
