@@ -15,6 +15,7 @@ import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import android.os.Parcelable
+import com.continuum.MainActivity
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.postgrest.query.filter.FilterOperator
@@ -36,7 +37,7 @@ import kotlin.time.Instant
 import kotlin.time.toDuration
 
 
-class Database {
+class Database (val session: MainActivity.UserSession) {
     val supabase = createSupabaseClient(
         supabaseUrl = "https://bbwivjungybfetfpnoyu.supabase.co",
         supabaseKey = "sb_publishable_ySkpmX-JfWWJ8mNzYR035A_avt2S9N_" // Public key. Safe to hard code I'm pretty sure. Make sure RLS is on in all tables though
@@ -61,10 +62,6 @@ class Database {
         3.toShort() to "Neutral",
         4.toShort() to "Low"
     )
-
-    var uid: String? = null
-    var activeTeam: Int? = 0
-    var userRole: Long? = 0L
 
     //Handoff Delimiters
     val START_ISSUE = "<ISSUE_DETAILS_DELIM>"
@@ -108,8 +105,7 @@ class Database {
     ) : Parcelable
     @Serializable
     data class NewTeamOutput(
-        @SerialName("team_id")
-        var teamID: Int? = null,
+        var team: Team? = null,
         var errorCode: String = ""
     )
 
@@ -327,7 +323,7 @@ class Database {
 
         // register user
         var errorMsg = ""
-        uid = try {
+        session.userID = try {
             supabase.auth.signUpWith(Email) {
                 email = inputEmail
                 password = inputPassword
@@ -399,7 +395,7 @@ class Database {
 
         if (errorMsg.isEmpty()) {
             // get userID
-            uid = supabase.auth.currentSessionOrNull()?.user?.id.toString()
+            session.userID = supabase.auth.currentSessionOrNull()?.user?.id.toString()
         }
         return errorMsg
     }
@@ -411,7 +407,7 @@ class Database {
 
         if (currentSession != null) {
             // User is already logged in, navigate straight to the Home Screen
-            uid = currentSession.user?.id.toString()
+            session.userID = currentSession.user?.id.toString()
             return true
         } else {
             // No cached user found, direct them to the Login Screen
@@ -428,9 +424,9 @@ class Database {
         }
 
         if (errorMsg.isEmpty()) {
-            uid = null
-            activeTeam = 0
-            userRole = 0L
+            session.userID = null
+            session.activeTeam = null
+            session.teamRole = 0L
         }
 
         return errorMsg
@@ -509,7 +505,7 @@ class Database {
                     }
                 ) {
                     filter {
-                        eq("team_id", activeTeam as Int)
+                        eq("team_id", session.activeTeam?.teamID!!)
                     }
                 }
                 error = ""
@@ -537,8 +533,8 @@ class Database {
                 //  add team to table, and add user handled by SQL trigger
                 val result = supabase.from("teams").insert(newTeam) {
                     select()
-                }.decodeSingle<NewTeamOutput>()
-                output.teamID = result.teamID
+                }.decodeSingle<Team>()
+                output.team = result
                 output.errorCode = ""
                 break
             } catch (e: Exception) {
@@ -553,26 +549,24 @@ class Database {
 
         try {
             // get teamID from teamCode
-            val teamIDResult = supabase.from("teams").select(columns = Columns.list("team_id")) {
+            val teamResult = supabase.from("teams").select(columns = Columns.list("team_id", "team_name", "team_code")) {
                 filter {
                     eq("team_code", teamCode)
                 }
             }.decodeSingleOrNull<Team>()
-            if (teamIDResult == null) {
+            if (teamResult == null) {
                 output.errorCode = "Invalid team code"
                 return output
             }
 
             val newUser = TeamUser(
-                teamIDResult.teamID ?: throw IllegalArgumentException("Invalid team code"),
-                uid,
+                teamResult.teamID,
+                session.userID,
                 roleID
             )
-            val result = supabase.from("team_members").insert(newUser) {
-                select()
-            }.decodeSingle<NewTeamOutput>()
+            supabase.from("team_members").insert(newUser) { }
 
-            output.teamID = result.teamID
+            output.team = teamResult
 
         } catch (e: io.github.jan.supabase.postgrest.exception.PostgrestRestException) {
 
@@ -605,7 +599,7 @@ class Database {
         try {
             val emailResult = supabase.postgrest.rpc(
                     function = "get_uid_by_email",
-                    parameters = Parameters(email.lowercase(), activeTeam ?: 0)
+                    parameters = Parameters(email.lowercase(), session.activeTeam?.teamID!!)
                 ).decodeSingleOrNull<userID>()
 
             if (emailResult == null) {
@@ -623,7 +617,7 @@ class Database {
         val userInTeam = supabase.from("team_members").select(columns = Columns.list("user_id")) {
             filter {
                 eq("user_id", user)
-                eq("team_id", activeTeam?: 0)
+                eq("team_id", session.activeTeam?.teamID!!)
             }
         }.decodeSingleOrNull<TeamUser>()
 
@@ -633,7 +627,7 @@ class Database {
 
         //add user to team
         val newUser = TeamUser(
-            activeTeam,
+            session.activeTeam?.teamID!!,
             user,
             0
         )
@@ -650,7 +644,7 @@ class Database {
         return result
     }
     suspend fun leaveTeam(): String {
-        if (userRole == 1L) {
+        if (session.teamRole == 1L) {
             var adminCount = 0
             getTeamMembers().forEach { member ->
                 if (member.teamData[0].roleID == 1L) {
@@ -664,25 +658,25 @@ class Database {
         try {
             supabase.from("team_members").delete {
                 filter {
-                    eq("user_id", uid as String)
-                    eq("team_id", activeTeam as Int)
+                    eq("user_id", session.userID!!)
+                    eq("team_id", session.activeTeam?.teamID!!)
                 }
             }
-            activeTeam = 0
+            session.activeTeam = null
             return ""
         } catch (e: Exception) {
             return "Error leaving team. Please try again"
         }
     }
     suspend fun leaveTeam(userID: String?): String {
-        if (userRole == 1L && userID == uid) {
+        if (session.teamRole == 1L && userID == session.userID) {
             return "ERROR: Cannot kick yourself"
         }
         try {
             supabase.from("team_members").delete {
                 filter {
-                    eq("user_id", userID as String)
-                    eq("team_id", activeTeam as Int)
+                    eq("user_id", userID!!)
+                    eq("team_id", session.activeTeam?.teamID!!)
                 }
             }
             return ""
@@ -693,10 +687,10 @@ class Database {
     suspend fun deleteTeam(): String {
         try { supabase.from("teams").delete {
                 filter {
-                    eq("team_id", activeTeam as Int)
+                    eq("team_id", session.activeTeam?.teamID!!)
                 }
             }
-            activeTeam = 0
+            session.activeTeam = null
             return ""
         } catch (e: Exception) {
             return "Error deleting team. Please try again"
@@ -709,7 +703,7 @@ class Database {
 
             val memberships = supabase.from("team_members").select(columns = Columns.list("team_id")) {
                 filter {
-                    eq("user_id", uid.toString())
+                    eq("user_id", session.userID!!)
                 }
             }.decodeList<Team>()
 
@@ -722,7 +716,7 @@ class Database {
                 memberships.forEach { membership ->
                     val team = supabase
                         .from("teams")
-                        .select(columns = Columns.list("team_id", "team_name")) {
+                        .select(columns = Columns.list("team_id", "team_name", "team_code")) {
                             filter {
                                 eq("team_id", membership.teamID as Int)
                             }
@@ -743,7 +737,7 @@ class Database {
         return try {
             val team = supabase.from("teams").select(columns = Columns.list("team_name", "team_code")) {
                 filter {
-                    eq("team_id", activeTeam as Int)
+                    eq("team_id", session.activeTeam?.teamID!!)
                 }
             }.decodeSingle<Team>()
             team
@@ -764,7 +758,7 @@ class Database {
                 }
             ) {
                 filter {
-                    eq("team_id", activeTeam as Int)
+                    eq("team_id", session.activeTeam?.teamID!!)
                 }
             }
             ""
@@ -774,20 +768,20 @@ class Database {
     }
     suspend fun getTeamRole(): Long {
         try {
-            userRole = supabase.from("team_members").select(columns = Columns.list("role_id")) {
+            session.teamRole = supabase.from("team_members").select(columns = Columns.list("role_id")) {
                 filter {
-                    eq("user_id", uid as String)
-                    eq("team_id", activeTeam as Int)
+                    eq("user_id", session.userID!!)
+                    eq("team_id", session.activeTeam?.teamID!!)
                 }
-            }.decodeSingle<TeamUser>().roleID
+            }.decodeSingle<TeamUser>().roleID!!
         }
         catch (e: Exception) {
             e.printStackTrace()
         }
-        return userRole ?: 0L
+        return session.teamRole
     }
     suspend fun reassignRole(userID: String?, roleID: Long = 0): String {
-        if (userRole == 1L) {
+        if (session.teamRole == 1L) {
             var adminCount = 0
             getTeamMembers().forEach { member ->
                 if (member.teamData[0].roleID == 1L) {
@@ -805,7 +799,7 @@ class Database {
                 }
             ) {
                 filter {
-                    eq("team_id", activeTeam as Int)
+                    eq("team_id", session.activeTeam?.teamID!!)
                     eq("user_id", userID as String)
                 }
             }
@@ -825,7 +819,7 @@ class Database {
 
             val members = supabase.from("users").select(columns = columns) {
                 filter {
-                    eq("team_members.team_id", activeTeam as Int)
+                    eq("team_members.team_id", session.activeTeam?.teamID!!)
                 }
                 order("l_name", Order.ASCENDING)
             }.decodeList<TeamUserDisplay>()
@@ -883,8 +877,8 @@ class Database {
 
         return try {
             val newHandoffObj = Handoff(
-                teamID = activeTeam,
-                userID = uid,
+                teamID = session.activeTeam?.teamID!!,
+                userID = session.userID,
                 title = title,
                 content = content,
                 status = status,
@@ -1014,8 +1008,8 @@ class Database {
 
     suspend fun getNotes(): List<Note> {
         return try {
-            val currentTeamID = activeTeam ?: return emptyList()
-            val currentUserID = uid ?: return emptyList()
+            val currentTeamID = session.activeTeam?.teamID ?: return emptyList()
+            val currentUserID = session.userID ?: return emptyList()
 
             supabase
                 .from("notes")
@@ -1036,8 +1030,8 @@ class Database {
         var errorMsg = ""
 
         try {
-            val currentUserID = uid ?: return "User not logged in"
-            val currentTeamID = activeTeam ?: return "No team selected"
+            val currentUserID = session.userID ?: return "User not logged in"
+            val currentTeamID = session.activeTeam?.teamID ?: return "No team selected"
 
             if (content.isBlank()) {
                 return "Note cannot be empty"
@@ -1097,7 +1091,7 @@ class Database {
         var errorMsg = ""
 
         try {
-            val currentUserID = uid ?: return "User not logged in"
+            val currentUserID = session.userID ?: return "User not logged in"
 
             if (content.isBlank()) {
                 return "Comment cannot be empty"
@@ -1141,14 +1135,14 @@ class Database {
     }
     suspend fun getHandoffs(): List<Handoff> {
         return try {
-            if (activeTeam == null) {
+            if (session.activeTeam == null) {
                 emptyList()
             } else {
                 supabase
                     .from("handoffs_most_recent")
                     .select {
                         filter {
-                            eq("team_id", activeTeam!!)
+                            eq("team_id", session.activeTeam?.teamID!!)
                             neq("status", 4)
                         }
                         order("sorted_timestamp", Order.DESCENDING)
@@ -1162,7 +1156,7 @@ class Database {
 
     suspend fun getAllTeamHandoffs(): List<Handoff> {
         return try {
-            val currentTeamID = activeTeam ?: return emptyList()
+            val currentTeamID = session.activeTeam?.teamID ?: return emptyList()
 
             supabase
                 .from("handoffs")
@@ -1345,14 +1339,14 @@ class Database {
         includeCompleted: Boolean = false
     ): List<Handoff> {
         return try {
-            if (activeTeam == null) {
+            if (session.activeTeam == null) {
                 emptyList()
             } else {
                 supabase
                     .from("handoffs_most_recent")
                     .select {
                         filter {
-                            eq("team_id", activeTeam!!)
+                            eq("team_id", session.activeTeam?.teamID!!)
 
                             if (status != (-1).toShort()) {
                                 eq("status", status)
@@ -1407,7 +1401,7 @@ class Database {
         var errorMsg = ""
 
         try {
-            val currentUserID = uid ?: return "User not logged in"
+            val currentUserID = session.userID ?: return "User not logged in"
 
             val acknowledgement = Acknowledgement(
                 handoffID = handoffID,
@@ -1427,7 +1421,7 @@ class Database {
     }
     suspend fun hasAcknowledgedHandoff(handoffID: Long): Boolean {
         return try {
-            val currentUserID = uid ?: return false
+            val currentUserID = session.userID ?: return false
 
             val acknowledgements = supabase
                 .from("Acknowledgements")

@@ -57,7 +57,7 @@ fun TrendsScreen(
     }
 
 
-    LaunchedEffect(db.activeTeam) {
+    LaunchedEffect(db.session.activeTeam) {
         loadTrends()
     }
 

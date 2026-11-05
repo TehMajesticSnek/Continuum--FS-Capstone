@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -89,12 +91,8 @@ fun TeamScreen(
     toTrends: () -> Unit,
 ) {
 
-    var team: Database.Team? by rememberSaveable {
-        mutableStateOf(null)
-    }
-    var members by rememberSaveable {
-        mutableStateOf<List<Database.TeamUserDisplay>>(emptyList())
-    }
+    var team = viewModel.session.activeTeam
+    var members = viewModel.teamMembers
 
     var selectedMember by remember { mutableStateOf<Database.TeamUserDisplay?>(null) }
 
@@ -115,26 +113,19 @@ fun TeamScreen(
     var showConfirmLeaveDialog by remember { mutableStateOf(false) }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
 
-    var teamLoadState by remember { mutableStateOf(true) }
+    var teamLoad = viewModel.teamLoadState
 
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        if (members.isEmpty()) {
-            teamLoadState = true
-            members = viewModel.db.getTeamMembers()
-        }
-        if (team == null) {
-            team = viewModel.db.getActiveTeam()
-            teamName = team?.teamName
-            teamCode = team?.teamCode
-        }
-        viewModel.db.getTeamRole() // TODO consider looking into Realtime stuff for live role updates. Same with handoff ownership and such
-        teamLoadState = false
+        viewModel.getTeamMembers()
+        teamName = viewModel.session.activeTeam!!.teamName
+        teamCode = viewModel.session.activeTeam!!.teamCode
+        // TODO consider looking into Realtime stuff for live role updates. Same with handoff ownership and such
     }
 
     Scaffold (
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().background(NavyBackground),
         bottomBar = {
             BottomAppBar(
                 containerColor = NavyBackground,
@@ -174,7 +165,6 @@ fun TeamScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(NavyBackground)
                 .statusBarsPadding()
                 .padding(
                     start = 20.dp,
@@ -220,7 +210,7 @@ fun TeamScreen(
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
-                if (viewModel.db.userRole == 1L) {
+                if (viewModel.session.teamRole == 1L) {
                     IconButton(onClick = { showAddUser = true }) {
                         Icon(
                             Icons.Default.PersonAddAlt1,
@@ -238,7 +228,7 @@ fun TeamScreen(
                         expanded = teamOptionsExpanded,
                         onDismissRequest = { teamOptionsExpanded = false }
                     ) {
-                        if (viewModel.db.userRole == 1L) {
+                        if (viewModel.session.teamRole == 1L) {
                             DropdownMenuItem(
                                 text = { Text("Change team name") },
                                 onClick = {
@@ -263,7 +253,7 @@ fun TeamScreen(
                             } // ensure there will be an admin if you are an admin and leave
                         )
 
-                        if (viewModel.db.userRole == 1L) {
+                        if (viewModel.session.teamRole == 1L) {
                             DropdownMenuItem(
                                 text = { Text("Delete Team", color = Color(0xffff0000)) },
                                 onClick = {
@@ -278,10 +268,6 @@ fun TeamScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             Button(
                 onClick = toTrends,
                 modifier = Modifier.fillMaxWidth()
@@ -291,7 +277,7 @@ fun TeamScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (viewModel.db.userRole == 1L) {
+            if (viewModel.session.teamRole == 1L) {
                 Button(
                     onClick = toSupervisorDashboard,
                     modifier = Modifier.fillMaxWidth()
@@ -312,40 +298,42 @@ fun TeamScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
             ) {
                 if (members.isEmpty()) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(180.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Surface
-                        ),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = Border
-                        )
-                    ) {
-                        Column(
+                    item {
+                        Card(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "Error fetching team members",
-                                color = PrimaryText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
+                                .fillMaxWidth()
+                                .height(100.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Surface
+                            ),
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = Border
                             )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Fetching team members",
+                                    color = PrimaryText,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 } else {
-                    members.forEach { member ->
+                    items(members, key = {it.userID}) { member ->
                         var userOptionsExpanded by remember { mutableStateOf(false) }
                         Card(
                             modifier = Modifier
@@ -384,7 +372,7 @@ fun TeamScreen(
                                     )
 
                                 }
-                                if (viewModel.db.userRole == 1L) {
+                                if (viewModel.session.teamRole == 1L) {
                                     Box(Modifier.align(Alignment.CenterVertically)) {
                                         IconButton(onClick = { userOptionsExpanded = !userOptionsExpanded }) {
                                             Icon(
@@ -405,7 +393,7 @@ fun TeamScreen(
                                                 }
                                             )
 
-                                            if (member.userID != viewModel.db.uid) {
+                                            if (member.userID != viewModel.session.userID) {
                                                 DropdownMenuItem(
                                                     text = {
                                                         Text(
@@ -428,27 +416,36 @@ fun TeamScreen(
                         }
                     }
                 }
-                if (teamLoadState) {
-                    Spacer(Modifier.height(10.dp))
-
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-
-                        ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .align(Alignment.Center),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            strokeWidth = 4.dp
-                        )
+                if (teamLoad) {
+                    item {
+                        Spacer(Modifier.height(16.dp))
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+
+                            ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .align(Alignment.Center),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                strokeWidth = 4.dp
+                            )
+                        }
+                    }
+
+                    item {
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
                 }
-                Spacer(modifier = Modifier.height(80.dp))
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
             }
         }
     }
@@ -473,7 +470,7 @@ fun TeamScreen(
             }
         )
     }
-    if (showAddUser) { // TODO
+    if (showAddUser) {
         AddUserDialog(
             db = viewModel.db,
             onDismissAdd = { showAddUser = false },
@@ -481,7 +478,8 @@ fun TeamScreen(
                 showAddUser = false
                 coroutineScope.launch {
                     members = viewModel.db.getTeamMembers()
-                }}
+                }
+            }
         )
     }
 
@@ -492,7 +490,7 @@ fun TeamScreen(
             onDismissLeave = { showConfirmLeaveDialog = false},
             onSuccessLeave = {
                 showConfirmLeaveDialog = false
-                viewModel.selectTeam(0)
+                viewModel.selectTeam(null)
                 toHome()
             }
         )
@@ -522,7 +520,7 @@ fun TeamScreen(
             onDismissDelete = { showConfirmDeleteDialog = false},
             onSuccessDelete = {
                 showConfirmDeleteDialog = false
-                viewModel.selectTeam(0)
+                viewModel.selectTeam(null)
                 toHome()
             }
         )
@@ -538,7 +536,7 @@ fun TeamScreen(
             onSuccessRole = {
                 coroutineScope.launch {
                     val freshMembers = viewModel.db.getTeamMembers()
-                    viewModel.db.userRole = viewModel.db.getTeamRole()
+                    viewModel.session.teamRole = viewModel.db.getTeamRole()
                     members = freshMembers.map { it.copy() }
                 }
                 showRoleDialog = false
@@ -747,7 +745,6 @@ fun CodeDialog(teamCode: String?, db: Database, onDismissCode: () -> Unit, onSuc
 }
 @Composable
 fun AddUserDialog(db: Database, onDismissAdd: () -> Unit, onSuccessAdd: () -> Unit) {
-    //TODO("Not yet implemented")
     var userEmail by remember { mutableStateOf("") }
 
     val coroutineScope = rememberCoroutineScope()
