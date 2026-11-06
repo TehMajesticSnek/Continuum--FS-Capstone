@@ -89,6 +89,7 @@ import com.k2fsa.sherpa.onnx.OfflineNemoEncDecCtcModelConfig
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.core.content.FileProvider
+import com.continuum.ui.theme.CyanAccent
 import java.io.File
 
 @Composable
@@ -874,7 +875,7 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
 
         if (showGenerateButton) {
             Spacer(modifier = Modifier.height(12.dp))
-            Button(
+            OutlinedButton(
                 onClick = {
                     coroutineScope.launch {
                         isGenerating = true
@@ -899,7 +900,7 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                         } else {
                             showError(
                                 context,
-                                "Unable to generate AI draft. Please try again."
+                                "Unable to complete AI draft. Please try again."
                             )
                         }
 
@@ -910,10 +911,12 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
-                shape = RoundedCornerShape(8.dp)
+                border = BorderStroke(1.dp, color = if (issueDetails.isNotBlank()) CyanAccent else Border),
+                shape = RoundedCornerShape(8.dp),
             ) {
                 Text(
-                    text = if (isGenerating) "Generating..." else "Generate AI Draft"
+                    text = if (isGenerating) "Structuring..." else "Structure with AI",
+                    color = if (issueDetails.isNotBlank()) CyanAccent else MutedText
                 )
             }
         }
