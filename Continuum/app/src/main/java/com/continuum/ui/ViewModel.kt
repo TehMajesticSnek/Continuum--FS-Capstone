@@ -28,20 +28,18 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
             initialValue = null
         )
     private var selectTeamJob: Job? = null
-    var teamRole by mutableIntStateOf(0)
 
-    fun selectTeam(team: Database.Team?) {
+    fun selectTeam(team: Database.Team?) { // TODO redo so that switching pages too fast doesn't result in blank fields
         selectTeamJob = viewModelScope.launch {
             selectingTeam = true
 
             repository.saveSelectedTeam(team)
             session.activeTeam = team
+            getTeamRole()
 
             selectingTeam = false
         }
     }
-
-
 
     var handoffs by mutableStateOf<List<Database.Handoff>>(emptyList())
         private set
@@ -106,6 +104,15 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
 
             teamLoadState = false
         }
+    }
+
+    fun getTeamRole() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                session.teamRole = db.getTeamRole()
+            }
+        }
+
     }
 
     fun getNotes() {

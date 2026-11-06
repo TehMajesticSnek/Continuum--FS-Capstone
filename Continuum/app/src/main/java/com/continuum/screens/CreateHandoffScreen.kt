@@ -61,6 +61,7 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.ArrowDropUp
@@ -686,7 +687,10 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                 Box (Modifier.align(Alignment.BottomStart)) {
                     DropdownMenu(
                         expanded = statExpanded,
-                        onDismissRequest = { statExpanded = false }
+                        onDismissRequest = { statExpanded = false },
+                        shape = RoundedCornerShape(10.dp),
+                        containerColor = NavyBackground,
+                        border = BorderStroke(1.dp, Border)
                     ) {
                         viewModel.db.statOptions.forEach { option ->
                             DropdownMenuItem(
@@ -769,7 +773,10 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                 Box (Modifier.align(Alignment.BottomEnd)) {
                     DropdownMenu(
                         expanded = prioExpanded,
-                        onDismissRequest = { prioExpanded = false }
+                        onDismissRequest = { prioExpanded = false },
+                        shape = RoundedCornerShape(10.dp),
+                        containerColor = NavyBackground,
+                        border = BorderStroke(1.dp, Border)
                     ) {
                         viewModel.db.prioOptions.forEach { option ->
                             DropdownMenuItem(

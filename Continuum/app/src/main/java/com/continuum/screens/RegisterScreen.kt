@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -368,7 +369,7 @@ fun RegisterScreen(
         }
         Text(signUpString)
     }
-    Box (modifier = Modifier.padding(top = 36.dp, start = 12.dp)){
+    Box (modifier = Modifier.statusBarsPadding().padding(top = 12.dp, start = 20.dp)){
         IconButton(
             onClick = { toLogin() },
             modifier = Modifier

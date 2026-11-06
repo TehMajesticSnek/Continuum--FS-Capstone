@@ -144,7 +144,7 @@ fun RecordsScreen(
         4.toShort() to "Low"
     )
     var prioExpanded by remember { mutableStateOf(false) }
-    var prioSelected by remember { mutableStateOf(statOptions.entries.find { it.key == (-1).toShort() }) }
+    var prioSelected by remember { mutableStateOf(prioOptions.entries.find { it.key == (-1).toShort() }) }
     val prioInteractionSource = remember { MutableInteractionSource() }
 
     var userExpanded by remember { mutableStateOf(false) }
@@ -152,7 +152,7 @@ fun RecordsScreen(
     val userInteractionSource = remember { MutableInteractionSource() }
 
     var handoffs by remember { mutableStateOf(viewModel.handoffs) }  // TODO Currently set up to reassign. Didn't make a huge amount of sense to move filter code to viewModel, since it is only used here
-    var teamMembers = listOf(Database.TeamUserDisplay("", "Any", "", emptyList())) + viewModel.teamMembers
+    val teamMembers = listOf(Database.TeamUserDisplay("", "Any", "", emptyList())) + viewModel.teamMembers
 
     var handoffLoad = viewModel.handoffLoadState
     val teamMemberLoad = viewModel.teamMemberLoadState
@@ -243,7 +243,6 @@ fun RecordsScreen(
         onDismiss: () -> Unit,
     ) {
         LaunchedEffect(Unit) {
-//todo
             //viewModel.getTeamMembers()
 //            teamMembers.clear()
 //            teamMembers.add(userSelected)
@@ -321,6 +320,7 @@ fun RecordsScreen(
                                 modifier = Modifier.clickable { statExpanded = true },
                                 readOnly = true,
                                 singleLine = true,
+                                interactionSource = statInteractionSource,
                                 trailingIcon = {
                                     if (!statExpanded) {
                                         Icon(
@@ -368,7 +368,10 @@ fun RecordsScreen(
                             Box (Modifier.align(Alignment.BottomStart)) {
                                 DropdownMenu(
                                     expanded = statExpanded,
-                                    onDismissRequest = { statExpanded = false }
+                                    onDismissRequest = { statExpanded = false },
+                                    shape = RoundedCornerShape(10.dp),
+                                    containerColor = NavyBackground,
+                                    border = BorderStroke(1.dp, Border)
                                 ) {
                                     statOptions.forEach { option ->
                                         DropdownMenuItem(
@@ -473,7 +476,10 @@ fun RecordsScreen(
                             Box(Modifier.align(Alignment.BottomEnd)) {
                                 DropdownMenu(
                                     expanded = prioExpanded,
-                                    onDismissRequest = { prioExpanded = false }
+                                    onDismissRequest = { prioExpanded = false },
+                                    shape = RoundedCornerShape(10.dp),
+                                    containerColor = NavyBackground,
+                                    border = BorderStroke(1.dp, Border)
                                 ) {
                                     prioOptions.forEach { option ->
                                         DropdownMenuItem(
@@ -557,7 +563,10 @@ fun RecordsScreen(
                         Box(Modifier.align(Alignment.BottomEnd)) {
                             DropdownMenu(
                                 expanded = userExpanded,
-                                onDismissRequest = { userExpanded = false }
+                                onDismissRequest = { userExpanded = false },
+                                shape = RoundedCornerShape(10.dp),
+                                containerColor = NavyBackground,
+                                border = BorderStroke(1.dp, Border)
                             ) {
                                 Column() {
                                     teamMembers.forEach { option ->
@@ -636,7 +645,10 @@ fun RecordsScreen(
                         Box(Modifier.align(Alignment.BottomEnd)) {
                             DropdownMenu(
                                 expanded = shiftExpanded,
-                                onDismissRequest = { shiftExpanded = false }
+                                onDismissRequest = { shiftExpanded = false },
+                                shape = RoundedCornerShape(10.dp),
+                                containerColor = NavyBackground,
+                                border = BorderStroke(1.dp, Border)
                             ) {
                                 shiftOptions.forEach { option ->
                                     DropdownMenuItem(
@@ -759,7 +771,10 @@ fun RecordsScreen(
                             Box(Modifier.align(Alignment.BottomEnd)) {
                                 DropdownMenu(
                                     expanded = ageExpanded,
-                                    onDismissRequest = { ageExpanded = false }
+                                    onDismissRequest = { ageExpanded = false },
+                                    shape = RoundedCornerShape(10.dp),
+                                    containerColor = NavyBackground,
+                                    border = BorderStroke(1.dp, Border)
                                 ) {
                                     ageOptions.forEach { option ->
                                         DropdownMenuItem(

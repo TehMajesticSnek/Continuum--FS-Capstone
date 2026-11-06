@@ -2,7 +2,6 @@ package com.continuum.screens
 
 import android.app.AlertDialog
 import android.content.Context
-import android.provider.ContactsContract
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.InfiniteRepeatableSpec
 import androidx.compose.animation.core.LinearEasing
@@ -87,7 +86,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.continuum.R
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
@@ -164,6 +162,7 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         viewModel.getHandoffs()
         viewModel.getTeams()
+        viewModel.getTeamRole()
     }
 
     var teamSearchQuery by rememberSaveable {
@@ -352,7 +351,7 @@ fun HomeScreen(
                     db = viewModel.db,
                     greeting = greeting,
                     firstName = firstName,
-                    selectedTeam = selectedTeam!!,
+                    selectedTeam = selectedTeam,
                     awaitNoteNavigate = viewModel::waitSelectingTeams,
                     toHandoff = {
                         toNewHandoff()
@@ -1176,7 +1175,7 @@ private fun UpperBlock(
     db: Database,
     greeting: String,
     firstName: String,
-    selectedTeam: Database.Team,
+    selectedTeam: Database.Team?,
     awaitNoteNavigate: (() -> Unit) -> Unit,
     toHandoff: () -> Unit,
     toHandoffFromNote: (String) -> Unit
@@ -1204,7 +1203,7 @@ private fun UpperBlock(
     Spacer(modifier = Modifier.height(10.dp))
 
     Text(
-        text = "Team: ${selectedTeam.teamName ?: "No Team Selected"}",
+        text = "Team: ${selectedTeam?.teamName ?: "No Team Selected"}",
         color = BluePrimary,
         style = MaterialTheme.typography.bodySmall,
         fontWeight = FontWeight.Medium
@@ -1979,7 +1978,7 @@ fun HandoffCardFull(
                                 }
                             )
                         ) {
-                            append("$db.statOptions[handoff.status]")
+                            append("${db.statOptions[handoff.status]}")
                         }
 
                         append("  •  Priority: ")
@@ -1996,7 +1995,7 @@ fun HandoffCardFull(
                                 }
                             )
                         ) {
-                            append("$db.prioOptions[handoff.priority]")
+                            append("${db.prioOptions[handoff.priority]}")
                         }
                     },
                     color = BluePrimary,

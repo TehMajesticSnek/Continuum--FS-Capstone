@@ -226,7 +226,10 @@ fun TeamScreen(
                     }
                     DropdownMenu(
                         expanded = teamOptionsExpanded,
-                        onDismissRequest = { teamOptionsExpanded = false }
+                        onDismissRequest = { teamOptionsExpanded = false },
+                        shape = RoundedCornerShape(10.dp),
+                        containerColor = NavyBackground,
+                        border = BorderStroke(1.dp, Border)
                     ) {
                         if (viewModel.session.teamRole == 1L) {
                             DropdownMenuItem(
@@ -381,7 +384,10 @@ fun TeamScreen(
                                         }
                                         DropdownMenu(
                                             expanded = userOptionsExpanded,
-                                            onDismissRequest = { userOptionsExpanded = false }
+                                            onDismissRequest = { userOptionsExpanded = false },
+                                            shape = RoundedCornerShape(10.dp),
+                                            containerColor = NavyBackground,
+                                            border = BorderStroke(1.dp, Border)
                                         ) {
 
                                             DropdownMenuItem(
@@ -1187,7 +1193,10 @@ fun RoleDialog(user: Database.TeamUserDisplay?, db: Database, onDismissRole: () 
                     Box(modifier = Modifier.align(Alignment.BottomEnd)) {
                         DropdownMenu(
                             expanded = roleExpanded,
-                            onDismissRequest = { roleExpanded = false }
+                            onDismissRequest = { roleExpanded = false },
+                            shape = RoundedCornerShape(10.dp),
+                            containerColor = NavyBackground,
+                            border = BorderStroke(1.dp, Border)
                         ) {
 
                             DropdownMenuItem(

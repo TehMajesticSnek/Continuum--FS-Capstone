@@ -245,7 +245,10 @@ fun HandoffDetailsScreen(
                     }
                     DropdownMenu(
                         expanded = optionsMenuExpanded,
-                        onDismissRequest = { optionsMenuExpanded = false }
+                        onDismissRequest = { optionsMenuExpanded = false },
+                        shape = RoundedCornerShape(10.dp),
+                        containerColor = NavyBackground,
+                        border = BorderStroke(1.dp, Border)
                     ) {
 
                         DropdownMenuItem(
@@ -398,7 +401,10 @@ fun HandoffDetailsScreen(
                                     expanded = statusMenuExpanded,
                                     onDismissRequest = {
                                         statusMenuExpanded = false
-                                    }
+                                    },
+                                    shape = RoundedCornerShape(10.dp),
+                                    containerColor = NavyBackground,
+                                    border = BorderStroke(1.dp, Border)
                                 ) {
                                     viewModel.db.statOptions
                                         .forEach { (statusValue, statusName) -> DropdownMenuItem(
@@ -1079,7 +1085,10 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
                     Box(modifier = Modifier.align(Alignment.BottomEnd)) {
                         DropdownMenu(
                             expanded = ownerExpanded,
-                            onDismissRequest = { ownerExpanded = false }
+                            onDismissRequest = { ownerExpanded = false },
+                            shape = RoundedCornerShape(10.dp),
+                            containerColor = NavyBackground,
+                            border = BorderStroke(1.dp, Border)
                         ) {
 
                         teamList.forEach { teamMember ->
