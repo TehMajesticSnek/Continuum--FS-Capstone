@@ -151,7 +151,7 @@ fun RecordsScreen(
     var userSelected by remember { mutableStateOf(Database.TeamUserDisplay("", "Any", "", emptyList())) }
     val userInteractionSource = remember { MutableInteractionSource() }
 
-    var handoffs by remember { mutableStateOf(viewModel.handoffs) }  // TODO Currently set up to reassign. Didn't make a huge amount of sense to move filter code to viewModel, since it is only used here
+    var handoffs by remember { mutableStateOf<List<Database.Handoff>>(emptyList()) }  // TODO Currently set up to reassign. Didn't make a huge amount of sense to move filter code to viewModel, since it is only used here
     val teamMembers = listOf(Database.TeamUserDisplay("", "Any", "", emptyList())) + viewModel.teamMembers
 
     var handoffLoad = viewModel.handoffLoadState
@@ -181,6 +181,15 @@ fun RecordsScreen(
 
     var showComplete by remember { mutableStateOf(false) }
     val showCompleteInteractionSource = remember { MutableInteractionSource() }
+
+    LaunchedEffect(Unit) {
+        viewModel.getHandoffs()
+        viewModel.getTeamMembers()
+    }
+
+    LaunchedEffect(viewModel.handoffs) {
+        handoffs = viewModel.handoffs
+    }
 
     fun calculateAge(age: Int, timespan: Short): Int {
         var age = age
@@ -878,12 +887,6 @@ fun RecordsScreen(
         }
     }
 
-
-    LaunchedEffect(Unit) {
-        viewModel.getHandoffs()
-        viewModel.getTeamMembers()
-    }
-
     Scaffold (
         modifier = modifier.fillMaxSize().background(NavyBackground),
         bottomBar = {
@@ -1034,7 +1037,6 @@ fun RecordsScreen(
             Spacer(modifier = Modifier.height(12.dp))
 
             LazyColumn(
-                //modifier = Modifier.imePadding().verticalScroll(rememberScrollState()), todo check this
                 modifier = Modifier.fillMaxSize()
             ) {
                 if (handoffs.isEmpty() && !handoffLoad) {

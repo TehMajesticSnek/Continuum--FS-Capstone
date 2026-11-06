@@ -23,6 +23,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
+import androidx.compose.runtime.collectAsState
 
 class MainActivity : ComponentActivity() {
     class UserSession {
@@ -54,12 +55,8 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 if (viewModel.db.isLoggedIn()) {
                     startPage = Home
-
-                    while (viewModel.selectedTeam.value == null) {
-                        delay(5.milliseconds)
-                    }
                 }
-                session.activeTeam = viewModel.selectedTeam.value
+
                 isCheckingAuth = false
             }
 
@@ -67,7 +64,8 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (!isCheckingAuth) {
+                    if (!isCheckingAuth && userData.canStart) {
+                        session.activeTeam = viewModel.selectedTeam.collectAsState().value
                         Navigate(viewModel = viewModel, startPage = startPage)
                     }
                 }

@@ -59,6 +59,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
 
     var teams by mutableStateOf<List<Database.Team>>(emptyList())
         private set
+    val teamsIsEmpty by derivedStateOf { !teamLoadState && teams.isEmpty() }
 
     var notes by mutableStateOf<List<Database.Note>>(emptyList())
         private set
@@ -66,16 +67,16 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
     var teamMembers by mutableStateOf<List<Database.TeamUserDisplay>>(emptyList())
         private set
 
-    var handoffLoadState by mutableStateOf(false)
+    var handoffLoadState by mutableStateOf(true)
         private set
-    var teamLoadState by mutableStateOf(false)
+    var teamLoadState by mutableStateOf(true)
         private set
-    var teamMemberLoadState by mutableStateOf(false)
-    var selectingTeam by mutableStateOf(false)
+    var teamMemberLoadState by mutableStateOf(true)
+    var selectingTeam by mutableStateOf(true)
         private set
 
     fun getHandoffs() {
-        if (handoffLoadState) return
+        //if (handoffLoadState) return
 
         viewModelScope.launch {
             handoffLoadState = true
@@ -91,7 +92,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
     }
 
     fun getTeams() {
-        if (teamLoadState) return
+        //if (teamLoadState) return
 
         viewModelScope.launch {
             teamLoadState = true
@@ -127,7 +128,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
     }
 
     fun getTeamMembers() {
-        if (teamMemberLoadState) return
+        //if (teamMemberLoadState) return
 
         viewModelScope.launch {
             teamMemberLoadState = true
