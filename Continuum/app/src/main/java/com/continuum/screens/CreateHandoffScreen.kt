@@ -1204,8 +1204,6 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                             )
                         }
 
-
-
                         if (result.error.isEmpty()) { // if there isn't an error
                             val handoffID = result.handoff?.handoffID
 

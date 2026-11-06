@@ -185,6 +185,7 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
                 },
                 onSubmitClick = { newHandoff ->
                     selectedHandoff = newHandoff
+                    viewModel.getHandoffs()
                     navController.popBackStack()
                 },
                 editHandoff = selectedHandoff,
