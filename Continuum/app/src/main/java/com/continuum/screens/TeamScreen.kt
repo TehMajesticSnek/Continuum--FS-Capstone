@@ -101,10 +101,10 @@ fun TeamScreen(
     var showRoleDialog by remember { mutableStateOf(false) }
 
     var showNameDialog by remember { mutableStateOf(false) }
-    var teamName: String? by remember { mutableStateOf("") }
+    var teamName: String? by remember { mutableStateOf(viewModel.session.activeTeam!!.teamName) }
 
     var showCodeDialog by remember { mutableStateOf(false) }
-    var teamCode: String? by remember { mutableStateOf("") }
+    var teamCode: String? by remember { mutableStateOf(viewModel.session.activeTeam!!.teamCode) }
 
     var showAddUser by remember { mutableStateOf(false) }
 
@@ -118,9 +118,8 @@ fun TeamScreen(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        viewModel.getTeamMembers()
-        teamName = viewModel.session.activeTeam!!.teamName
-        teamCode = viewModel.session.activeTeam!!.teamCode
+        if (members.isEmpty()) viewModel.getTeamMembers()
+
         // TODO consider looking into Realtime stuff for live role updates. Same with handoff ownership and such
     }
 

@@ -183,8 +183,8 @@ fun RecordsScreen(
     val showCompleteInteractionSource = remember { MutableInteractionSource() }
 
     LaunchedEffect(Unit) {
-        viewModel.getHandoffs()
-        viewModel.getTeamMembers()
+        if (viewModel.handoffs.isEmpty()) viewModel.getHandoffs()
+        if (teamMembers.size == 1) viewModel.getTeamMembers()
     }
 
     LaunchedEffect(viewModel.handoffs) {
