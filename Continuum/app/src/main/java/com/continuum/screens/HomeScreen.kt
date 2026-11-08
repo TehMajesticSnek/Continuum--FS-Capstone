@@ -108,6 +108,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import kotlin.math.abs
 import kotlin.time.toJavaInstant
+import androidx.compose.runtime.collectAsState
 
 suspend fun showError(context: Context, error: String) {
     withContext(Dispatchers.Main) {
@@ -158,13 +159,13 @@ fun HomeScreen(
     val handoffLoad = viewModel.handoffLoadState
     val teamLoad = viewModel.teamLoadState
 
-    val selectedTeam = viewModel.session.activeTeam
+    val selectedTeam = viewModel.selectedTeam.collectAsState().value
 
-    var pulseMenuButton by remember { mutableStateOf(false) } // TODO Make sure this still activates when it should
+    val pulseMenuButton = viewModel.teamsIsEmpty
 
     LaunchedEffect(Unit) {
-        viewModel.getHandoffs()
-        viewModel.getTeams()
+        if (handoffs.isEmpty()) viewModel.getHandoffs()
+        if (teams.isEmpty()) viewModel.getTeams()
         viewModel.getTeamRole()
     }
 
