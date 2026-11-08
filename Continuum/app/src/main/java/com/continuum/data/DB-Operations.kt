@@ -1083,6 +1083,37 @@ class Database (val session: MainActivity.UserSession) {
         return errorMsg
     }
 
+    suspend fun deleteNote(noteID: Long): String {
+        val currentUserID = session.userID
+            ?: return "User not logged in"
+
+        val currentTeamID = session.activeTeam?.teamID
+            ?: return "No team selected"
+
+        return try {
+            val deletedNotes = supabase
+                .from("notes")
+                .delete {
+                    select()
+                    filter {
+                        eq("note_id", noteID)
+                        eq("user_id", currentUserID)
+                        eq("team_id", currentTeamID)
+                    }
+                }
+                .decodeList<Note>()
+
+            if (deletedNotes.isEmpty()) {
+                "Note could not be deleted. Please try again."
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "There was an issue deleting this note. Please try again."
+        }
+    }
+
     suspend fun addComment(
         handoffID: Long,
         content: String,

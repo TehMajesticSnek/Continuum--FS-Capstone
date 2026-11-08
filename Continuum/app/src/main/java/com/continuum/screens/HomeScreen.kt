@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +53,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -95,6 +97,7 @@ import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
+import androidx.compose.material.icons.filled.Description
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -1170,6 +1173,7 @@ fun ConfirmSignOut(
         }
     }
 }
+
 @Composable
 private fun UpperBlock(
     db: Database,
@@ -1183,8 +1187,22 @@ private fun UpperBlock(
     var showQuickNoteDialog by remember { mutableStateOf(false) }
     var showSavedNotesDialog by remember { mutableStateOf(false) }
     var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
+
     val activeTeam = db.session.activeTeam
 
+
+    var savedNoteCount by remember { mutableStateOf(0) }
+    var notesRefreshKey by remember { mutableStateOf(0) }
+
+    LaunchedEffect(activeTeam?.teamID, notesRefreshKey) {
+        savedNoteCount = if (activeTeam != null) {
+            db.getNotes().size
+        } else {
+            0
+        }
+    }
+
+    // Greeting
     Text(
         text = "$greeting, $firstName!",
         color = PrimaryText,
@@ -1211,73 +1229,128 @@ private fun UpperBlock(
 
     Spacer(modifier = Modifier.height(18.dp))
 
-    OutlinedButton(
-        onClick = {
-            awaitNoteNavigate {
-                showQuickNoteDialog = true
-            }
-        },
-        enabled = (activeTeam != null),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(6.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (activeTeam != null) BluePrimary else Border
+
+    // Quick Notes section
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF172238)
         ),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = BluePrimary,
-            disabledContentColor = MutedText
-        )
+        border = BorderStroke(1.dp, Border)
     ) {
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = "Quick Note",
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Quick Notes",
+                        color = PrimaryText,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
-            )
+                    Spacer(modifier = Modifier.height(3.dp))
 
-        Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Capture something to follow up on",
+                        color = MutedText,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
-        Text(
-            text = "Quick Note",
-            fontWeight = FontWeight.SemiBold
-        )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = {
+                        awaitNoteNavigate {
+                            showQuickNoteDialog = true
+                        }
+                    },
+                    enabled = activeTeam != null,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BluePrimary,
+                        contentColor = PrimaryText
+                    ),
+                    contentPadding = PaddingValues(
+                        horizontal = 12.dp,
+                        vertical = 6.dp
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("New")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            HorizontalDivider(color = Color(0xFF34435D))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = activeTeam != null) {
+                        awaitNoteNavigate {
+                            showSavedNotesDialog = true
+                        }
+                    }
+                    .padding(vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Description,
+                    contentDescription = null,
+                    tint = MutedText,
+                    modifier = Modifier.size(19.dp)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Text(
+                    text = "View saved notes",
+                    color = PrimaryText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Text(
+                    text = "$savedNoteCount ${if (savedNoteCount == 1) "note" else "notes"}",
+                    color = MutedText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Text(
+                    text = "›",
+                    color = MutedText,
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+        }
     }
 
-    Spacer(modifier = Modifier.height(10.dp))
+    Spacer(modifier = Modifier.height(12.dp))
 
-    OutlinedButton(
-        onClick = {
-            awaitNoteNavigate {
-                showSavedNotesDialog = true
-            }
-        },
-        enabled = (activeTeam != null),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(6.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (activeTeam != null) BluePrimary else Border
-        ),
-        colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = BluePrimary,
-            disabledContentColor = MutedText
-        )
-    ) {
-        Text(
-            text = "Saved Notes",
-            fontWeight = FontWeight.SemiBold
-        )
-    }
 
-    Spacer(modifier = Modifier.height(10.dp))
 
+
+    // New Handoff button
     Button(
-        enabled = (db.session.activeTeam != null),
-        onClick = { toHandoff() },
+        enabled = activeTeam != null,
+        onClick = toHandoff,
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp),
@@ -1292,13 +1365,22 @@ private fun UpperBlock(
             fontWeight = FontWeight.SemiBold
         )
     }
+
+    // Create note dialog
     if (showQuickNoteDialog) {
         QuickNoteDialog(
             db = db,
-            onDismiss = { showQuickNoteDialog = false },
-            onSuccess = { showQuickNoteDialog = false }
+            onDismiss = {
+                showQuickNoteDialog = false
+            },
+            onSuccess = {
+                showQuickNoteDialog = false
+                notesRefreshKey++
+            }
         )
     }
+
+    // Saved notes dialog
     if (showSavedNotesDialog) {
         SavedNotesDialog(
             db = db,
@@ -1311,7 +1393,10 @@ private fun UpperBlock(
             }
         )
     }
-    selectedNote?.let { note: Database.Note ->
+
+
+    // Edit existing note
+    selectedNote?.let { note ->
         EditNoteDialog(
             db = db,
             note = note,
@@ -1320,14 +1405,18 @@ private fun UpperBlock(
             },
             onSuccess = {
                 selectedNote = null
+                notesRefreshKey++
             },
-            onCreateHandoff = {
-                toHandoffFromNote(note.content)
+            onCreateHandoff = { content ->
                 selectedNote = null
+                toHandoffFromNote(content)
             }
         )
     }
+
 }
+
+
 
 @Composable
 fun QuickNoteDialog(
@@ -1336,21 +1425,26 @@ fun QuickNoteDialog(
     onSuccess: () -> Unit
 ) {
     var noteContent by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .size(width = 320.dp, height = 320.dp)
-                .background(
-                    MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(20.dp)
+    Dialog(onDismissRequest = {
+        if (!isSaving) onDismiss()
+    }) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF101827)
+            ),
+            border = BorderStroke(1.dp, Border)
         ) {
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
             ) {
                 Text(
                     text = "Quick Note",
@@ -1359,15 +1453,26 @@ fun QuickNoteDialog(
                     fontWeight = FontWeight.Bold
                 )
 
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Capture something to follow up on later",
+                    color = MutedText,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = noteContent,
                     onValueChange = { noteContent = it },
-                    placeholder = { Text("Enter note...") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .height(130.dp),
+                    enabled = !isSaving,
+                    placeholder = {
+                        Text("Enter note...")
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Surface,
                         unfocusedContainerColor = Surface,
@@ -1386,44 +1491,60 @@ fun QuickNoteDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(
-                        onClick = onDismiss
+                        onClick = onDismiss,
+                        enabled = !isSaving
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = MutedText)
                     }
 
                     Button(
                         onClick = {
-                            coroutineScope.launch(Dispatchers.IO) {
-                                val response = db.saveNote(noteContent)
+                            isSaving = true
 
-                                if (response.isEmpty()) {
-
-
-                                    withContext(Dispatchers.Main) {
-                                        onSuccess()
+                            coroutineScope.launch {
+                                try {
+                                    val response = withContext(Dispatchers.IO) {
+                                        db.saveNote(noteContent)
                                     }
-                                } else {
-                                    showError(context, response)
+
+                                    if (response.isEmpty()) {
+                                        onSuccess()
+                                    } else {
+                                        isSaving = false
+                                        showError(context, response)
+                                    }
+                                } catch (e: Exception) {
+                                    isSaving = false
+                                    showError(
+                                        context,
+                                        e.message ?: "Unable to save note."
+                                    )
                                 }
                             }
                         },
-                        enabled = noteContent.isNotBlank(),
+                        enabled = noteContent.isNotBlank() && !isSaving,
+                        shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = BluePrimary,
                             contentColor = PrimaryText
-                        ),
-                        shape = RoundedCornerShape(6.dp)
+                        )
                     ) {
-                        Text("Save")
+                        Text(
+                            text = if (isSaving) "Saving..." else "Save",
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
         }
     }
 }
+
+
 
 @Composable
 fun SavedNotesDialog(
@@ -1435,83 +1556,120 @@ fun SavedNotesDialog(
         mutableStateOf<List<Database.Note>>(emptyList())
     }
 
-    LaunchedEffect(Unit) { //todo
+    LaunchedEffect(Unit) {
         notes = db.getNotes()
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .size(width = 340.dp, height = 420.dp)
-                .background(
-                    MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(20.dp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF101827)
+            ),
+            border = BorderStroke(1.dp, Border)
         ) {
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
             ) {
-                Text(
-                    text = "Saved Notes",
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Saved Notes",
+                            color = PrimaryText,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
 
-                if (notes.isEmpty()) {
-                    Text(
-                        text = "No saved notes.",
-                        color = MutedText
-                    )
-                } else {
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        notes.forEach { note ->
+                        Text(
+                            text = "${notes.size} ${if (notes.size == 1) "note" else "notes"} saved",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
 
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .clickable {
-                                        onSelectNote(note)
-                                    },
-                                shape = RoundedCornerShape(8.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = Surface
-                                ),
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = Border
-                                )
-                            ) {
-                                Text(
-                                    text = note.content,
-                                    color = PrimaryText,
-                                    modifier = Modifier.padding(12.dp)
-                                )
-                            }
-                        }
+                    TextButton(onClick = onDismiss) {
+                        Text("Close", color = BluePrimary)
                     }
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Border)
+                Spacer(modifier = Modifier.height(12.dp))
 
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text("Close")
+                if (notes.isEmpty()) {
+                    Text(
+                        text = "No saved notes yet.",
+                        color = MutedText,
+                        modifier = Modifier.padding(vertical = 20.dp)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 360.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(notes) { note ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onSelectNote(note)
+                                    },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color(0xFF172238)
+                                ),
+                                border = BorderStroke(1.dp, Border)
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = note.content,
+                                            color = PrimaryText,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+
+                                        Spacer(modifier = Modifier.height(5.dp))
+
+                                        Text(
+                                            text = "Tap to edit or create a handoff",
+                                            color = MutedText,
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Text(
+                                        text = "›",
+                                        color = MutedText,
+                                        style = MaterialTheme.typography.titleLarge
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
+
+
 
 @Composable
 fun EditNoteDialog(
@@ -1519,34 +1677,64 @@ fun EditNoteDialog(
     note: Database.Note,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit,
-    onCreateHandoff: () -> Unit
+    onCreateHandoff: (String) -> Unit
 ) {
     var noteContent by remember(note.noteID) {
         mutableStateOf(note.content)
     }
 
+    var isSaving by remember { mutableStateOf(false) }
+
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
+
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .size(width = 320.dp, height = 320.dp)
-                .background(
-                    MaterialTheme.colorScheme.surface,
-                    shape = RoundedCornerShape(16.dp)
-                )
-                .padding(20.dp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF101827)
+            ),
+            border = BorderStroke(1.dp, Border)
         ) {
             Column(
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
             ) {
-                Text(
-                    text = "Edit Note",
-                    color = PrimaryText,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Edit Note",
+                            color = PrimaryText,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "Update your note or turn it into a handoff",
+                            color = MutedText,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = !isSaving && !isDeleting
+                    ) {
+                        Text("✕", color = MutedText)
+                    }
+
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -1555,7 +1743,11 @@ fun EditNoteDialog(
                     onValueChange = { noteContent = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .heightIn(min = 110.dp, max = 200.dp),
+                    enabled = !isSaving,
+                    placeholder = {
+                        Text("Enter your note...")
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Surface,
                         unfocusedContainerColor = Surface,
@@ -1563,71 +1755,167 @@ fun EditNoteDialog(
                         unfocusedBorderColor = Border,
                         focusedTextColor = PrimaryText,
                         unfocusedTextColor = PrimaryText,
-                        cursorColor = BluePrimary
+                        cursorColor = BluePrimary,
+                        focusedPlaceholderColor = MutedText,
+                        unfocusedPlaceholderColor = MutedText
                     ),
                     shape = RoundedCornerShape(10.dp)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedButton(
-                    onClick = onCreateHandoff,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(6.dp),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = BluePrimary
+                Button(
+                    onClick = {
+                        onCreateHandoff(noteContent)
+                    },
+                    enabled = noteContent.isNotBlank() && !isSaving,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BluePrimary,
+                        contentColor = PrimaryText
                     )
                 ) {
                     Text(
                         text = "Create Handoff",
-                        color = BluePrimary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(
-                        onClick = onDismiss
+                        onClick = {
+                            showDeleteConfirmation = true
+                        },
+                        enabled = !isSaving && !isDeleting
                     ) {
-                        Text("Cancel")
+                        Text(
+                            text = "Delete",
+                            color = Color(0xFFF87171),
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
 
-                    Button(
+                    OutlinedButton(
                         onClick = {
-                            coroutineScope.launch(Dispatchers.IO) {
-                                val response = db.updateNote(
-                                    noteID = note.noteID,
-                                    content = noteContent
-                                )
+                            isSaving = true
 
-                                if (response.isEmpty()) {
-                                    withContext(Dispatchers.Main) {
-                                        onSuccess()
+                            coroutineScope.launch {
+                                try {
+                                    val response = withContext(Dispatchers.IO) {
+                                        db.updateNote(
+                                            noteID = note.noteID,
+                                            content = noteContent
+                                        )
                                     }
-                                } else {
-                                    showError(context, response)
+
+                                    if (response.isEmpty()) {
+                                        onSuccess()
+                                    } else {
+                                        isSaving = false
+                                        showError(context, response)
+                                    }
+                                } catch (e: Exception) {
+                                    isSaving = false
+                                    showError(
+                                        context,
+                                        e.message ?: "Unable to save note."
+                                    )
                                 }
                             }
                         },
-                        enabled = noteContent.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = BluePrimary,
-                            contentColor = PrimaryText
-                        ),
-                        shape = RoundedCornerShape(6.dp)
+                        enabled = noteContent.isNotBlank() && !isSaving,
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, BluePrimary)
                     ) {
-                        Text("Save Changes")
+                        Text(
+                            text = if (isSaving) "Saving..." else "Save Changes",
+                            color = BluePrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
         }
     }
+
+if (showDeleteConfirmation) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = {
+            if (!isDeleting) {
+                showDeleteConfirmation = false
+            }
+        },
+        title = {
+            Text(
+                "Delete Note?",
+                color = PrimaryText,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Text(
+                "Are you sure you want to delete this note? This action cannot be undone.",
+                color = MutedText
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    isDeleting = true
+
+                    coroutineScope.launch {
+                        try {
+                            val response = withContext(Dispatchers.IO) {
+                                db.deleteNote(note.noteID)
+                            }
+
+                            if (response.isEmpty()) {
+                                showDeleteConfirmation = false
+                                onSuccess()
+                            } else {
+                                isDeleting = false
+                                showError(context, response)
+                            }
+                        } catch (e: Exception) {
+                            isDeleting = false
+                            showError(
+                                context,
+                                e.message ?: "Unable to delete note."
+                            )
+                        }
+                    }
+                },
+                enabled = !isDeleting
+            ) {
+                Text(
+                    if (isDeleting) "Deleting..." else "Delete",
+                    color = Color(0xFFF87171)
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    showDeleteConfirmation = false
+                },
+                enabled = !isDeleting
+            ) {
+                Text("Cancel", color = MutedText)
+            }
+        },
+        containerColor = Color(0xFF101827),
+        shape = RoundedCornerShape(16.dp)
+    )
+}
 }
 
 @Composable
