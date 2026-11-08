@@ -52,6 +52,7 @@ class MainActivity : ComponentActivity() {
                 isCheckingAuth
             }
 
+
             LaunchedEffect(Unit) {
                 if (viewModel.db.isLoggedIn()) {
                     startPage = Home
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
 
                 isCheckingAuth = false
             }
+
 
             ContinuumTheme {
                 Surface(

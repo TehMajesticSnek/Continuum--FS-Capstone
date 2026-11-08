@@ -35,6 +35,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 import kotlin.time.toDuration
+import kotlinx.serialization.json.put
 
 
 class Database (val session: MainActivity.UserSession) {
@@ -845,6 +846,26 @@ class Database (val session: MainActivity.UserSession) {
         }
     }
 
+    suspend fun testHandoffCrypto(): String {
+        return try {
+            val response = supabase.functions.invoke(
+                function = "handoff-crypto",
+                body = buildJsonObject { }
+            )
+
+            response.body<String>()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            "Test failed: ${e.message}"
+        }
+    }
+
+    suspend fun runHandoffCryptoTest() {
+        val result = testHandoffCrypto()
+        android.util.Log.d("HANDOFF_CRYPTO", result)
+    }
+
+
     fun combineContent(issue: String, action: String, next: String): String {
         return """
             Issue Details:
@@ -868,43 +889,64 @@ class Database (val session: MainActivity.UserSession) {
 
         return ParsedContent(issue = issue, action = action, next = next)
     }
+
+
+
+    @Serializable
+    data class EncryptedHandoffRequest(
+        val action: String,
+        val teamID: Int,
+        val title: String,
+        val content: String,
+        val status: Int,
+        val priority: Int
+    )
+
+
+    @Serializable
+    data class EncryptedHandoffResponse(
+        val handoff: Handoff,
+        val encrypted: Boolean
+    )
+
+
     suspend fun newHandoff(
         title: String,
         content: String?,
         status: Short,
         priority: Short
     ): NewHandoffResult {
-
         return try {
-            val newHandoffObj = Handoff(
-                teamID = session.activeTeam?.teamID!!,
-                userID = session.userID,
+            val teamID = session.activeTeam?.teamID
+                ?: return NewHandoffResult(error = "No team selected")
+
+            val request = EncryptedHandoffRequest(
+                action = "create",
+                teamID = teamID,
                 title = title,
-                content = content,
-                status = status,
-                priority = priority,
-                timestamp = Clock.System.now()
+                content = content.orEmpty(),
+                status = status.toInt(),
+                priority = priority.toInt()
             )
 
-            val createdHandoff = supabase
-                .from("handoffs")
-                .insert(newHandoffObj) {
-                    select()
-                }
-                .decodeSingle<Handoff>()
-
-            NewHandoffResult(
-                handoff = createdHandoff
+            val response = supabase.functions.invoke(
+                function = "handoff-crypto",
+                body = request
             )
+
+            val result = response.body<EncryptedHandoffResponse>()
+
+            NewHandoffResult(handoff = result.handoff)
 
         } catch (e: Exception) {
             e.printStackTrace()
 
             NewHandoffResult(
-                error = "There was an issue creating this record. Please try again"
+                error = "Unable to create encrypted handoff. Please try again."
             )
         }
     }
+
 
     suspend fun updateHandoffStatus(
         handoffID: Long,
@@ -929,6 +971,13 @@ class Database (val session: MainActivity.UserSession) {
 
         } catch (e: Exception) {
             e.printStackTrace()
+
+            android.util.Log.e(
+                "HANDOFF_CRYPTO_ERROR",
+                "Encrypted handoff failed: ${e.message}",
+                e
+            )
+
             println("STATUS UPDATE ERROR: ${e.message}")
             errorMsg = "Unable to update handoff status. Please try again."
         }
@@ -958,37 +1007,46 @@ class Database (val session: MainActivity.UserSession) {
         return errorMsg
     }
 
-    suspend fun editHandoff(handoffID: Long, title: String, content: String?, status: Short, priority: Short): NewHandoffResult {
-        return try {
 
-            val createdHandoff = supabase
-                .from("handoffs").update(
-                    {
-                        set("title", title)
-                        set("content", content)
-                        set("status", status)
-                        set("priority", priority)
-                        set("time_edited", Clock.System.now())
-                    }
-                ) {
-                    select()
-                    filter {
-                        eq("handoff_id", handoffID)
-                    }
-                }.decodeSingle<Handoff>()
+    suspend fun editHandoff(
+        handoffID: Long,
+        title: String,
+        content: String?,
+        status: Short,
+        priority: Short
+    ): NewHandoffResult {
+        return try {
+            val response = supabase.functions.invoke(
+                function = "handoff-crypto",
+                body = buildJsonObject {
+                    put("action", "edit")
+                    put("handoffID", handoffID)
+                    put("title", title)
+                    put("content", content.orEmpty())
+                    put("status", status.toInt())
+                    put("priority", priority.toInt())
+                }
+            )
+
+            val result = response.body<EncryptedHandoffResponse>()
 
             NewHandoffResult(
-                handoff = createdHandoff
+                handoff = result.handoff
             )
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e(
+                "HANDOFF_CRYPTO",
+                "Failed to edit encrypted handoff",
+                e
+            )
 
             NewHandoffResult(
                 error = "There was an issue editing this record. Please try again"
             )
         }
     }
+
 
     suspend fun deleteHandoff(handoffID: Long?): String {
         if (handoffID == null) {
@@ -1164,45 +1222,72 @@ class Database (val session: MainActivity.UserSession) {
             emptyList()
         }
     }
+
+    @Serializable
+    data class DecryptedHandoffsResponse(
+        val handoffs: List<Handoff>
+    )
+
     suspend fun getHandoffs(): List<Handoff> {
         return try {
-            if (session.activeTeam == null) {
-                emptyList()
-            } else {
-                supabase
-                    .from("handoffs_most_recent")
-                    .select {
-                        filter {
-                            eq("team_id", session.activeTeam?.teamID!!)
-                            neq("status", 4)
-                        }
-                        order("sorted_timestamp", Order.DESCENDING)
-                    }.decodeList<Handoff>()
+            val teamID = session.activeTeam?.teamID
+                ?: return emptyList()
+
+            val response = supabase.functions.invoke(
+                function = "handoff-crypto",
+                body = buildJsonObject {
+                    put("action", "read")
+                    put("teamID", teamID)
+                }
+            )
+
+
+            val result = response.body<DecryptedHandoffsResponse>()
+
+            result.handoffs.filter { handoff ->
+                handoff.status.toInt() != 4
             }
+
+
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e(
+                "HANDOFF_CRYPTO",
+                "Failed to retrieve handoffs",
+                e
+            )
             emptyList()
         }
     }
+
+
 
     suspend fun getAllTeamHandoffs(): List<Handoff> {
         return try {
-            val currentTeamID = session.activeTeam?.teamID ?: return emptyList()
+            val currentTeamID = session.activeTeam?.teamID
+                ?: return emptyList()
 
-            supabase
-                .from("handoffs")
-                .select {
-                    filter {
-                        eq("team_id", currentTeamID)
-                    }
+            val response = supabase.functions.invoke(
+                function = "handoff-crypto",
+                body = buildJsonObject {
+                    put("action", "read")
+                    put("teamID", currentTeamID)
                 }
-                .decodeList<Handoff>()
+            )
+
+            val result = response.body<DecryptedHandoffsResponse>()
+
+            result.handoffs
 
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e(
+                "HANDOFF_CRYPTO",
+                "Failed to retrieve all team handoffs",
+                e
+            )
             emptyList()
         }
     }
+
 
 
 
@@ -1361,72 +1446,83 @@ class Database (val session: MainActivity.UserSession) {
     }
 
 
+
     suspend fun getHandoffsFilter(
         keyword: String = "",
-        status : Short = -1,
+        status: Short = -1,
         priority: Short = -1,
         user: String = "",
-        age: Int = 0/*days*/,
+        age: Int = 0 /* days */,
         includeCompleted: Boolean = false
     ): List<Handoff> {
         return try {
-            if (session.activeTeam == null) {
-                emptyList()
-            } else {
-                supabase
-                    .from("handoffs_most_recent")
-                    .select {
-                        filter {
-                            eq("team_id", session.activeTeam?.teamID!!)
+            val teamID = session.activeTeam?.teamID
+                ?: return emptyList()
 
-                            if (status != (-1).toShort()) {
-                                eq("status", status)
-                            }
-                            else if (!includeCompleted) {
-                                neq("status", 4)
-                            }
+            val response = supabase.functions.invoke(
+                function = "handoff-crypto",
+                body = buildJsonObject {
+                    put("action", "read")
+                    put("teamID", teamID)
+                }
+            )
 
-                            if (priority != (-1).toShort()) {
-                                eq("priority", priority)
-                            }
+            val handoffs = response.body<DecryptedHandoffsResponse>().handoffs
 
-                            if (user != "") {
-                                eq("user_id", user)
-                            }
+            handoffs.filter { handoff ->
+                val matchesStatus =
+                    if (status != (-1).toShort()) {
+                        handoff.status == status
+                    } else {
+                        includeCompleted || handoff.status.toInt() != 4
+                    }
 
-                            if (age != 0) {
-                                val ageTime = LocalDate.now(ZoneId.systemDefault()).minusDays(age.toLong())
-                                val ageTimeDate = ageTime.atStartOfDay(ZoneId.systemDefault()) //set cutoff to midnight so it sticks to calendar days
-                                val ageTimeDateAsStamp = ageTimeDate.toInstant().toString()
+                val matchesPriority =
+                    priority == (-1).toShort() ||
+                            handoff.priority == priority
 
-                                or {
-                                    and {
-                                        exact("time_edited", null)
-                                        lt("time_created", ageTimeDateAsStamp)
-                                    }
-                                    and {
-                                        filterNot("time_edited", FilterOperator.IS, "null")
-                                        lt("time_edited", ageTimeDateAsStamp)
-                                    }
-                                }
-                            }
-                            // handle shifts locally
+                val matchesUser =
+                    user.isBlank() || handoff.userID == user
 
-                            or {
-                                if (keyword != "") {
-                                    ilike("title", "%$keyword%")
-                                    ilike("content", "%$keyword%")
-                                }
-                            }
-                        }
-                        order("sorted_timestamp", Order.DESCENDING)
-                    }.decodeList<Handoff>()
+                val matchesKeyword =
+                    keyword.isBlank() ||
+                            handoff.title.contains(keyword, ignoreCase = true) ||
+                            (handoff.content?.contains(keyword, ignoreCase = true) == true)
+
+                val matchesAge =
+                    if (age == 0) {
+                        true
+                    } else {
+                        val cutoff = LocalDate.now(ZoneId.systemDefault())
+                            .minusDays(age.toLong())
+                            .atStartOfDay(ZoneId.systemDefault())
+                            .toInstant()
+
+                        val lastUpdated = handoff.editTimestamp
+                            ?: handoff.timestamp
+
+                        lastUpdated != null &&
+                                java.time.Instant.parse(lastUpdated.toString())
+                                    .isBefore(cutoff)
+                    }
+
+                matchesStatus &&
+                        matchesPriority &&
+                        matchesUser &&
+                        matchesKeyword &&
+                        matchesAge
             }
+
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.e(
+                "HANDOFF_CRYPTO",
+                "Failed to filter decrypted handoffs",
+                e
+            )
             emptyList()
         }
     }
+
 
     suspend fun acknowledgeHandoff(handoffID: Long): String {
         var errorMsg = ""
