@@ -52,6 +52,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
@@ -70,8 +71,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.continuum.data.Database
 import com.continuum.ui.ViewModel
+import com.continuum.ui.theme.BlueAlternate
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
+import com.continuum.ui.theme.CardColor
+import com.continuum.ui.theme.CardMutedColor
+import com.continuum.ui.theme.CardTextColor
+import com.continuum.ui.theme.Critical
 import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
@@ -90,8 +96,6 @@ fun TeamScreen(
     toSupervisorDashboard: () -> Unit = {},
     toTrends: () -> Unit,
 ) {
-
-    var team = viewModel.session.activeTeam
     var members = viewModel.teamMembers
 
     var selectedMember by remember { mutableStateOf<Database.TeamUserDisplay?>(null) }
@@ -127,7 +131,7 @@ fun TeamScreen(
         modifier = modifier.fillMaxSize().background(NavyBackground),
         bottomBar = {
             BottomAppBar(
-                containerColor = NavyBackground,
+                containerColor = Surface,
                 contentPadding = PaddingValues(start = 40.dp, top = 10.dp, end = 40.dp, bottom = 30.dp),
                 windowInsets = WindowInsets(0, 0, 0, 80),
                 modifier = Modifier.wrapContentHeight()
@@ -227,7 +231,7 @@ fun TeamScreen(
                         expanded = teamOptionsExpanded,
                         onDismissRequest = { teamOptionsExpanded = false },
                         shape = RoundedCornerShape(10.dp),
-                        containerColor = NavyBackground,
+                        containerColor = Surface,
                         border = BorderStroke(1.dp, Border)
                     ) {
                         if (viewModel.session.teamRole == 1L) {
@@ -248,20 +252,20 @@ fun TeamScreen(
                         }
 
                         DropdownMenuItem(
-                            text = { Text("Leave Team", color = Color(0xffff0000)) },
+                            text = { Text("Leave Team", color = Critical) },
                             onClick = {
                                 showConfirmLeaveDialog = true
                                 teamOptionsExpanded = false
-                            } // ensure there will be an admin if you are an admin and leave
+                            }
                         )
 
                         if (viewModel.session.teamRole == 1L) {
                             DropdownMenuItem(
-                                text = { Text("Delete Team", color = Color(0xffff0000)) },
+                                text = { Text("Delete Team", color = Critical) },
                                 onClick = {
                                     showConfirmDeleteDialog = true
                                     teamOptionsExpanded = false
-                                } // confirm popup for both this and leave
+                                }
                             )
                         }
                     }
@@ -272,23 +276,23 @@ fun TeamScreen(
 
             Button(
                 onClick = toTrends,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
             ) {
                 Text("View Trends & Analytics")
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             if (viewModel.session.teamRole == 1L) {
+                Spacer(modifier = Modifier.height(4.dp))
+
                 Button(
                     onClick = toSupervisorDashboard,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("View Supervisor Dashboard")
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Members",
@@ -343,7 +347,7 @@ fun TeamScreen(
                                 .padding(bottom = 10.dp),
                             shape = RoundedCornerShape(8.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Surface
+                                containerColor = CardColor
                             ),
                             border = BorderStroke(
                                 width = 1.dp,
@@ -356,7 +360,7 @@ fun TeamScreen(
                                 ) {
                                     Text(
                                         text = "${member.firstName} ${member.lastName}",
-                                        color = PrimaryText,
+                                        color = CardTextColor,
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -369,7 +373,7 @@ fun TeamScreen(
                                         } else {
                                             ""
                                         },
-                                        color = MutedText,
+                                        color = CardMutedColor,
                                         style = MaterialTheme.typography.bodySmall
                                     )
 
@@ -385,7 +389,7 @@ fun TeamScreen(
                                             expanded = userOptionsExpanded,
                                             onDismissRequest = { userOptionsExpanded = false },
                                             shape = RoundedCornerShape(10.dp),
-                                            containerColor = NavyBackground,
+                                            containerColor = Surface,
                                             border = BorderStroke(1.dp, Border)
                                         ) {
 
@@ -403,17 +407,16 @@ fun TeamScreen(
                                                     text = {
                                                         Text(
                                                             "Remove User",
-                                                            color = Color(0xffff0000)
+                                                            color = Critical
                                                         )
                                                     },
                                                     onClick = {
                                                         selectedMember = member
                                                         showConfirmKickDialog = true
                                                         userOptionsExpanded = false
-                                                    } // ensure there will be an admin if you are an admin and leave
+                                                    }
                                                 )
                                             }
-
                                         }
                                     }
                                 }
@@ -561,7 +564,7 @@ fun NameDialog(teamName: String?, db: Database, onDismissName: () -> Unit, onSuc
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -620,7 +623,7 @@ fun NameDialog(teamName: String?, db: Database, onDismissName: () -> Unit, onSuc
                             onDismissName()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
@@ -636,7 +639,7 @@ fun NameDialog(teamName: String?, db: Database, onDismissName: () -> Unit, onSuc
 
                         },
                     ) {
-                        Text("Confirm")
+                    Text("Confirm", color = BlueAlternate)
                     }
                 }
             }
@@ -653,7 +656,7 @@ fun CodeDialog(teamCode: String?, db: Database, onDismissCode: () -> Unit, onSuc
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -741,7 +744,7 @@ fun CodeDialog(teamCode: String?, db: Database, onDismissCode: () -> Unit, onSuc
                     TextButton(
                         onClick = onDismissCode
                     ) {
-                        Text("Confirm")
+                        Text("Confirm", color = BlueAlternate)
                     }
                 }
             }
@@ -759,7 +762,7 @@ fun AddUserDialog(db: Database, onDismissAdd: () -> Unit, onSuccessAdd: () -> Un
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -785,7 +788,7 @@ fun AddUserDialog(db: Database, onDismissAdd: () -> Unit, onSuccessAdd: () -> Un
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = userEmail ?: "...",
+                    value = userEmail,
                     onValueChange = {
                         userEmail = it
                     },
@@ -825,7 +828,7 @@ fun AddUserDialog(db: Database, onDismissAdd: () -> Unit, onSuccessAdd: () -> Un
                             onDismissAdd()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
@@ -841,7 +844,7 @@ fun AddUserDialog(db: Database, onDismissAdd: () -> Unit, onSuccessAdd: () -> Un
 
                         },
                     ) {
-                        Text("Add User")
+                        Text("Add User", color = BlueAlternate)
                     }
                 }
             }
@@ -858,7 +861,7 @@ fun ConfirmLeaveDialog(teamName: String?, db: Database, onDismissLeave: () -> Un
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -896,7 +899,7 @@ fun ConfirmLeaveDialog(teamName: String?, db: Database, onDismissLeave: () -> Un
                             onDismissLeave()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
@@ -914,7 +917,7 @@ fun ConfirmLeaveDialog(teamName: String?, db: Database, onDismissLeave: () -> Un
 
                         },
                     ) {
-                        Text("Leave", color = Color(0xffff0000))
+                        Text("Leave", color = Critical)
                     }
                 }
             }
@@ -930,7 +933,7 @@ fun ConfirmKickDialog(user: Database.TeamUserDisplay?, db: Database, onDismissKi
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -943,7 +946,7 @@ fun ConfirmKickDialog(user: Database.TeamUserDisplay?, db: Database, onDismissKi
                     )
             ) {
                 Text(
-                    text = "Confirm Leave",
+                    text = "Confirm Remove",
                     color = PrimaryText,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -968,7 +971,7 @@ fun ConfirmKickDialog(user: Database.TeamUserDisplay?, db: Database, onDismissKi
                             onDismissKick()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
@@ -986,7 +989,7 @@ fun ConfirmKickDialog(user: Database.TeamUserDisplay?, db: Database, onDismissKi
 
                         },
                     ) {
-                        Text("Confirm", color = Color(0xffff0000))
+                        Text("Confirm", color = Critical)
                     }
                 }
             }
@@ -1004,7 +1007,7 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 350.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -1026,7 +1029,7 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "Are you sure you want to delete this team? This action is permanent."
+                    text = "Are you sure you want to delete this team? This action will be permanent."
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -1071,7 +1074,7 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
                             onDismissDelete()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     Button(
                         onClick = {
@@ -1088,7 +1091,7 @@ fun ConfirmDeleteDialog(teamName: String?, db: Database, onDismissDelete: () -> 
 
                         },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xffff0000),
+                            containerColor = Critical,
                         ),
                         enabled = (teamNameInput == teamName),
                     ) {
@@ -1119,7 +1122,7 @@ fun RoleDialog(user: Database.TeamUserDisplay?, db: Database, onDismissRole: () 
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 350.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -1229,7 +1232,7 @@ fun RoleDialog(user: Database.TeamUserDisplay?, db: Database, onDismissRole: () 
                             onDismissRole()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
@@ -1244,7 +1247,7 @@ fun RoleDialog(user: Database.TeamUserDisplay?, db: Database, onDismissRole: () 
                             }
                         },
                     ) {
-                        Text("Confirm")
+                        Text("Confirm", color = BlueAlternate)
                     }
                 }
             }

@@ -1,10 +1,15 @@
 
 package com.continuum.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,6 +20,18 @@ import com.continuum.ui.ViewModel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.Alignment
+import com.continuum.data.PrioOptions
+import com.continuum.data.StatOptions
+import com.continuum.ui.theme.BlueAlternate
+import com.continuum.ui.theme.CardColor
+import com.continuum.ui.theme.CardMutedColor
+import com.continuum.ui.theme.CardTextColor
+import com.continuum.ui.theme.Critical
+import com.continuum.ui.theme.NavyBackground
+import com.continuum.ui.theme.PrimaryText
+import com.continuum.ui.theme.Success
+import com.continuum.ui.theme.Warning
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,18 +89,36 @@ fun SupervisorDashboardScreen(
             TopAppBar(
                 title = { Text("Supervisor Dashboard") },
                 navigationIcon = {
-                    TextButton(onClick = onBackClick) {
-                        Text("Back")
+                    IconButton(onClick = onBackClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = CardTextColor
+                        )
                     }
                 },
                 actions = {
-                    TextButton(
-                        onClick = { refreshCount++ },
+                    IconButton(
+                        onClick = {
+                            refreshCount++
+                        },
                         enabled = !isLoading
                     ) {
-                        Text("Refresh")
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh trends",
+                            tint = CardTextColor
+                        )
                     }
-                }
+                },
+                colors = TopAppBarColors(
+                    containerColor = NavyBackground,
+                    scrolledContainerColor = NavyBackground,
+                    navigationIconContentColor = CardTextColor,
+                    titleContentColor = CardTextColor,
+                    actionIconContentColor = CardTextColor,
+                    subtitleContentColor = CardTextColor,
+                )
             )
         }
     ) { paddingValues ->
@@ -92,7 +127,8 @@ fun SupervisorDashboardScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
                 }
@@ -133,14 +169,14 @@ fun SupervisorDashboardScreen(
                                 DashboardStatCard(
                                     title = "Open Handoffs",
                                     count = handoffs.size,
-                                    color = Color(0xFF60A5FA),
+                                    color = BlueAlternate,
                                     modifier = Modifier.weight(1f)
                                 )
 
                                 DashboardStatCard(
                                     title = "Urgent",
                                     count = urgentCount,
-                                    color = Color(0xFFF87171),
+                                    color = Critical,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -152,14 +188,14 @@ fun SupervisorDashboardScreen(
                                 DashboardStatCard(
                                     title = "High Priority",
                                     count = highCount,
-                                    color = Color(0xFFFBBF24),
+                                    color = Warning,
                                     modifier = Modifier.weight(1f)
                                 )
 
                                 DashboardStatCard(
                                     title = "In Progress",
                                     count = inProgressCount,
-                                    color = Color(0xFF4ADE80),
+                                    color = Success,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -225,7 +261,7 @@ fun SupervisorDashboardScreen(
                                 .fillMaxWidth()
                                 .clickable { onHandoffClick(handoff) },
                             colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFF242D3D)
+                                containerColor = CardColor
                             )
                         ) {
 
@@ -243,13 +279,7 @@ fun SupervisorDashboardScreen(
                                     modifier = Modifier.weight(1f)
                                 )
 
-                                val priorityColor = when (handoff.priority.toInt()) {
-                                    0 -> Color(0xFFF87171) // Urgent
-                                    1 -> Color(0xFFFBBF24) // High
-                                    2 -> Color(0xFF60A5FA) // Medium
-                                    3 -> Color(0xFFCBD5E1) // Neutral
-                                    else -> Color(0xFF94A3B8) // Low
-                                }
+                                val priorityColor = PrioOptions.fromValue(handoff.priority).prioColor()
 
                                 Surface(
                                     color = priorityColor.copy(alpha = 0.18f),
@@ -257,8 +287,7 @@ fun SupervisorDashboardScreen(
                                 ) {
                                     Text(
                                         text = (
-                                                viewModel.db.prioOptions[handoff.priority]
-                                                    ?: "Unknown"
+                                                PrioOptions.fromValue(handoff.priority).text
                                                 ).uppercase(),
                                         color = priorityColor,
                                         style = MaterialTheme.typography.labelSmall,
@@ -274,10 +303,8 @@ fun SupervisorDashboardScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                                 Text(
-                                    "Status: ${
-                                        viewModel.db.statOptions[handoff.status]
-                                            ?: "Unknown"
-                                    }"
+                                    "Status: ${StatOptions.fromValue(handoff.status)}",
+                                    color = StatOptions.fromValue(handoff.status).statColor()
                                 )
                             }
                         }
@@ -298,7 +325,7 @@ private fun DashboardStatCard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF242D3D)
+            containerColor = CardColor
         )
     ) {
         Column(
@@ -310,7 +337,7 @@ private fun DashboardStatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFCBD5E1)
+                color = CardMutedColor
             )
 
             Text(

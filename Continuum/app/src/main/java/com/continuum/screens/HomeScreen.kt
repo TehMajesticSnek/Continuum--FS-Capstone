@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -98,6 +99,7 @@ import com.continuum.ui.theme.NavyBackground
 import com.continuum.ui.theme.PrimaryText
 import com.continuum.ui.theme.Surface
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material3.Surface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -109,6 +111,21 @@ import java.util.Calendar
 import kotlin.math.abs
 import kotlin.time.toJavaInstant
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.unit.FontScaling
+import androidx.core.app.NotificationCompat
+import com.continuum.data.PrioOptions
+import com.continuum.data.StatOptions
+import com.continuum.ui.theme.BlueAlternate
+import com.continuum.ui.theme.CardColor
+import com.continuum.ui.theme.CardMutedColor
+import com.continuum.ui.theme.CardTextColor
+import com.continuum.ui.theme.Critical
+import com.continuum.ui.theme.CyanAccent
+import com.continuum.ui.theme.Success
+import com.continuum.ui.theme.Warning
+import java.nio.file.WatchEvent
+import kotlin.inc
 
 suspend fun showError(context: Context, error: String) {
     withContext(Dispatchers.Main) {
@@ -123,7 +140,6 @@ suspend fun showError(context: Context, error: String) {
 
 @Composable
 fun HomeScreen(
-    modifier: Modifier,
     viewModel: ViewModel,
     toNewHandoff: () -> Unit = {},
     toHandoffFromNote: (String) -> Unit = {},
@@ -249,7 +265,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Join Team",
-                            tint = BluePrimary,
+                            tint = BlueAlternate,
                             modifier = Modifier.size(20.dp)
                         )
 
@@ -257,7 +273,7 @@ fun HomeScreen(
 
                         Text(
                             text = "Join Team",
-                            color = BluePrimary,
+                            color = BlueAlternate,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -285,7 +301,7 @@ fun HomeScreen(
                 .background(NavyBackground),
             bottomBar = {
                 BottomAppBar(
-                    containerColor = NavyBackground,
+                    containerColor = Surface,
                     contentPadding = PaddingValues(start = 40.dp, top = 10.dp, end = 40.dp, bottom = 30.dp),
                     windowInsets = WindowInsets(0, 0, 0, 80),
                     modifier = Modifier.wrapContentHeight()
@@ -485,7 +501,7 @@ private fun TopBar(
         Spacer(modifier = Modifier.weight(1f))
 
 
-        Notifications(db, highPriorityHandoffs, onClick)
+        Notifications(highPriorityHandoffs, onClick)
 
         IconButton(
             onClick = {
@@ -709,7 +725,7 @@ private fun TeamMenuItem(
         Text(
             text = teamName,
             color = if (selected) {
-                BluePrimary
+                BlueAlternate
             } else {
                 PrimaryText
             },
@@ -727,7 +743,7 @@ private fun TeamMenuItem(
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = "Selected Team",
-                tint = BluePrimary,
+                tint = BlueAlternate,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -749,7 +765,7 @@ fun JoinTeamDialog(
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -842,14 +858,14 @@ fun JoinTeamDialog(
                         onClick = { onShowCreate() }
 
                     ) {
-                        Text("Create Team")
+                        Text("Create Team", color = BlueAlternate)
                     }
 
                     TextButton(
                         onClick = { onDismissJoin() }
 
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                 }
             }
@@ -858,7 +874,10 @@ fun JoinTeamDialog(
 }
 
 @Composable
-fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate: () -> Unit) {
+fun CreateTeamDialog(
+    db: Database, onDismissCreate: () -> Unit,
+    onSuccessCreate: () -> Unit
+) {
     var teamName by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -868,7 +887,7 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -953,7 +972,7 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
                     onClick = { onDismissCreate() }
 
                 ) {
-                    Text("Cancel")
+                    Text("Cancel", color = BlueAlternate)
                 }
             }
         }
@@ -962,7 +981,6 @@ fun CreateTeamDialog(db: Database, onDismissCreate: () -> Unit, onSuccessCreate:
 
 @Composable
 private fun Notifications(
-    db: Database,
     highPriorityHandoffs: List<Database.Handoff>,
     onHandoffClick: (Database.Handoff) -> Unit
 ) {
@@ -991,8 +1009,8 @@ private fun Notifications(
                     .align(Alignment.TopEnd)
                     .size(18.dp)
                     .background(
-                        Color.Red,
-                        RoundedCornerShape(50)
+                        Critical,
+                        CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -1008,7 +1026,6 @@ private fun Notifications(
         }
         if (showNotifications) {
             NotificationsDialog(
-                db = db,
                 highPriorityHandoffs = highPriorityHandoffs,
                 onHandoffClick = onHandoffClick,
                 onDismiss = { showNotifications = false }
@@ -1018,7 +1035,6 @@ private fun Notifications(
 }
 @Composable
 private fun NotificationsDialog(
-    db: Database,
     highPriorityHandoffs: List<Database.Handoff>,
     onHandoffClick: (Database.Handoff) -> Unit,
     onDismiss: () -> Unit
@@ -1027,7 +1043,7 @@ private fun NotificationsDialog(
         onDismissRequest = {
             onDismiss()
         },
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = NavyBackground,
         title = {
             Text("Priority Alerts")
         },
@@ -1054,19 +1070,15 @@ private fun NotificationsDialog(
                                         onHandoffClick(handoff)
                                     },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Surface
+                                    containerColor = CardColor
                                 ),
-                                border = BorderStroke(
-                                    1.dp,
-                                    Border
-                                )
                             ) {
                                 Column(
                                     modifier = Modifier.padding(12.dp)
                                 ) {
                                     Text(
                                         text = handoff.title,
-                                        color = PrimaryText,
+                                        color = CardTextColor,
                                         fontWeight = FontWeight.Bold
                                     )
 
@@ -1078,15 +1090,14 @@ private fun NotificationsDialog(
                                         else
                                             "HIGH PRIORITY",
                                         color = if (handoff.priority.toInt() == 0)
-                                            Color.Red
+                                            Critical
                                         else
-                                            Color(0xffFF5F15)
+                                            Warning
                                     )
 
                                     Text(
-                                        text = db.statOptions[handoff.status]
-                                            ?: "Unknown",
-                                        color = MutedText
+                                        text = "${StatOptions.fromValue(handoff.status)}",
+                                        color = CardMutedColor
                                     )
                                 }
                             }
@@ -1101,7 +1112,7 @@ private fun NotificationsDialog(
                     onDismiss()
                 }
             ) {
-                Text("Close")
+                Text("Close", color = BlueAlternate)
             }
         }
     )
@@ -1154,7 +1165,7 @@ fun ConfirmSignOut(
                         onClick = { onDismissSignOut() }
 
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
 
                     TextButton(
@@ -1167,7 +1178,7 @@ fun ConfirmSignOut(
                         }
 
                     ) {
-                        Text("Confirm", color = Color.Red)
+                        Text("Confirm", color = Critical)
                     }
                 }
             }
@@ -1185,23 +1196,10 @@ private fun UpperBlock(
     toHandoff: () -> Unit,
     toHandoffFromNote: (String) -> Unit
 ) {
-    var showQuickNoteDialog by remember { mutableStateOf(false) }
-    var showSavedNotesDialog by remember { mutableStateOf(false) }
-    var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
-
     val activeTeam = db.session.activeTeam
 
 
-    var savedNoteCount by remember { mutableStateOf(0) }
-    var notesRefreshKey by remember { mutableStateOf(0) }
 
-    LaunchedEffect(activeTeam?.teamID, notesRefreshKey) {
-        savedNoteCount = if (activeTeam != null) {
-            db.getNotes().size
-        } else {
-            0
-        }
-    }
 
     // Greeting
     Text(
@@ -1230,13 +1228,60 @@ private fun UpperBlock(
 
     Spacer(modifier = Modifier.height(18.dp))
 
+    NotesSection(
+        db = db,
+        awaitNoteNavigate = awaitNoteNavigate,
+        toHandoffFromNote = toHandoffFromNote
+    )
 
+    Spacer(modifier = Modifier.height(12.dp))
+
+    // New Handoff button
+    Button(
+        enabled = activeTeam != null,
+        onClick = toHandoff,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp),
+        shape = RoundedCornerShape(6.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = BluePrimary,
+            contentColor = PrimaryText
+        )
+    ) {
+        Text(
+            text = "New Handoff",
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+@Composable
+fun NotesSection(
+    db: Database,
+    awaitNoteNavigate: (() -> Unit) -> Unit,
+    toHandoffFromNote: (String) -> Unit
+) {
+    var showQuickNoteDialog by remember { mutableStateOf(false) }
+    var showSavedNotesDialog by remember { mutableStateOf(false) }
+    var selectedNote by remember { mutableStateOf<Database.Note?>(null) }
+
+    var savedNoteCount by remember { mutableIntStateOf(0) }
+    var notesRefreshKey by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(db.session.activeTeam?.teamID, notesRefreshKey) {
+        savedNoteCount = if (db.session.activeTeam != null) {
+            db.getNotes().size
+        } else {
+            0
+        }
+    }
     // Quick Notes section
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF172238)
+            containerColor = Surface
         ),
         border = BorderStroke(1.dp, Border)
     ) {
@@ -1274,7 +1319,7 @@ private fun UpperBlock(
                             showQuickNoteDialog = true
                         }
                     },
-                    enabled = activeTeam != null,
+                    enabled = db.session.activeTeam != null,
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = BluePrimary,
@@ -1297,12 +1342,12 @@ private fun UpperBlock(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            HorizontalDivider(color = Color(0xFF34435D))
+            HorizontalDivider(color = Border)
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = activeTeam != null) {
+                    .clickable(enabled = db.session.activeTeam != null) {
                         awaitNoteNavigate {
                             showSavedNotesDialog = true
                         }
@@ -1343,30 +1388,6 @@ private fun UpperBlock(
         }
     }
 
-    Spacer(modifier = Modifier.height(12.dp))
-
-
-
-
-    // New Handoff button
-    Button(
-        enabled = activeTeam != null,
-        onClick = toHandoff,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(48.dp),
-        shape = RoundedCornerShape(6.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = BluePrimary,
-            contentColor = PrimaryText
-        )
-    ) {
-        Text(
-            text = "New Handoff",
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-
     // Create note dialog
     if (showQuickNoteDialog) {
         QuickNoteDialog(
@@ -1395,7 +1416,6 @@ private fun UpperBlock(
         )
     }
 
-
     // Edit existing note
     selectedNote?.let { note ->
         EditNoteDialog(
@@ -1414,10 +1434,7 @@ private fun UpperBlock(
             }
         )
     }
-
 }
-
-
 
 @Composable
 fun QuickNoteDialog(
@@ -1438,7 +1455,7 @@ fun QuickNoteDialog(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF101827)
+                containerColor = NavyBackground
             ),
             border = BorderStroke(1.dp, Border)
         ) {
@@ -1499,7 +1516,7 @@ fun QuickNoteDialog(
                         onClick = onDismiss,
                         enabled = !isSaving
                     ) {
-                        Text("Cancel", color = MutedText)
+                        Text("Cancel", color = BlueAlternate)
                     }
 
                     Button(
@@ -1545,8 +1562,6 @@ fun QuickNoteDialog(
     }
 }
 
-
-
 @Composable
 fun SavedNotesDialog(
     db: Database,
@@ -1566,7 +1581,7 @@ fun SavedNotesDialog(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF101827)
+                containerColor = NavyBackground
             ),
             border = BorderStroke(1.dp, Border)
         ) {
@@ -1597,7 +1612,7 @@ fun SavedNotesDialog(
                     }
 
                     TextButton(onClick = onDismiss) {
-                        Text("Close", color = BluePrimary)
+                        Text("Close", color = BlueAlternate)
                     }
                 }
 
@@ -1625,7 +1640,7 @@ fun SavedNotesDialog(
                                     },
                                 shape = RoundedCornerShape(10.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color(0xFF172238)
+                                    containerColor = CardColor
                                 ),
                                 border = BorderStroke(1.dp, Border)
                             ) {
@@ -1638,7 +1653,7 @@ fun SavedNotesDialog(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = note.content,
-                                            color = PrimaryText,
+                                            color = CardTextColor,
                                             style = MaterialTheme.typography.bodyMedium,
                                             maxLines = 2,
                                             overflow = TextOverflow.Ellipsis
@@ -1648,7 +1663,7 @@ fun SavedNotesDialog(
 
                                         Text(
                                             text = "Tap to edit or create a handoff",
-                                            color = MutedText,
+                                            color = CardMutedColor,
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     }
@@ -1657,7 +1672,7 @@ fun SavedNotesDialog(
 
                                     Text(
                                         text = "›",
-                                        color = MutedText,
+                                        color = CardMutedColor,
                                         style = MaterialTheme.typography.titleLarge
                                     )
                                 }
@@ -1669,8 +1684,6 @@ fun SavedNotesDialog(
         }
     }
 }
-
-
 
 @Composable
 fun EditNoteDialog(
@@ -1697,7 +1710,7 @@ fun EditNoteDialog(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFF101827)
+                containerColor = NavyBackground
             ),
             border = BorderStroke(1.dp, Border)
         ) {
@@ -1727,14 +1740,17 @@ fun EditNoteDialog(
                         )
                     }
 
-
                     TextButton(
                         onClick = onDismiss,
                         enabled = !isSaving && !isDeleting
                     ) {
-                        Text("✕", color = MutedText)
+                        Text(
+                            "✕",
+                            color = PrimaryText,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleLarge
+                        )
                     }
-
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -1800,7 +1816,7 @@ fun EditNoteDialog(
                     ) {
                         Text(
                             text = "Delete",
-                            color = Color(0xFFF87171),
+                            color = Critical,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -1839,7 +1855,7 @@ fun EditNoteDialog(
                     ) {
                         Text(
                             text = if (isSaving) "Saving..." else "Save Changes",
-                            color = BluePrimary,
+                            color = BlueAlternate,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -1848,75 +1864,77 @@ fun EditNoteDialog(
         }
     }
 
-if (showDeleteConfirmation) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = {
-            if (!isDeleting) {
-                showDeleteConfirmation = false
-            }
-        },
-        title = {
-            Text(
-                "Delete Note?",
-                color = PrimaryText,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Text(
-                "Are you sure you want to delete this note? This action cannot be undone.",
-                color = MutedText
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    isDeleting = true
-
-                    coroutineScope.launch {
-                        try {
-                            val response = withContext(Dispatchers.IO) {
-                                db.deleteNote(note.noteID)
-                            }
-
-                            if (response.isEmpty()) {
-                                showDeleteConfirmation = false
-                                onSuccess()
-                            } else {
-                                isDeleting = false
-                                showError(context, response)
-                            }
-                        } catch (e: Exception) {
-                            isDeleting = false
-                            showError(
-                                context,
-                                e.message ?: "Unable to delete note."
-                            )
-                        }
-                    }
-                },
-                enabled = !isDeleting
-            ) {
-                Text(
-                    if (isDeleting) "Deleting..." else "Delete",
-                    color = Color(0xFFF87171)
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
+    if (showDeleteConfirmation) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                if (!isDeleting) {
                     showDeleteConfirmation = false
-                },
-                enabled = !isDeleting
-            ) {
-                Text("Cancel", color = MutedText)
-            }
-        },
-        containerColor = Color(0xFF101827),
-        shape = RoundedCornerShape(16.dp)
-    )
-}
+                }
+            },
+            title = {
+                Text(
+                    "Delete Note?",
+                    color = PrimaryText,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to delete this note? This action cannot be undone.",
+                    color = MutedText
+                )
+            },
+            confirmButton = {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(
+                        onClick = {
+                            showDeleteConfirmation = false
+                        },
+                        enabled = !isDeleting
+                    ) {
+                        Text("Cancel", color = BlueAlternate)
+                    }
+
+                    TextButton(
+                        onClick = {
+                            isDeleting = true
+
+                            coroutineScope.launch {
+                                try {
+                                    val response = withContext(Dispatchers.IO) {
+                                        db.deleteNote(note.noteID)
+                                    }
+
+                                    if (response.isEmpty()) {
+                                        showDeleteConfirmation = false
+                                        onSuccess()
+                                    } else {
+                                        isDeleting = false
+                                        showError(context, response)
+                                    }
+                                } catch (e: Exception) {
+                                    isDeleting = false
+                                    showError(
+                                        context,
+                                        e.message ?: "Unable to delete note."
+                                    )
+                                }
+                            }
+                        },
+                        enabled = !isDeleting
+                    ) {
+                        Text(
+                            if (isDeleting) "Deleting..." else "Delete",
+                            color = Critical
+                        )
+                    }
+                }
+            },
+            dismissButton = null,
+            containerColor = Surface,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
 }
 
 @Composable
@@ -1997,21 +2015,21 @@ private fun SummaryCardSection(
         SummaryCard(
             label = "Open\nIssues",
             value = if (handoffLoad) "-" else "$unresolvedCount",
-            indicatorColor = Color.Green,
+            indicatorColor = Success,
             modifier = Modifier.weight(1f)
         )
 
         SummaryCard(
             label = "High\nPriority",
             value = if (handoffLoad) "-" else "$highPriorityCount",
-            indicatorColor = Color.Red,
+            indicatorColor = Critical,
             modifier = Modifier.weight(1f)
         )
 
         SummaryCard(
             label = "In\nProgress",
             value = if (handoffLoad) "-" else "$inProgressCount",
-            indicatorColor = BluePrimary,
+            indicatorColor = CyanAccent,
             modifier = Modifier.weight(1f)
         )
     }
@@ -2085,14 +2103,10 @@ fun HandoffCardSimple(
             .clickable {
                 onClick(handoff)
             },
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Surface
+            containerColor = CardColor
         ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = Border
-        )
     ) {
         Column(
             modifier = Modifier.padding(14.dp)
@@ -2100,7 +2114,7 @@ fun HandoffCardSimple(
             // title
             Text(
                 text = handoff.title,
-                color = PrimaryText,
+                color = CardTextColor,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -2110,7 +2124,7 @@ fun HandoffCardSimple(
             //Content
             Text(
                 text = db.separateContent(handoff.content ?: "").issue ?: "",
-                color = MutedText,
+                color = CardMutedColor,
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
@@ -2126,34 +2140,20 @@ fun HandoffCardSimple(
                 //Status + Priority
                 Row {
                     Text(
-                        text = "${db.statOptions[handoff.status]}",
-                        color = when (handoff.status.toInt()) {
-                            0 -> Color(0xffFF5F15)
-                            1 -> Color.Yellow
-                            2 -> BluePrimary
-                            3 -> Color.Cyan
-                            4 -> Color.Green
-                            else -> BluePrimary
-                        },
-                        style = MaterialTheme.typography.bodySmall
-                    )
-
-                    Text(" • ", color = BluePrimary, style = MaterialTheme.typography.bodySmall)
-
-                    Text(
-                        text = db.prioOptions[handoff.priority] ?: "",
-                        color = when (handoff.priority.toInt()) {
-                            0 -> Color.Red
-                            1 -> Color(0xffFF5F15)
-                            2 -> Color.Yellow
-                            3 -> BluePrimary
-                            4 -> Color.Green
-                            else -> BluePrimary
-                        },
+                        text = "${StatOptions.fromValue(handoff.status)}",
+                        color = StatOptions.fromValue(handoff.status).statColor(),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.SemiBold
                     )
 
+                    Text(" • ", color = BlueAlternate, style = MaterialTheme.typography.bodySmall)
+
+                    Text(
+                        text = "${PrioOptions.fromValue(handoff.priority)}",
+                        color = PrioOptions.fromValue(handoff.priority).prioColor(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
                 //Timestamps
                 Column(horizontalAlignment = Alignment.End) {
@@ -2168,7 +2168,7 @@ fun HandoffCardSimple(
                                     )
                                 )
                         } ?: "",
-                        color = MutedText,
+                        color = CardMutedColor,
                         style = MaterialTheme.typography.bodySmall
                     )
                     if (handoff.editTimestamp != null) {
@@ -2183,7 +2183,7 @@ fun HandoffCardSimple(
                                         )
                                     )
                             }})""",
-                            color = MutedText,
+                            color = CardMutedColor,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -2205,21 +2205,17 @@ fun HandoffCardFull(
             .clickable {
                 onClick(handoff)
             },
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Surface
+            containerColor = CardColor
         ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = Border
-        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
                 text = handoff.title,
-                color = PrimaryText,
+                color = CardTextColor,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -2241,7 +2237,7 @@ fun HandoffCardFull(
                         |${parsedContent.next}
                     """.trimMargin()
                 },
-                color = MutedText,
+                color = CardMutedColor,
                 style = MaterialTheme.typography.bodySmall
             )
 
@@ -2257,37 +2253,23 @@ fun HandoffCardFull(
                         append("Status: ")
                         withStyle(
                             style = SpanStyle(
-                                color = when (handoff.status.toInt()) {
-                                    0 -> Color(0xffFF5F15)
-                                    1 -> Color.Yellow
-                                    2 -> BluePrimary
-                                    3 -> Color.Cyan
-                                    4 -> Color.Green
-                                    else -> BluePrimary
-                                }
+                                color = StatOptions.fromValue(handoff.status).statColor(),
                             )
                         ) {
-                            append("${db.statOptions[handoff.status]}")
+                            append("${StatOptions.fromValue(handoff.status)}")
                         }
 
                         append("  •  Priority: ")
 
                         withStyle(
                             style = SpanStyle(
-                                color = when (handoff.priority.toInt()) {
-                                    0 -> Color.Red
-                                    1 -> Color(0xffFF5F15)
-                                    2 -> Color.Yellow
-                                    3 -> BluePrimary
-                                    4 -> Color.Green
-                                    else -> BluePrimary
-                                }
+                                color = PrioOptions.fromValue(handoff.priority).prioColor(),
                             )
                         ) {
-                            append("${db.prioOptions[handoff.priority]}")
+                            append("${PrioOptions.fromValue(handoff.priority)}")
                         }
                     },
-                    color = BluePrimary,
+                    color = BlueAlternate,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -2303,7 +2285,7 @@ fun HandoffCardFull(
                                 "M/d/yyyy • h:mm a"
                             )
                         ) ?: "",
-                    color = MutedText,
+                    color = CardMutedColor,
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (handoff.editTimestamp != null) {
@@ -2316,7 +2298,7 @@ fun HandoffCardFull(
                                     )
                                 )
                         })""",
-                        color = MutedText,
+                        color = CardMutedColor,
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -2336,7 +2318,7 @@ private fun SummaryCard(
         modifier = modifier.height(100.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Surface
+            containerColor = CardColor
         ),
         border = BorderStroke(
             width = 1.dp,
@@ -2364,7 +2346,7 @@ private fun SummaryCard(
 
                 Text(
                     text = label,
-                    color = MutedText,
+                    color = CardMutedColor,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.height(34.dp)
                 )
@@ -2374,7 +2356,7 @@ private fun SummaryCard(
 
             Text(
                 text = value,
-                color = PrimaryText,
+                color = CardTextColor,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )

@@ -15,28 +15,104 @@ import io.github.jan.supabase.storage.storage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import android.os.Parcelable
+import androidx.compose.ui.graphics.Color
 import com.continuum.MainActivity
+import com.continuum.data.PrioOptions.HIGH
+import com.continuum.data.PrioOptions.LOW
+import com.continuum.data.PrioOptions.MEDIUM
+import com.continuum.data.PrioOptions.NEUTRAL
+import com.continuum.data.PrioOptions.URGENT
+import com.continuum.data.StatOptions.ACKNOWLEDGED
+import com.continuum.data.StatOptions.COMPLETE
+import com.continuum.data.StatOptions.IN_PROGRESS
+import com.continuum.data.StatOptions.NEW
+import com.continuum.data.StatOptions.UNDER_REVIEW
+import com.continuum.ui.theme.BluePrimary
+import com.continuum.ui.theme.CardMutedColor
+import com.continuum.ui.theme.Critical
+import com.continuum.ui.theme.CyanAccent
+import com.continuum.ui.theme.Success
+import com.continuum.ui.theme.Warning
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
-import io.github.jan.supabase.postgrest.query.filter.FilterOperator
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.parcelize.Parcelize
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import java.security.SecureRandom
-import java.security.Timestamp
 import java.time.LocalDate
 import java.time.ZoneId
-import java.util.Date
 import kotlin.Int
 import kotlin.time.Clock
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
-import kotlin.time.toDuration
 import kotlinx.serialization.json.put
 
+enum class StatOptions(val text: String) {
+    NEW("New"),
+    ACKNOWLEDGED("Acknowledged"),
+    IN_PROGRESS("In Progress"),
+    UNDER_REVIEW("Under Review"),
+    COMPLETE("Complete");
+
+    override fun toString(): String = text
+
+    fun statColor(): Color {
+
+        val color = when (this) {
+            NEW -> Critical
+            ACKNOWLEDGED -> Warning
+            IN_PROGRESS -> CyanAccent
+            UNDER_REVIEW -> BluePrimary
+            COMPLETE -> Success
+        }
+
+        return color
+    }
+
+    companion object {
+        fun fromValue(value: Short): StatOptions {
+            val index = value.toInt()
+
+            return entries.getOrNull(index)!!
+        }
+    }
+}
+enum class PrioOptions(val text: String) {
+    URGENT("Urgent"),
+    HIGH("High"),
+    MEDIUM("Medium"),
+    NEUTRAL("Neutral"),
+    LOW("Low");
+
+    //override fun toString(): String = text
+
+    fun prioColor(): Color {
+        val color = when (this) {
+            URGENT -> Critical
+            HIGH -> Warning
+            MEDIUM -> Success
+            NEUTRAL -> CardMutedColor
+            LOW -> CyanAccent
+        }
+
+        return color
+    }
+
+//    0 -> Color(0xFFF87171) // Urgent
+//    1 -> Color(0xFFFBBF24) // High
+//    2 -> Color(0xFF60A5FA) // Medium
+//    3 -> Color(0xFFCBD5E1) // Neutral
+//    else -> Color(0xFF94A3B8) // Low
+
+    companion object {
+        fun fromValue(value: Short): PrioOptions {
+            val index = value.toInt()
+
+            return PrioOptions.entries.getOrNull(index)!!
+        }
+    }
+}
 
 class Database (val session: MainActivity.UserSession) {
     val supabase = createSupabaseClient(
@@ -48,21 +124,6 @@ class Database (val session: MainActivity.UserSession) {
         install(Functions)
         install(Storage)
     }
-
-    val statOptions = mapOf( // TODO Consider using enums
-        0.toShort() to "New",
-        1.toShort() to "Acknowledged",
-        2.toShort() to "In Progress",
-        3.toShort() to "Under Review",
-        4.toShort() to "Complete"
-    )
-    val prioOptions = mapOf(
-        0.toShort() to "Urgent",
-        1.toShort() to "High",
-        2.toShort() to "Medium",
-        3.toShort() to "Neutral",
-        4.toShort() to "Low"
-    )
 
     //Handoff Delimiters
     val START_ISSUE = "<ISSUE_DETAILS_DELIM>"

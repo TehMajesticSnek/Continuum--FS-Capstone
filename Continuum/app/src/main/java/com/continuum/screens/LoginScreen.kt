@@ -256,11 +256,11 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Forgot Password?",
-            color = BluePrimary,
-            style = MaterialTheme.typography.bodyMedium
-        )
+//        Text( // TODO add functionality
+//            text = "Forgot Password?",
+//            color = BlueAlternate,
+//            style = MaterialTheme.typography.bodyMedium
+//        )
 
         Spacer(modifier = Modifier.height(32.dp))
 

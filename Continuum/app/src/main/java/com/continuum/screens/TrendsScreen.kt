@@ -17,14 +17,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.continuum.data.Database
+import com.continuum.data.PrioOptions
+import com.continuum.data.StatOptions
+import com.continuum.ui.theme.BlueAlternate
+import com.continuum.ui.theme.CardColor
+import com.continuum.ui.theme.CardTextColor
+import com.continuum.ui.theme.NavyBackground
+import com.continuum.ui.theme.Success
+import com.continuum.ui.theme.Warning
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
-private val TrendsCardColor = Color(0xFF242D3D)
-private val TrendsTextColor = Color(0xFFF1F5F9)
-private val TrendsMutedColor = Color(0xFFB0BAC9)
+private val CardMutedColor = Color(0xFFB0BAC9)
 
 @Composable
 fun TrendsScreen(
@@ -64,11 +70,13 @@ fun TrendsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(NavyBackground)
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+
     ) {
 
         // Header
@@ -80,7 +88,7 @@ fun TrendsScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = TrendsTextColor
+                    tint = CardTextColor
                 )
             }
 
@@ -89,12 +97,12 @@ fun TrendsScreen(
                     text = "Trends & Analytics",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = TrendsTextColor
+                    color = CardTextColor
                 )
                 Text(
                     text = "Team handoff insights",
                     style = MaterialTheme.typography.bodySmall,
-                    color = TrendsMutedColor
+                    color = CardMutedColor
                 )
             }
 
@@ -107,15 +115,16 @@ fun TrendsScreen(
                 Icon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = "Refresh trends",
-                    tint = TrendsTextColor
+                    tint = CardTextColor
                 )
             }
         }
 
         if (isLoading) {
             Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxSize().weight(1f),
+                contentAlignment = Alignment.Center,
+
             ) {
                 CircularProgressIndicator()
             }
@@ -142,7 +151,7 @@ fun TrendsScreen(
                     text = "Team Overview",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = TrendsTextColor
+                    color = CardTextColor
                 )
 
                 Row(
@@ -151,14 +160,14 @@ fun TrendsScreen(
                     TrendsStatCard(
                         title = "Total Handoffs",
                         value = data.totalHandoffs.toString(),
-                        valueColor = TrendsTextColor,
+                        valueColor = CardTextColor,
                         modifier = Modifier.weight(1f)
                     )
 
                     TrendsStatCard(
                         title = "Completed",
                         value = completed.toString(),
-                        valueColor = Color(0xFF34D399),
+                        valueColor = Success,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -169,14 +178,14 @@ fun TrendsScreen(
                     TrendsStatCard(
                         title = "Unresolved",
                         value = unresolved.toString(),
-                        valueColor = Color(0xFFFBBF24),
+                        valueColor = Warning,
                         modifier = Modifier.weight(1f)
                     )
 
                     TrendsStatCard(
                         title = "Completion Rate",
                         value = "$completionRate%",
-                        valueColor = Color(0xFF60A5FA),
+                        valueColor = BlueAlternate,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -184,7 +193,7 @@ fun TrendsScreen(
                 // Priority breakdown
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = TrendsCardColor
+                        containerColor = CardColor
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -197,20 +206,12 @@ fun TrendsScreen(
                             text = "Priority Breakdown",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TrendsTextColor
+                            color = CardTextColor
                         )
 
-                        val priorityColors = mapOf(
-                            0.toShort() to Color(0xFFF87171),
-                            1.toShort() to Color(0xFFFBBF24),
-                            2.toShort() to Color(0xFF60A5FA),
-                            3.toShort() to Color(0xFF94A3B8),
-                            4.toShort() to Color(0xFF34D399)
-                        )
-
-                        db.prioOptions.forEach { (priority, label) ->
+                        PrioOptions.entries.forEach { priority ->
                             val count =
-                                data.priorityCounts[priority] ?: 0
+                                data.priorityCounts[priority.ordinal.toShort()] ?: 0
 
                             val fraction =
                                 if (data.totalHandoffs > 0) {
@@ -229,12 +230,12 @@ fun TrendsScreen(
                                         Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = label,
-                                        color = TrendsTextColor
+                                        text = priority.text,
+                                        color = CardTextColor
                                     )
                                     Text(
                                         text = count.toString(),
-                                        color = TrendsMutedColor
+                                        color = CardMutedColor
                                     )
                                 }
 
@@ -243,8 +244,7 @@ fun TrendsScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(8.dp),
-                                    color = priorityColors[priority]
-                                        ?: TrendsMutedColor,
+                                    color = priority.prioColor(),
                                     trackColor = Color(0xFF394456),
                                     gapSize = 0.dp,
                                     drawStopIndicator = {}
@@ -257,7 +257,7 @@ fun TrendsScreen(
                 // Activity over the last 7 days
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = TrendsCardColor
+                        containerColor = CardColor
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -270,13 +270,13 @@ fun TrendsScreen(
                             text = "Activity Over Time",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TrendsTextColor
+                            color = CardTextColor
                         )
 
                         Text(
                             text = "Handoffs created in the last 7 days",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TrendsMutedColor
+                            color = CardMutedColor
                         )
 
                         val today = LocalDate.now()
@@ -300,7 +300,7 @@ fun TrendsScreen(
                                     text = day.format(
                                         DateTimeFormatter.ofPattern("EEE")
                                     ),
-                                    color = TrendsMutedColor,
+                                    color = CardMutedColor,
                                     modifier = Modifier.width(42.dp)
                                 )
 
@@ -311,7 +311,7 @@ fun TrendsScreen(
                                     modifier = Modifier
                                         .weight(1f)
                                         .height(10.dp),
-                                    color = Color(0xFF60A5FA),
+                                    color = BlueAlternate,
                                     trackColor = Color(0xFF394456),
                                     gapSize = 0.dp,
                                     drawStopIndicator = {}
@@ -319,7 +319,7 @@ fun TrendsScreen(
 
                                 Text(
                                     text = count.toString(),
-                                    color = TrendsTextColor,
+                                    color = CardTextColor,
                                     modifier = Modifier.width(24.dp)
                                 )
                             }
@@ -330,7 +330,7 @@ fun TrendsScreen(
                 // Repeated Issues
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = TrendsCardColor
+                        containerColor = CardColor
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -343,19 +343,19 @@ fun TrendsScreen(
                             text = "Repeated Issues",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TrendsTextColor
+                            color = CardTextColor
                         )
 
                         Text(
                             text = "Potentially recurring handoff topics",
                             style = MaterialTheme.typography.bodySmall,
-                            color = TrendsMutedColor
+                            color = CardMutedColor
                         )
 
                         if (repeatedIssues.isEmpty()) {
                             Text(
                                 text = "No repeated issues detected.",
-                                color = TrendsMutedColor
+                                color = CardMutedColor
                             )
                         } else {
                             repeatedIssues.take(5).forEach { issue ->
@@ -366,7 +366,7 @@ fun TrendsScreen(
                                 ) {
                                     Text(
                                         text = issue.title,
-                                        color = TrendsTextColor,
+                                        color = CardTextColor,
                                         modifier = Modifier.weight(1f)
                                     )
 
@@ -374,7 +374,7 @@ fun TrendsScreen(
 
                                     Text(
                                         text = "${issue.occurrences} occurrences",
-                                        color = Color(0xFF60A5FA),
+                                        color = BlueAlternate,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                 }
@@ -386,7 +386,7 @@ fun TrendsScreen(
                 // Status breakdown
                 Card(
                     colors = CardDefaults.cardColors(
-                        containerColor = TrendsCardColor
+                        containerColor = CardColor
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -399,12 +399,12 @@ fun TrendsScreen(
                             text = "Handoff Status",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TrendsTextColor
+                            color = CardTextColor
                         )
 
-                        db.statOptions.forEach { (status, label) ->
+                        StatOptions.entries.forEach { status ->
                             val count =
-                                data.statusCounts[status] ?: 0
+                                data.statusCounts[status.ordinal.toShort()] ?: 0
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -412,12 +412,12 @@ fun TrendsScreen(
                                     Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    text = label,
-                                    color = TrendsTextColor
+                                    text = status.text,
+                                    color = status.statColor()
                                 )
                                 Text(
                                     text = count.toString(),
-                                    color = TrendsMutedColor,
+                                    color = CardMutedColor,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -439,7 +439,7 @@ private fun TrendsStatCard(
     Card(
         modifier = modifier.height(110.dp),
         colors = CardDefaults.cardColors(
-            containerColor = TrendsCardColor
+            containerColor = CardColor
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -452,7 +452,7 @@ private fun TrendsStatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = TrendsMutedColor
+                color = CardMutedColor
             )
 
             Text(

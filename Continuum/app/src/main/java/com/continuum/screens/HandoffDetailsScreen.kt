@@ -69,8 +69,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
 import androidx.compose.runtime.key
+import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.navigation.NavHostController
+import com.continuum.data.PrioOptions
+import com.continuum.data.StatOptions
+import com.continuum.ui.theme.BlueAlternate
+import com.continuum.ui.theme.Critical
+import com.continuum.ui.theme.Warning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.ZoneId
@@ -94,9 +100,7 @@ fun HandoffDetailsScreen(
         mutableStateOf(false)
     }
 
-    var currentStatus by remember(handoff.handoffID) {
-        mutableStateOf(handoff.status)
-    }
+    var currentStatus by remember { mutableStateOf(StatOptions.fromValue(handoff.status)) }
 
     var statusMenuExpanded by remember {
         mutableStateOf(false)
@@ -247,7 +251,7 @@ fun HandoffDetailsScreen(
                         expanded = optionsMenuExpanded,
                         onDismissRequest = { optionsMenuExpanded = false },
                         shape = RoundedCornerShape(10.dp),
-                        containerColor = NavyBackground,
+                        containerColor = Surface,
                         border = BorderStroke(1.dp, Border)
                     ) {
 
@@ -263,7 +267,7 @@ fun HandoffDetailsScreen(
                             text = {
                                 Text(
                                     "Delete handoff",
-                                    color = Color(0xffff0000)
+                                    color = Critical
                                 )
                             },
                             onClick = {
@@ -370,15 +374,8 @@ fun HandoffDetailsScreen(
                                 }
                             ) {
                                 Text(
-                                    text = viewModel.db.statOptions[currentStatus].toString(),
-                                    color = when (currentStatus.toInt()) {
-                                        0 -> Color(0xffFF5F15)
-                                        1 -> Color.Yellow
-                                        2 -> BluePrimary
-                                        3 -> Color.Cyan
-                                        4 -> Color.Green
-                                        else -> BluePrimary
-                                    },
+                                    text = currentStatus.text,
+                                    color = currentStatus.statColor(),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -406,17 +403,10 @@ fun HandoffDetailsScreen(
                                     containerColor = NavyBackground,
                                     border = BorderStroke(1.dp, Border)
                                 ) {
-                                    viewModel.db.statOptions
-                                        .forEach { (statusValue, statusName) -> DropdownMenuItem(
+                                    StatOptions.entries
+                                        .forEach { status -> DropdownMenuItem(
                                             text = {
-                                                Text(statusName, color = when (statusValue.toInt()) {
-                                                    0 -> Color(0xffFF5F15)
-                                                    1 -> Color.Yellow
-                                                    2 -> BluePrimary
-                                                    3 -> Color.Cyan
-                                                    4 -> Color.Green
-                                                    else -> BluePrimary
-                                                })
+                                                Text(status.text, color = status.statColor())
                                             },
                                             onClick = {
                                                 val id = handoff.handoffID
@@ -425,12 +415,13 @@ fun HandoffDetailsScreen(
                                                     coroutineScope.launch {
                                                         val result = viewModel.db.updateHandoffStatus(
                                                             handoffID = id,
-                                                            status = statusValue
+                                                            status = status.ordinal.toShort()
                                                         )
 
                                                         if (result.isEmpty()) {
-                                                            currentStatus = statusValue
+                                                            currentStatus = status
                                                         }
+                                                        viewModel.getHandoffs()
                                                     }
                                                 }
                                                 statusMenuExpanded = false
@@ -453,15 +444,8 @@ fun HandoffDetailsScreen(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = viewModel.db.prioOptions[handoff.priority].toString(),
-                                color = when (handoff.priority.toInt()) {
-                                    0 -> Color.Red
-                                    1 -> Color(0xffFF5F15)
-                                    2 -> Color.Yellow
-                                    3 -> BluePrimary
-                                    4 -> Color.Green
-                                    else -> BluePrimary
-                                },
+                                text = PrioOptions.fromValue(handoff.priority).text,
+                                color = PrioOptions.fromValue(handoff.priority).prioColor(),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -480,7 +464,7 @@ fun HandoffDetailsScreen(
                                 ),
                                 border = BorderStroke(
                                     width = 1.dp,
-                                    color = Color(0xffFF5F15)
+                                    color = Warning
                                 ),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
@@ -489,7 +473,7 @@ fun HandoffDetailsScreen(
                                 ) {
                                     Text(
                                         text = "Repeat Issue Detected",
-                                        color = Color(0xffFF5F15),
+                                        color = Warning,
                                         fontWeight = FontWeight.Bold
                                     )
 
@@ -729,7 +713,7 @@ fun HandoffDetailsScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         Text(
-                                            text = attachment.transcription!!,
+                                            text = attachment.transcription,
                                             color = MutedText,
                                             style = MaterialTheme.typography.bodyMedium
                                         )
@@ -747,7 +731,7 @@ fun HandoffDetailsScreen(
                                         Spacer(modifier = Modifier.height(4.dp))
 
                                         Text(
-                                            text = attachment.extractedText!!,
+                                            text = attachment.extractedText,
                                             color = MutedText,
                                             style = MaterialTheme.typography.bodyMedium
                                         )
@@ -769,14 +753,14 @@ fun HandoffDetailsScreen(
                                     if (result.isEmpty()) {
                                         acknowledged = true
 
-                                        if (currentStatus.toInt() == 0) {
+                                        if (currentStatus == StatOptions.NEW) {
                                             val statusResult = viewModel.db.updateHandoffStatus(
                                                 handoffID = id,
                                                 status = 1.toShort()
                                             )
 
                                             if (statusResult.isEmpty()) {
-                                                currentStatus = 1.toShort()
+                                                currentStatus = StatOptions.ACKNOWLEDGED
                                             }
                                         }
                                     }
@@ -868,7 +852,8 @@ fun HandoffDetailsScreen(
                             onClick = {
                                 isAction = false
                             },
-                            modifier = Modifier.weight(1f)
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).height(60.dp)
                         ) {
                             Text("Comment")
                         }
@@ -879,9 +864,10 @@ fun HandoffDetailsScreen(
                             onClick = {
                                 isAction = true
                             },
-                            modifier = Modifier.weight(1f)
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.weight(1f).height(60.dp)
                         ) {
-                            Text("Attempted Action")
+                            Text("Attempted Action", textAlign = TextAlign.Center)
                         }
                     }
 
@@ -1017,7 +1003,7 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -1056,13 +1042,13 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
                             if (!ownerExpanded) {
                                 Icon(
                                     imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = "Change Status",
+                                    contentDescription = "Change Owner",
                                     tint = MutedText
                                 )
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.ArrowDropUp,
-                                    contentDescription = "Change Status",
+                                    contentDescription = "Change Owner",
                                     tint = MutedText
                                 )
                             }
@@ -1087,7 +1073,7 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
                             expanded = ownerExpanded,
                             onDismissRequest = { ownerExpanded = false },
                             shape = RoundedCornerShape(10.dp),
-                            containerColor = NavyBackground,
+                            containerColor = Surface,
                             border = BorderStroke(1.dp, Border)
                         ) {
 
@@ -1119,7 +1105,7 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
                             onDismissOwner()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
@@ -1134,7 +1120,7 @@ fun OwnerDialog(currentOwner: Database.User?, handoff: Database.Handoff, db: Dat
                             }
                         },
                     ) {
-                        Text("Confirm")
+                        Text("Confirm", color = BlueAlternate)
                     }
                 }
             }
@@ -1152,7 +1138,7 @@ fun ConfirmDeleteHandoffDialog(handoff: Database.Handoff, db: Database, onDismis
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -1190,7 +1176,7 @@ fun ConfirmDeleteHandoffDialog(handoff: Database.Handoff, db: Database, onDismis
                             onDismissDelete()
                         },
                     ) {
-                        Text("Cancel")
+                        Text("Cancel", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
@@ -1208,7 +1194,7 @@ fun ConfirmDeleteHandoffDialog(handoff: Database.Handoff, db: Database, onDismis
 
                         },
                     ) {
-                        Text("Delete", color = Color(0xffff0000))
+                        Text("Delete", color = Critical)
                     }
                 }
             }

@@ -52,7 +52,7 @@ object Teams
 object SupervisorDashboard
 @Serializable object Trends
 @Composable
-fun Navigate(viewModel: ViewModel, startPage: Any) {
+fun Navigate(viewModel: ViewModel) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
@@ -81,7 +81,7 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
 
     NavHost(
         navController = navController,
-        startDestination = startPage
+        startDestination = viewModel.startPage
     ) {
 
         composable<Login> {
@@ -118,18 +118,6 @@ fun Navigate(viewModel: ViewModel, startPage: Any) {
 
         composable<Home> {
             HomeScreen(
-                modifier = Modifier.onSwipeNavigation(
-                    onSwipeLeft = {
-                        if (viewModel.session.activeTeam != null) {
-                            navController.navigate(route = Records) {
-                                popUpTo(Home) {
-                                    inclusive = false
-                                }
-                            }
-                        }
-                    },
-                    onSwipeRight = { }
-                ),
                 viewModel = viewModel,
                 toNewHandoff = {
                     selectedHandoff = null

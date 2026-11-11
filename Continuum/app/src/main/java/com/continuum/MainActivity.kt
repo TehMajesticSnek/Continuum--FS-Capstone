@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.LaunchedEffect
@@ -38,37 +39,25 @@ class MainActivity : ComponentActivity() {
         val session = UserSession()
         val db = Database(session)
         val userData = UserPreferences(applicationContext) // Selected team mostly. Settings are separate
-        var startPage: Any = Login
 
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
         enableEdgeToEdge()
 
+        val viewModel: ViewModel by viewModels { ViewModel.Factory(userData, db, session) }
+
+        splashScreen.setKeepOnScreenCondition {
+            viewModel.isCheckingAuth || !userData.canStart
+        }
+
         setContent {
-            val viewModel: ViewModel = viewModel(factory = ViewModel.Factory(userData, db, session))
-
-            var isCheckingAuth by remember { mutableStateOf(true) }
-
-            splashScreen.setKeepOnScreenCondition {
-                isCheckingAuth
-            }
-
-
-            LaunchedEffect(Unit) {
-                if (viewModel.db.isLoggedIn()) {
-                    startPage = Home
-                }
-
-                isCheckingAuth = false
-            }
-
 
             ContinuumTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    if (!isCheckingAuth && userData.canStart) {
+                    if (!viewModel.isCheckingAuth && userData.canStart) {
                         session.activeTeam = viewModel.selectedTeam.collectAsState().value
-                        Navigate(viewModel = viewModel, startPage = startPage)
+                        Navigate(viewModel = viewModel)
                     }
                 }
             }

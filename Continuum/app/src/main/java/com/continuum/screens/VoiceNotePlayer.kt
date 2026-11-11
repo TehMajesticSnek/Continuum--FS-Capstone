@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -28,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,6 +40,10 @@ import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.MutedText
 import com.continuum.ui.theme.PrimaryText
 import kotlinx.coroutines.delay
+import androidx.core.net.toUri
+import androidx.media3.common.PlaybackException
+import com.continuum.ui.theme.BlueAlternate
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun VoiceNotePlayer(
@@ -72,14 +78,14 @@ fun VoiceNotePlayer(
             }
 
             override fun onPlayerError(
-                error: androidx.media3.common.PlaybackException
+                error: PlaybackException
             ) {
                 playbackError = true
             }
         }
 
         player.addListener(listener)
-        player.setMediaItem(MediaItem.fromUri(Uri.parse(audioUrl)))
+        player.setMediaItem(MediaItem.fromUri(audioUrl.toUri()))
         player.prepare()
 
         onDispose {
@@ -91,7 +97,7 @@ fun VoiceNotePlayer(
     LaunchedEffect(player) {
         while (true) {
             currentPosition = player.currentPosition.coerceAtLeast(0L)
-            delay(250L)
+            delay(250L.milliseconds)
         }
     }
 
@@ -172,7 +178,19 @@ fun VoiceNotePlayer(
                 currentPosition = value.toLong()
             },
             valueRange = 0f..duration.coerceAtLeast(1L).toFloat(),
-            enabled = duration > 0L
+            enabled = duration > 0L,
+            colors = SliderColors(
+                thumbColor = BluePrimary,
+                activeTrackColor = BluePrimary,
+                activeTickColor = BlueAlternate,
+                inactiveTrackColor = Color(0xFF394456),
+                inactiveTickColor = BlueAlternate,
+                disabledThumbColor = BluePrimary,
+                disabledActiveTrackColor = BluePrimary,
+                disabledActiveTickColor = BlueAlternate,
+                disabledInactiveTrackColor = Color(0xFF394456),
+                disabledInactiveTickColor = BlueAlternate
+            )
         )
 
         Row(
@@ -186,7 +204,7 @@ fun VoiceNotePlayer(
         if (playbackError) {
             Text(
                 text = "Unable to play this recording.",
-                color = androidx.compose.ui.graphics.Color.Red
+                color = Color.Red
             )
         }
     }

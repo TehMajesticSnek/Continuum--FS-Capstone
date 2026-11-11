@@ -86,7 +86,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.continuum.data.Database
+import com.continuum.data.PrioOptions
+import com.continuum.data.StatOptions
 import com.continuum.ui.ViewModel
+import com.continuum.ui.theme.BlueAlternate
 import com.continuum.ui.theme.BluePrimary
 import com.continuum.ui.theme.Border
 import com.continuum.ui.theme.MutedText
@@ -123,26 +126,18 @@ fun RecordsScreen(
 
     var showFilterDialog by remember { mutableStateOf(false) }
 
-    val statOptions = mapOf(
-        (-1).toShort() to "Any",
-        0.toShort() to "New",
-        1.toShort() to "Acknowledged",
-        2.toShort() to "In Progress",
-        3.toShort() to "Under Review",
-        4.toShort() to "Complete"
-    )
+    val statOptions: Map<Short, String> = buildMap {
+        put((-1).toShort(), "Any")
+        StatOptions.entries.forEach { put(it.ordinal.toShort(), it.text) }
+    }
     var statExpanded by remember { mutableStateOf(false) }
     var statSelected by remember { mutableStateOf(statOptions.entries.find { it.key == (-1).toShort() }) }
     val statInteractionSource = remember { MutableInteractionSource() }
 
-    val prioOptions = mapOf(
-        (-1).toShort() to "Any",
-        0.toShort() to "Urgent",
-        1.toShort() to "High",
-        2.toShort() to "Medium",
-        3.toShort() to "Neutral",
-        4.toShort() to "Low"
-    )
+    val prioOptions = buildMap {
+        put((-1).toShort(), "Any")
+        PrioOptions.entries.forEach { put(it.ordinal.toShort(), it.text) }
+    }
     var prioExpanded by remember { mutableStateOf(false) }
     var prioSelected by remember { mutableStateOf(prioOptions.entries.find { it.key == (-1).toShort() }) }
     val prioInteractionSource = remember { MutableInteractionSource() }
@@ -155,7 +150,6 @@ fun RecordsScreen(
     val teamMembers = listOf(Database.TeamUserDisplay("", "Any", "", emptyList())) + viewModel.teamMembers
 
     var handoffLoad = viewModel.handoffLoadState
-    val teamMemberLoad = viewModel.teamMemberLoadState
 
     var age: Int? by remember { mutableStateOf<Int?>(0) }
 
@@ -248,21 +242,14 @@ fun RecordsScreen(
 
     @Composable
     fun FilterDialog(
-        db: Database,
         onDismiss: () -> Unit,
     ) {
-        LaunchedEffect(Unit) {
-            //viewModel.getTeamMembers()
-//            teamMembers.clear()
-//            teamMembers.add(userSelected)
-//            teamMembers += db.getTeamMembers()
-        }
 
         Dialog(onDismissRequest = onDismiss) {
             Box(
                 modifier = Modifier
                     .size(width = 300.dp, height = 450.dp)
-                    .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                    .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                     .padding(top = 12.dp)
             ) {
                 Column (modifier = Modifier
@@ -350,22 +337,8 @@ fun RecordsScreen(
                                     unfocusedContainerColor = Surface,
                                     focusedBorderColor = Border,
                                     unfocusedBorderColor = Border,
-                                    focusedTextColor = when (statSelected!!.key.toInt()) {
-                                        0 -> Color(0xffFF5F15)
-                                        1 -> Color.Yellow
-                                        2 -> BluePrimary
-                                        3 -> Color.Cyan
-                                        4 -> Color.Green
-                                        else -> PrimaryText
-                                    },
-                                    unfocusedTextColor = when (statSelected!!.key.toInt()) {
-                                        0 -> Color(0xffFF5F15)
-                                        1 -> Color.Yellow
-                                        2 -> BluePrimary
-                                        3 -> Color.Cyan
-                                        4 -> Color.Green
-                                        else -> PrimaryText
-                                    },
+                                    focusedTextColor = if (statSelected!!.key == (-1).toShort()) PrimaryText else StatOptions.fromValue(statSelected!!.key).statColor(),
+                                    unfocusedTextColor = if (statSelected!!.key == (-1).toShort()) PrimaryText else StatOptions.fromValue(statSelected!!.key).statColor(),
                                     focusedLabelColor = MutedText,
                                     unfocusedLabelColor = MutedText,
                                     cursorColor = BluePrimary,
@@ -384,15 +357,10 @@ fun RecordsScreen(
                                 ) {
                                     statOptions.forEach { option ->
                                         DropdownMenuItem(
-                                            text = { Text(option.value,
-                                                color = when (option.key.toInt()) {
-                                                    0 -> Color(0xffFF5F15)
-                                                    1 -> Color.Yellow
-                                                    2 -> BluePrimary
-                                                    3 -> Color.Cyan
-                                                    4 -> Color.Green
-                                                    else -> PrimaryText
-                                                })
+                                            text = {
+                                                Text(option.value,
+                                                    color = if (option.key == (-1).toShort()) PrimaryText else StatOptions.fromValue(option.key).statColor(),
+                                                )
                                             },
                                             onClick = {
                                                 statSelected = option
@@ -458,22 +426,8 @@ fun RecordsScreen(
                                     unfocusedContainerColor = Surface,
                                     focusedBorderColor = Border,
                                     unfocusedBorderColor = Border,
-                                    focusedTextColor = when (prioSelected!!.key.toInt()) {
-                                        0 -> Color.Red
-                                        1 -> Color(0xffFF5F15)
-                                        2 -> Color.Yellow
-                                        3 -> BluePrimary
-                                        4 -> Color.Green
-                                        else -> PrimaryText
-                                    },
-                                    unfocusedTextColor = when (prioSelected!!.key.toInt()) {
-                                        0 -> Color.Red
-                                        1 -> Color(0xffFF5F15)
-                                        2 -> Color.Yellow
-                                        3 -> BluePrimary
-                                        4 -> Color.Green
-                                        else -> PrimaryText
-                                    },
+                                    focusedTextColor = if (prioSelected!!.key == (-1).toShort()) PrimaryText else PrioOptions.fromValue(prioSelected!!.key).prioColor(),
+                                    unfocusedTextColor = if (prioSelected!!.key == (-1).toShort()) PrimaryText else PrioOptions.fromValue(prioSelected!!.key).prioColor(),
                                     focusedLabelColor = MutedText,
                                     unfocusedLabelColor = MutedText,
                                     cursorColor = BluePrimary,
@@ -492,16 +446,10 @@ fun RecordsScreen(
                                 ) {
                                     prioOptions.forEach { option ->
                                         DropdownMenuItem(
-                                            text = { Text(
-                                                option.value,
-                                                color = when (option.key.toInt()) {
-                                                    0 -> Color.Red
-                                                    1 -> Color(0xffFF5F15)
-                                                    2 -> Color.Yellow
-                                                    3 -> BluePrimary
-                                                    4 -> Color.Green
-                                                    else -> PrimaryText
-                                                })
+                                            text = {
+                                                Text(option.value,
+                                                    color = if (option.key.toInt() == (-1)) PrimaryText else PrioOptions.fromValue(option.key).prioColor(),
+                                                )
                                             },
                                             onClick = {
                                                 prioSelected = option
@@ -880,7 +828,7 @@ fun RecordsScreen(
                         },
                             modifier = Modifier.align(Alignment.End),
                         ) {
-                        Text("Confirm")
+                        Text("Confirm", color = BlueAlternate)
                     }
                 }
             }
@@ -891,7 +839,7 @@ fun RecordsScreen(
         modifier = modifier.fillMaxSize().background(NavyBackground),
         bottomBar = {
             BottomAppBar(
-                containerColor = NavyBackground,
+                containerColor = Surface,
                 contentPadding = PaddingValues(start = 40.dp, top = 10.dp, end = 40.dp, bottom = 30.dp),
                 windowInsets = WindowInsets(0, 0, 0, 80),
                 modifier = Modifier.wrapContentHeight()
@@ -922,9 +870,8 @@ fun RecordsScreen(
                     )
                 }
             }
-        }
-    ) {
-        it
+        },
+    ) { it
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1011,7 +958,13 @@ fun RecordsScreen(
                     border = BorderStroke(width = 1.dp, color = Border),
                     modifier = Modifier
                         .fillMaxHeight()
-                        .weight(.2f)
+                        .weight(.2f),
+                    colors = IconButtonColors(
+                        containerColor = Surface,
+                        contentColor = MutedText,
+                        disabledContainerColor = Surface,
+                        disabledContentColor = MutedText,
+                    )
 
                 ) {
                     Icon(
@@ -1100,7 +1053,7 @@ fun RecordsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                         }
 
-                        items(dayHandoffs, key = { it.handoffID!! }) { handoff ->
+                        items(dayHandoffs, key = { it -> it.handoffID!! }) { handoff ->
                             HandoffCardFull(viewModel.db, handoff, onHandoffClick)
                         }
                     }
@@ -1131,13 +1084,11 @@ fun RecordsScreen(
                 item {
                     Spacer(modifier = Modifier.height(80.dp))
                 }
-
             }
         }
     }
     if (showFilterDialog) {
         FilterDialog(
-            db = viewModel.db,
             onDismiss = { showFilterDialog = false },
         )
     }

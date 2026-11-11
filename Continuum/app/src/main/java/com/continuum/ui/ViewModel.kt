@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.continuum.Home
+import com.continuum.Login
 import com.continuum.MainActivity
 import com.continuum.data.Database
 import com.continuum.data.UserPreferences
@@ -20,6 +22,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ViewModel(private val repository: UserPreferences, val db: Database, val session: MainActivity.UserSession) : ViewModel() {
+
+    var isCheckingAuth by mutableStateOf(true)
+        private set
+    var startPage by mutableStateOf<Any>(Login)
 
     val selectedTeam: StateFlow<Database.Team?> = repository.selectedTeamFlow
         .stateIn(
@@ -143,6 +149,14 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
         }
     }
 
+    init {
+        viewModelScope.launch {
+            if (db.isLoggedIn()) {
+                startPage = Home
+            }
+            isCheckingAuth = false
+        }
+    }
 
     class Factory(private val repository: UserPreferences, private val database: Database, private val session: MainActivity.UserSession) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

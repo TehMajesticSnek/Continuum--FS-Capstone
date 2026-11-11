@@ -64,6 +64,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.Api
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
@@ -89,6 +91,10 @@ import com.k2fsa.sherpa.onnx.OfflineNemoEncDecCtcModelConfig
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.core.content.FileProvider
+import com.continuum.data.PrioOptions
+import com.continuum.data.StatOptions
+import com.continuum.ui.theme.BlueAlternate
+import com.continuum.ui.theme.CardColor
 import com.continuum.ui.theme.CyanAccent
 import java.io.File
 
@@ -130,11 +136,11 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
     var photoExtractedText by remember { mutableStateOf("") }
 
     var statExpanded by remember { mutableStateOf(false) }
-    var statSelected by remember { mutableStateOf(viewModel.db.statOptions.entries.find { it.key == 0.toShort() }) }
+    var statSelected by remember { mutableStateOf(StatOptions.NEW) }
     val statInteractionSource = remember { MutableInteractionSource() }
 
     var prioExpanded by remember { mutableStateOf(false) }
-    var prioSelected by remember { mutableStateOf(viewModel.db.prioOptions.entries.find { it.key == 3.toShort() }) }
+    var prioSelected by remember { mutableStateOf(PrioOptions.NEUTRAL) }
     val prioInteractionSource = remember { MutableInteractionSource() }
 
 
@@ -210,8 +216,8 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
             showGenerateButton = false
 
             title = editHandoff.title
-            statSelected = viewModel.db.statOptions.entries.find { it.key == editHandoff.status }
-            prioSelected = viewModel.db.prioOptions.entries.find { it.key == editHandoff.priority }
+            statSelected = StatOptions.fromValue(editHandoff.status)
+            prioSelected = PrioOptions.fromValue(editHandoff.priority)
 
             val parsedContent = viewModel.db.separateContent(editHandoff.content ?: "")
             issueDetails = parsedContent.issue ?: ""
@@ -635,7 +641,7 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
             Box (modifier = Modifier.weight(0.5f))
             {
                 OutlinedTextField(
-                    value = statSelected!!.value,
+                    value = statSelected.toString(),
                     onValueChange = { },
                     label = { Text("Status") },
                     readOnly = true,
@@ -661,22 +667,8 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                         unfocusedContainerColor = Surface,
                         focusedBorderColor = Border,
                         unfocusedBorderColor = Border,
-                        focusedTextColor = when (statSelected!!.key.toInt()) {
-                            0 -> Color(0xffFF5F15)
-                            1 -> Color.Yellow
-                            2 -> BluePrimary
-                            3 -> Color.Cyan
-                            4 -> Color.Green
-                            else -> BluePrimary
-                        },
-                        unfocusedTextColor = when (statSelected!!.key.toInt()) {
-                            0 -> Color(0xffFF5F15)
-                            1 -> Color.Yellow
-                            2 -> BluePrimary
-                            3 -> Color.Cyan
-                            4 -> Color.Green
-                            else -> BluePrimary
-                        },
+                        focusedTextColor = statSelected.statColor(),
+                        unfocusedTextColor = statSelected.statColor(),
                         focusedLabelColor = MutedText,
                         unfocusedLabelColor = MutedText,
                         cursorColor = BluePrimary,
@@ -690,22 +682,15 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                         expanded = statExpanded,
                         onDismissRequest = { statExpanded = false },
                         shape = RoundedCornerShape(10.dp),
-                        containerColor = NavyBackground,
+                        containerColor = Surface,
                         border = BorderStroke(1.dp, Border)
                     ) {
-                        viewModel.db.statOptions.forEach { option ->
+                        StatOptions.entries.forEach { option ->
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        option.value,
-                                        color = when (option.key.toInt()) {
-                                            0 -> Color(0xffFF5F15)
-                                            1 -> Color.Yellow
-                                            2 -> BluePrimary
-                                            3 -> Color.Cyan
-                                            4 -> Color.Green
-                                            else -> BluePrimary
-                                        }
+                                        option.text,
+                                        color = option.statColor()
                                     )
                                 },
                                 onClick = {
@@ -721,7 +706,7 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
             Box (modifier = Modifier.weight(0.5f))
             {
                 OutlinedTextField(
-                    value = prioSelected!!.value,
+                    value = prioSelected.text,
                     onValueChange = { },
                     label = { Text("Priority") },
                     readOnly = true,
@@ -747,22 +732,8 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                         unfocusedContainerColor = Surface,
                         focusedBorderColor = Border,
                         unfocusedBorderColor = Border,
-                        focusedTextColor = when (prioSelected!!.key.toInt()) {
-                            0 -> Color.Red
-                            1 -> Color(0xffFF5F15)
-                            2 -> Color.Yellow
-                            3 -> BluePrimary
-                            4 -> Color.Green
-                            else -> BluePrimary
-                        },
-                        unfocusedTextColor = when (prioSelected!!.key.toInt()) {
-                            0 -> Color.Red
-                            1 -> Color(0xffFF5F15)
-                            2 -> Color.Yellow
-                            3 -> BluePrimary
-                            4 -> Color.Green
-                            else -> BluePrimary
-                        },
+                        focusedTextColor = prioSelected.prioColor(),
+                        unfocusedTextColor = prioSelected.prioColor(),
                         focusedLabelColor = MutedText,
                         unfocusedLabelColor = MutedText,
                         cursorColor = BluePrimary,
@@ -776,22 +747,15 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                         expanded = prioExpanded,
                         onDismissRequest = { prioExpanded = false },
                         shape = RoundedCornerShape(10.dp),
-                        containerColor = NavyBackground,
+                        containerColor = Surface,
                         border = BorderStroke(1.dp, Border)
                     ) {
-                        viewModel.db.prioOptions.forEach { option ->
+                        PrioOptions.entries.forEach { option ->
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        option.value,
-                                        color = when (option.key.toInt()) {
-                                            0 -> Color.Red
-                                            1 -> Color(0xffFF5F15)
-                                            2 -> Color.Yellow
-                                            3 -> BluePrimary
-                                            4 -> Color.Green
-                                            else -> BluePrimary
-                                        },
+                                        option.text,
+                                        color = option.prioColor(),
                                     )
                                 },
 
@@ -914,10 +878,18 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                 border = BorderStroke(1.dp, color = if (issueDetails.isNotBlank()) CyanAccent else Border),
                 shape = RoundedCornerShape(8.dp),
             ) {
-                Text(
-                    text = if (isGenerating) "Structuring..." else "Structure with AI",
-                    color = if (issueDetails.isNotBlank()) CyanAccent else MutedText
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Api,
+                        contentDescription = "Structure AI Icon",
+                        tint = if (issueDetails.isNotBlank()) CyanAccent else MutedText,)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (isGenerating) "Structuring..." else "Structure with AI",
+                        color = if (issueDetails.isNotBlank()) CyanAccent else MutedText,
+                    )
+                }
+
             }
         }
 
@@ -1007,7 +979,8 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, color = BlueAlternate)
         ) {
             Text(
                 text = if (selectedFileUri == null) {
@@ -1027,7 +1000,8 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, color = BlueAlternate)
         ) {
             Text("Add Photo")
         }
@@ -1054,7 +1028,8 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, color = BlueAlternate)
         ) {
             Text("Take Photo")
         }
@@ -1083,7 +1058,8 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            border = BorderStroke(1.dp, color = BlueAlternate)
         ) {
             Text(
                 text = if (isRecording) {
@@ -1191,16 +1167,16 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
                             result = viewModel.db.newHandoff(
                                 title,
                                 structuredContent,
-                                statSelected!!.key,
-                                prioSelected!!.key
+                                statSelected?.ordinal?.toShort() ?: 0,
+                                prioSelected?.ordinal?.toShort() ?: 0
                             )
                         } else {
                             result = viewModel.db.editHandoff(
                                 editHandoff.handoffID!!,
                                 title,
                                 structuredContent,
-                                statSelected!!.key,
-                                prioSelected!!.key
+                                statSelected?.ordinal?.toShort() ?: 0,
+                                prioSelected?.ordinal?.toShort() ?: 0
                             )
                         }
 
@@ -1288,14 +1264,11 @@ fun CreateHandoffScreen( // TODO: Check for performance improvement. Takes forev
 @Composable
 fun ConfirmLeaveEditDialog(handoff: Database.Handoff?, onDismissLeave: () -> Unit, onSuccessLeave: () -> Unit) {
 
-    val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
-
     Dialog(onDismissRequest = onDismissLeave) {
         Box(
             modifier = Modifier
                 .size(width = 300.dp, height = 300.dp)
-                .background(MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp))
+                .background(NavyBackground, shape = RoundedCornerShape(16.dp))
                 .padding(top = 12.dp)
         ) {
             Column(
@@ -1333,14 +1306,14 @@ fun ConfirmLeaveEditDialog(handoff: Database.Handoff?, onDismissLeave: () -> Uni
                             onDismissLeave()
                         },
                     ) {
-                        Text("Return")
+                        Text("Return", color = BlueAlternate)
                     }
                     TextButton(
                         onClick = {
                             onSuccessLeave()
                         },
                     ) {
-                        Text("Confirm")
+                        Text("Confirm", color = BlueAlternate)
                     }
                 }
             }
