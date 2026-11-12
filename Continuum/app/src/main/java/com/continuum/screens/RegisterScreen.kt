@@ -317,6 +317,7 @@ fun RegisterScreen(
                     val response = viewModel.db.registerUser(email, password, passwordConfirm, fName, lName)
                     if (response == "") {
                         withContext(Dispatchers.Main) {
+                            viewModel.getTeams()
                             toHome()
                         }
                     }

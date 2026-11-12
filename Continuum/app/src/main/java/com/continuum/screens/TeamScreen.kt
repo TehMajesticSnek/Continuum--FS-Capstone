@@ -96,7 +96,7 @@ fun TeamScreen(
     toSupervisorDashboard: () -> Unit = {},
     toTrends: () -> Unit,
 ) {
-    var members = viewModel.teamMembers
+    val members = viewModel.teamMembers
 
     var selectedMember by remember { mutableStateOf<Database.TeamUserDisplay?>(null) }
 
@@ -117,7 +117,7 @@ fun TeamScreen(
     var showConfirmLeaveDialog by remember { mutableStateOf(false) }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
 
-    var teamLoad = viewModel.teamLoadState
+    val teamLoad = viewModel.teamLoadState
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -484,9 +484,7 @@ fun TeamScreen(
             onDismissAdd = { showAddUser = false },
             onSuccessAdd = {
                 showAddUser = false
-                coroutineScope.launch {
-                    members = viewModel.db.getTeamMembers()
-                }
+                viewModel.getTeamMembers()
             }
         )
     }
@@ -514,10 +512,7 @@ fun TeamScreen(
             onSuccessKick = {
                 showConfirmKickDialog = false
                 selectedMember = null
-
-                coroutineScope.launch {
-                    members = viewModel.db.getTeamMembers()
-                }
+                viewModel.getTeamMembers()
             }
         )
     }
@@ -543,9 +538,8 @@ fun TeamScreen(
             },
             onSuccessRole = {
                 coroutineScope.launch {
-                    val freshMembers = viewModel.db.getTeamMembers()
-                    viewModel.session.teamRole = viewModel.db.getTeamRole()
-                    members = freshMembers.map { it.copy() }
+                    viewModel.getTeamMembers()
+                    viewModel.getTeamRole()
                 }
                 showRoleDialog = false
                 selectedMember = null

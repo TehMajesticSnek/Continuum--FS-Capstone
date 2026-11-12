@@ -227,6 +227,7 @@ fun LoginScreen(
                     val response = viewModel.db.login(email, password)
                     if (response == "") {
                         withContext(Dispatchers.Main) {
+                            viewModel.getTeams()
                             toHome()
                         }
                     }

@@ -39,9 +39,14 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
         selectTeamJob = viewModelScope.launch {
             selectingTeam = true
 
-            repository.saveSelectedTeam(team)
-            session.activeTeam = team
-            getTeamRole()
+            withContext(Dispatchers.IO) {
+                session.activeTeam = team
+                repository.saveSelectedTeam(team)
+
+                getHandoffs()
+                getTeamRole()
+                getTeamMembers()
+            }
 
             selectingTeam = false
         }
@@ -88,9 +93,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
             handoffLoadState = true
             handoffs = emptyList()
             withContext(Dispatchers.IO) {
-                if (handoffs.isEmpty()) {
-                    handoffs = db.getHandoffs()
-                }
+                handoffs = db.getHandoffs()
             }
 
             handoffLoadState = false
@@ -104,9 +107,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
             teamLoadState = true
             teams = emptyList()
             withContext(Dispatchers.IO) {
-                if (teams.isEmpty()) {
-                    teams = db.getUserTeams()
-                }
+                teams = db.getUserTeams()
             }
 
             teamLoadState = false
@@ -140,9 +141,7 @@ class ViewModel(private val repository: UserPreferences, val db: Database, val s
             teamMemberLoadState = true
 
             withContext(Dispatchers.IO) {
-                if (teamMembers.isEmpty()) {
-                    teamMembers = db.getTeamMembers()
-                }
+                teamMembers = db.getTeamMembers()
             }
 
             teamMemberLoadState = false

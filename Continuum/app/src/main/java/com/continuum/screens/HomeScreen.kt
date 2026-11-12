@@ -153,7 +153,6 @@ fun HomeScreen(
     )
 
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
     var showJoinDialog by remember { mutableStateOf(false) }
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -239,9 +238,6 @@ fun HomeScreen(
                         onSearchChange = { teamSearchQuery = it },
                         filteredTeams = filteredTeams,
                         onTeamClick = { team ->
-                            viewModel.session.activeTeam = team
-                            viewModel.getHandoffs()
-                            viewModel.getTeams()
                             viewModel.selectTeam(team)
 
                             scope.launch {
@@ -402,9 +398,8 @@ fun HomeScreen(
             onDismissJoin = { showJoinDialog = false },
             onShowCreate = { showCreateDialog = true },
             onSuccessJoin = {
-                viewModel.getHandoffs()
-                viewModel.getTeams()
                 viewModel.selectTeam(viewModel.session.activeTeam)
+                viewModel.getTeams()
                 showJoinDialog = false
             }
         )
@@ -415,9 +410,8 @@ fun HomeScreen(
             db = viewModel.db,
             onDismissCreate = { showCreateDialog = false },
             onSuccessCreate = {
-                viewModel.getHandoffs()
-                viewModel.getTeams()
                 viewModel.selectTeam(viewModel.session.activeTeam)
+                viewModel.getTeams()
                 showCreateDialog = false
                 showJoinDialog = false
             }
