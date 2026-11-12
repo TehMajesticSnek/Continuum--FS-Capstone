@@ -919,6 +919,12 @@ fun HandoffDetailsScreen(
                                         newEntry = ""
                                         comments = viewModel.db.getComments(id)
                                     }
+                                    commentAuthors = comments
+                                        .map { it.userID }
+                                        .distinct()
+                                        .associateWith { userID ->
+                                            viewModel.db.getUserFirstName(userID)
+                                        }
                                 }
                             }
                         },

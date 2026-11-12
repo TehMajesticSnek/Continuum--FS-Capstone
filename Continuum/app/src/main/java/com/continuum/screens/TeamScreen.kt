@@ -497,6 +497,7 @@ fun TeamScreen(
             onSuccessLeave = {
                 showConfirmLeaveDialog = false
                 viewModel.selectTeam(null)
+                viewModel.getTeams()
                 toHome()
             }
         )
@@ -524,6 +525,7 @@ fun TeamScreen(
             onSuccessDelete = {
                 showConfirmDeleteDialog = false
                 viewModel.selectTeam(null)
+                viewModel.getTeams()
                 toHome()
             }
         )
