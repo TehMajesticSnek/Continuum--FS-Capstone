@@ -15,7 +15,7 @@ Continuum includes the following features:
 
 - **User Authentication** – Allows users to securely sign in to the application.
 - **Shift Handoff Management** – Allows employees to create, edit, view, and acknowledge shift handoffs.
-- **AI-Assisted Note Structuring** – Helps organize unstructured shift information into clear and useful handoff records.
+- **AI-Assisted Note Structuring** – Uses the OpenAI API to help organize unstructured shift notes into clear handoff drafts.
 - **Quick Notes** – Allows users to create, edit, save, delete, and convert notes into handoffs.
 - **Unresolved Issue Tracking** – Keeps ongoing problems and tasks visible between shifts.
 - **Issue Ownership** – Identifies who is responsible for unresolved items.
@@ -42,12 +42,24 @@ Continuum was developed using the following technologies:
 - **Supabase** – Backend services, authentication, database access, and file storage
 - **PostgreSQL** – Relational database used through Supabase
 - **Supabase Edge Functions** – Server-side processing for handoff operations
+- **OpenAI API** – AI-assisted note structuring and handoff generation
+- **Android Speech Recognition** – Local speech-to-text functionality
 - **AES-256-GCM** – Encryption for sensitive handoff information
-- **Android Speech Recognition** – Speech-to-text functionality
-- **Git** – Version control
-- **GitHub** – Repository hosting and team collaboration
+- **Git and GitHub** – Version control and team collaboration
 - **Figma** – UI/UX wireframing and prototyping
 - **Jira** – Sprint planning and project management
+
+## AI Integration
+
+Continuum integrates the OpenAI API to assist users with organizing shift information.
+
+Employees can enter unstructured notes and use AI assistance to generate more organized handoff drafts. The goal is to reduce the amount of time spent manually formatting shift information while making important details easier for incoming employees to understand.
+
+Users can review and edit generated information before saving it as a handoff record.
+
+Voice transcription is handled separately through Android's speech recognition functionality rather than the OpenAI API.
+
+Continuum uses a pretrained AI model through the OpenAI API and does not train or maintain a custom AI model.
 
 ## Security
 
@@ -55,13 +67,13 @@ Continuum includes security measures designed to protect user information and se
 
 User authentication is managed through Supabase Authentication.
 
-Sensitive handoff fields, including titles and content, are encrypted using AES-256-GCM through Supabase Edge Functions before being stored in the database. The application also supports decrypting this information so users can continue viewing and managing their handoffs normally.
+Sensitive handoff fields, including titles and content, are encrypted using AES-256-GCM through Supabase Edge Functions before being stored in the database.
 
-Encryption was implemented later in the development process, so handoffs created before this feature was introduced remain stored as plaintext. New handoffs and subsequent updates use the encryption process.
+The application also supports decrypting this information so users can continue viewing and managing their handoffs normally.
+
+Encryption was implemented later in development, so handoffs created before this feature was introduced remain stored as plaintext. New handoffs and subsequent updates use the encryption process.
 
 Database access is also managed through Supabase security policies.
-
-These measures help protect newly created and updated handoff information while maintaining the application's functionality.
 
 ## Installation
 
@@ -73,15 +85,15 @@ Developers can clone the repository and build the Android application using Andr
 
 Open a terminal or Git Bash and run:
 
-```bash
+~~~bash
 git clone https://github.com/TehMajesticSnek/Continuum--FS-Capstone.git
-```
+~~~
 
 ### 2. Navigate to the Android Project
 
-```bash
+~~~bash
 cd Continuum--FS-Capstone/Continuum
-```
+~~~
 
 ### 3. Open the Project
 
@@ -97,7 +109,9 @@ Continuum uses Supabase for authentication, database operations, storage, and Ed
 
 A compatible Supabase configuration and the required backend services must be available for connected functionality to work correctly.
 
-Private credentials and encryption keys should not be committed to the repository.
+The OpenAI API integration also requires valid API configuration and access to the associated service.
+
+Private credentials, API keys, and encryption secrets should never be committed to the repository.
 
 ### 6. Select a Device
 
@@ -119,13 +133,14 @@ Developers contributing to Continuum should have the following installed:
 - A compatible Java/JDK installation
 - Android emulator or compatible physical Android device
 - Access to the required Supabase backend configuration
+- OpenAI API configuration for AI-assisted features
 
 ### Clone the Project
 
-```bash
+~~~bash
 git clone https://github.com/TehMajesticSnek/Continuum--FS-Capstone.git
 cd Continuum--FS-Capstone/Continuum
-```
+~~~
 
 Open the Continuum directory in Android Studio.
 
@@ -139,9 +154,9 @@ Developers should create feature branches for new functionality instead of makin
 
 For example:
 
-```bash
+~~~bash
 git checkout -b feature/example-feature
-```
+~~~
 
 After a feature has been completed and tested, changes can be reviewed before being merged into the appropriate development branch.
 
@@ -161,7 +176,7 @@ Developers can also use **Build > Make Project** to verify that the project comp
 
 The Continuum repository separates the Android application from other Capstone project resources.
 
-```text
+~~~text
 Continuum--FS-Capstone/
 ├── Assets/
 ├── Builds/
@@ -169,7 +184,7 @@ Continuum--FS-Capstone/
 ├── Documentation/
 ├── Shared/
 └── README.md
-```
+~~~
 
 ### Important Paths
 
@@ -220,7 +235,7 @@ The following major milestones were completed during development:
 - Developed shift handoff management
 - Implemented Quick Notes functionality
 - Added unresolved issue tracking and ownership
-- Integrated AI-assisted handoff organization
+- Integrated OpenAI-assisted handoff organization
 - Added multimedia functionality
 - Implemented priority notifications
 - Developed supervisor and analytics features
@@ -234,7 +249,9 @@ Continuum was developed as an educational Capstone project and has not been depl
 
 Handoff records created before encryption was implemented remain stored as plaintext. A migration process would be needed to encrypt those historical records.
 
-The application also requires its configured Supabase backend services to operate correctly.
+The application requires its configured Supabase backend services to operate correctly.
+
+AI-assisted functionality also depends on valid OpenAI API access and available service credits.
 
 Production deployment, broader compatibility testing, and long-term maintenance are outside the scope of the completed Capstone development.
 
