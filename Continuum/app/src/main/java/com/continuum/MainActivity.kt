@@ -1,47 +1,66 @@
 package com.continuum
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.continuum.data.Database
+import com.continuum.data.UserPreferences
+import com.continuum.ui.ViewModel
 import com.continuum.ui.theme.ContinuumTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import io.github.jan.supabase.auth.user.UserSession
+import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
+import androidx.compose.runtime.collectAsState
 
 class MainActivity : ComponentActivity() {
+    class UserSession {
+        var userID by mutableStateOf<String?>(null)
+        var activeTeam by mutableStateOf<Database.Team?>(null)
+        var teamRole by mutableLongStateOf(0)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val splashScreen = installSplashScreen()
+        val session = UserSession()
+        val db = Database(session)
+        val userData = UserPreferences(applicationContext) // Selected team mostly. Settings are separate
+
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
         enableEdgeToEdge()
+
+        val viewModel: ViewModel by viewModels { ViewModel.Factory(userData, db, session) }
+
+        splashScreen.setKeepOnScreenCondition {
+            viewModel.isCheckingAuth || !userData.canStart
+        }
+
         setContent {
+
             ContinuumTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Surface(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (!viewModel.isCheckingAuth && userData.canStart) {
+                        session.activeTeam = viewModel.selectedTeam.collectAsState().value
+                        Navigate(viewModel = viewModel)
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    ContinuumTheme {
-        Greeting("Android")
     }
 }
